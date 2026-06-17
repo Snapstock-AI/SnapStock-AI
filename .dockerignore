@@ -1,0 +1,13 @@
+# Root context (if used); service builds use their own .dockerignore files
+.git
+.gitignore
+.cursor
+.env
+.env.*
+*.md
+docker-compose*.yml
+**/node_modules
+**/dist
+**/venv
+**/.venv
+**/__pycache__
