@@ -1,49 +1,4 @@
 services:
-  client:
-    container_name: client
-    build:
-      context: ./client
-      dockerfile: dev.dockerfile
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./client:/app
-      - client-node-modules:/app/node_modules
-    environment:
-      - VITE_API_URL=http://localhost:5000
-    depends_on:
-      - server
-
-  server:
-    container_name: server
-    build:
-      context: ./server
-      dockerfile: dev.dockerfile
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./server/src:/app/src
-    environment:
-      - NODE_ENV=development
-      - DATABASE_URL=${DATABASE_URL}
-    depends_on:
-      - postgres
-      # Removed ai-service from depends_on to avoid cycle
-    command: npm run dev
-
-  ai-service:
-    container_name: ai-service
-    build:
-      context: ./ai-service
-      dockerfile: dev.dockerfile
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./ai-service:/app
-    environment:
-      - PYTHONUNBUFFERED=1
-    # Removed depends_on: server
-
   postgres:
     container_name: snapstock-postgres
     image: postgres:16-alpine
@@ -53,7 +8,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -79,4 +34,3 @@ services:
 volumes:
   postgres-data:
   pgadmin-data:
-  client-node-modules:
