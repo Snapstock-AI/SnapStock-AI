@@ -12,6 +12,7 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
+    "allowJs": false,
     "noEmit": true,
     "jsx": "react-jsx",
 
