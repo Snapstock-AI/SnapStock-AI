@@ -30,6 +30,7 @@ uvicorn main:app --reload --port 8000
 # Server
 cd server
 npm install
+npm run migration
 npm run dev
 
 # Client
@@ -46,3 +47,26 @@ npm run dev
 | Server     | http://localhost:5000  |
 | AI service | http://localhost:8000  |
 | pgAdmin    | http://localhost:5050  |
+
+### Database migrations
+
+Schema changes live in `server/migrations/` as numbered TypeScript files, for example `001-seed-dummy.ts`.
+
+Each file must export an `up(client)` function:
+
+```ts
+import type { PoolClient } from "pg";
+
+export async function up(client: PoolClient): Promise<void> {
+  await client.query("...");
+}
+```
+
+After `git pull`, if new migration files were added, `npm run dev` will fail until you apply them:
+
+```bash
+cd server
+npm run migration
+```
+
+This keeps every developer on the same database schema.

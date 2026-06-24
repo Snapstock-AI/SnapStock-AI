@@ -2,13 +2,15 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "predev": "ts-node --project tsconfig.scripts.json scripts/check-migrations.ts",
     "dev": "nodemon --exec ts-node src/index.ts",
+    "prestart": "ts-node --project tsconfig.scripts.json scripts/check-migrations.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "migrate": "node scripts/migrate.js"
+    "migration": "ts-node --project tsconfig.scripts.json scripts/migrate.ts"
   },
   "keywords": [],
   "author": "",
