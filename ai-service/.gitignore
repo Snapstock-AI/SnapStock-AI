@@ -1,3 +1,7 @@
 data/
 dataset/
-models/
+
+models/*
+!models/mobilenet_fruit.keras
+!models/fruit_freshness.keras
+!models/.gitkeep
