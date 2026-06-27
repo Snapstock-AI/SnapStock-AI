@@ -70,3 +70,32 @@ npm run migration
 ```
 
 This keeps every developer on the same database schema.
+
+
+
+### Models use in a file
+
+1. Install dependencies:
+
+pip install huggingface_hub tensorflow
+
+2. Create a new Python file (e.g. test_model.py)
+
+3. Import the loader function:
+
+```ts
+from download_model import load_model
+```
+
+4. Load the model:
+
+```ts
+cnn_model = load_model("cnn")
+mobilenet_model = load_model("mobilenet")
+```
+
+5. Run predictions using TensorFlow:
+
+```ts
+prediction = cnn_model.predict(input_data)
+```
