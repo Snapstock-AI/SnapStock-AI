@@ -1,7 +1,5 @@
 data/
 dataset/
-
+scripts/upload_model.py
 models/*
-!models/mobilenet_fruit.keras
-!models/fruit_freshness.keras
 !models/.gitkeep
