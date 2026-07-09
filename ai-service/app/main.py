@@ -7,6 +7,8 @@ from app.model_loader import get_model
 from app.predictor import InvalidImageError, PredictionError, predict
 from app.schemas import HealthResponse, PredictionResponse
 
+from fastapi.middleware.cors import CORSMiddleware
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,6 +32,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://192.168.43.130:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/health", response_model=HealthResponse)
 def health():
