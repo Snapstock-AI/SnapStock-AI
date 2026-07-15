@@ -24,3 +24,5 @@ class DetectionResponse(BaseModel):
     total_count: int
     counts: dict[str, int]
     
+class CropResult(DetectedObject):
+    crop_path: str
