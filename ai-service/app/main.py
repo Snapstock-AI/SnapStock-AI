@@ -6,7 +6,7 @@ from app.config import ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES
 from app.model_loader import get_model
 from app.predictor import InvalidImageError, PredictionError, predict
 from app.schemas import HealthResponse, PredictionResponse
-
+from app.detection.routes import router as detection_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,6 +30,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.include_router(detection_router)
 
 @app.get("/health", response_model=HealthResponse)
 def health():
