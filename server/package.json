@@ -27,6 +27,8 @@
     "morgan": "^1.11.0",
     "nodemailer": "^9.0.1",
     "pg": "^8.22.0",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.26",
     "zod": "^4.4.3"
   },
   "devDependencies": {
