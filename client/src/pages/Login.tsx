@@ -1,7 +1,30 @@
-import { Link } from 'react-router'
+import { useState, type FormEvent } from 'react'
+import { Link, useNavigate } from 'react-router'
 import AuthLayout from '@/components/AuthLayout'
+import { useAuth } from '@/context/AuthContext'
 
 export default function Login() {
+  const navigate = useNavigate()
+  const { login } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await login(email, password)
+      navigate('/dashboard')
+    } catch (err: any) {
+      setError(err.message || 'Login failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <AuthLayout>
       <div className="w-full max-w-md">
@@ -11,7 +34,7 @@ export default function Login() {
           Continue scanning shelves and tracking freshness across your stores.
         </p>
 
-        <form className="mt-8 space-y-5" onSubmit={(e) => e.preventDefault()}>
+        <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
           <div>
             <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
               Email
@@ -19,6 +42,9 @@ export default function Login() {
             <input
               id="email"
               type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="you@shop.com"
               className="w-full rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm outline-none ring-brand-500/30 transition focus:ring-2"
             />
@@ -29,52 +55,43 @@ export default function Login() {
               <label htmlFor="password" className="text-sm font-medium">
                 Password
               </label>
-              <a href="#" className="text-xs text-brand-500 hover:underline">
+              <Link to="/forgot-password" className="text-xs text-brand-500 hover:underline">
                 Forgot password?
-              </a>
+              </Link>
             </div>
             <input
               id="password"
               type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm outline-none ring-brand-500/30 transition focus:ring-2"
             />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-muted">
-            <input type="checkbox" defaultChecked className="rounded border-border text-brand-500" />
-            Remember me for 30 days
-          </label>
+          {error && (
+            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+              {error}
+              {error.toLowerCase().includes('verify') && (
+                <>
+                  {' '}
+                  <Link to="/resend-verification" className="font-medium underline">
+                    Resend verification email
+                  </Link>
+                </>
+              )}
+            </p>
+          )}
 
-          <Link
-            to="/dashboard"
-            className="flex w-full items-center justify-center rounded-full bg-brand-500 py-3.5 text-sm font-semibold text-white transition hover:bg-brand-600"
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex w-full items-center justify-center rounded-full bg-brand-500 py-3.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
           >
-            Sign In
-          </Link>
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
         </form>
-
-        <div className="relative my-8">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border" />
-          </div>
-          <p className="relative mx-auto w-fit bg-surface px-4 text-xs text-muted">or continue with</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            className="rounded-xl border border-border py-3 text-sm font-medium transition hover:bg-surface-muted"
-          >
-            Google
-          </button>
-          <button
-            type="button"
-            className="rounded-xl border border-border py-3 text-sm font-medium transition hover:bg-surface-muted"
-          >
-            Apple
-          </button>
-        </div>
 
         <p className="mt-8 text-center text-sm text-muted">
           New to FreshTrack?{' '}

@@ -11,6 +11,19 @@ export interface LoginDTO {
   password: string;
 }
 
+export interface ForgotPasswordDTO {
+  email: string;
+}
+
+export interface ResetPasswordDTO {
+  token: string;
+  password: string;
+}
+
+export interface ResendVerificationDTO {
+  email: string;
+}
+
 export interface EmailVerificationToken {
   user_id: string;
   token: string;
