@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import Logo from '@/components/Logo'
 import ThemeToggle from '@/components/ThemeToggle'
+import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 
 const sidebarLinks = [
@@ -23,6 +24,12 @@ const sidebarLinks = [
 
 export default function DashboardLayout() {
   const navigate = useNavigate()
+  const { logout, user } = useAuth()
+
+  async function handleLogout() {
+    await logout()
+    navigate('/login')
+  }
 
   return (
     <div className="min-h-dvh bg-surface">
@@ -54,7 +61,7 @@ export default function DashboardLayout() {
         <div className="border-t border-border p-4">
           <button
             type="button"
-            onClick={() => navigate('/login')}
+            onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted transition hover:bg-surface-muted hover:text-foreground"
           >
             <LogOut className="h-4 w-4" />
@@ -77,7 +84,7 @@ export default function DashboardLayout() {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700 dark:bg-brand-900 dark:text-brand-300">
-              P
+              {(user?.full_name || 'U').charAt(0).toUpperCase()}
             </div>
           </div>
         </header>

@@ -1,14 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import AuthLayout from '@/components/AuthLayout'
-import { useAuth } from '@/context/AuthContext'
+import { apiRequest } from '@/lib/api'
 
-export default function Signup() {
-  const navigate = useNavigate()
-  const { register } = useAuth()
-  const [fullName, setFullName] = useState('')
+export default function ForgotPassword() {
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -19,11 +15,13 @@ export default function Signup() {
     setMessage('')
     setLoading(true)
     try {
-      const successMessage = await register(fullName, email, password)
-      setMessage(successMessage)
-      setTimeout(() => navigate('/login'), 2000)
+      const result = await apiRequest<{ message: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      })
+      setMessage(result.data?.message || 'Check your email for a reset link.')
     } catch (err: any) {
-      setError(err.message || 'Signup failed')
+      setError(err.message || 'Request failed')
     } finally {
       setLoading(false)
     }
@@ -32,28 +30,13 @@ export default function Signup() {
   return (
     <AuthLayout>
       <div className="w-full max-w-md">
-        <p className="text-xs font-semibold uppercase tracking-widest text-brand-500">Get started</p>
-        <h1 className="mt-3 font-serif text-3xl font-semibold md:text-4xl">Create your account</h1>
+        <p className="text-xs font-semibold uppercase tracking-widest text-brand-500">Account recovery</p>
+        <h1 className="mt-3 font-serif text-3xl font-semibold md:text-4xl">Forgot password</h1>
         <p className="mt-3 text-sm text-muted">
-          Start monitoring inventory and freshness for your storefront in minutes.
+          Enter your email and we&apos;ll send a reset link if an account exists.
         </p>
 
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="full_name" className="mb-1.5 block text-sm font-medium">
-              Full name
-            </label>
-            <input
-              id="full_name"
-              type="text"
-              required
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Priya Rajan"
-              className="w-full rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm outline-none ring-brand-500/30 transition focus:ring-2"
-            />
-          </div>
-
           <div>
             <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
               Email
@@ -65,22 +48,6 @@ export default function Signup() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@shop.com"
-              className="w-full rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm outline-none ring-brand-500/30 transition focus:ring-2"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="mb-1.5 block text-sm font-medium">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
               className="w-full rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm outline-none ring-brand-500/30 transition focus:ring-2"
             />
           </div>
@@ -101,12 +68,12 @@ export default function Signup() {
             disabled={loading}
             className="flex w-full items-center justify-center rounded-full bg-brand-500 py-3.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
           >
-            {loading ? 'Creating account...' : 'Create free account'}
+            {loading ? 'Sending...' : 'Send reset link'}
           </button>
         </form>
 
         <p className="mt-8 text-center text-sm text-muted">
-          Already have an account?{' '}
+          Remembered your password?{' '}
           <Link to="/login" className="font-medium text-brand-500 hover:underline">
             Sign in
           </Link>
