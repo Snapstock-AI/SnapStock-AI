@@ -32,7 +32,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         <div className="relative hidden overflow-hidden p-6 lg:block">
           <div className="relative h-full overflow-hidden rounded-3xl">
             <img
-              src="https://images.unsplash.com/photo-1610832958506-aa56368156cf?w=900&q=80&auto=format&fit=crop"
+              src="https://images.unsplash.com/photo-1540420773420-3366772f4999?w=900&q=80&auto=format&fit=crop"
               alt="Fresh fruits and vegetables"
               className="h-full w-full object-cover"
             />
