@@ -1,6 +1,6 @@
 from io import BytesIO
 from typing import Any
-
+import cv2
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 
@@ -133,4 +133,94 @@ def predict(model: Any, image_bytes: bytes) -> dict:
         "confidence_percent": confidence_percent,
         "model": MODEL_NAME,
         "message": f"Fruit predicted as {freshness} with {confidence_percent}% confidence",
+    }
+
+
+def predict_crop(model: Any, crop: np.ndarray) -> dict:
+    """
+    Predict freshness from a YOLO detected crop.
+
+    Input:
+        crop:
+            OpenCV image (BGR numpy array)
+
+    Output:
+        Freshness prediction result
+    """
+
+    if crop is None or crop.size == 0:
+        raise InvalidImageError(
+            "Empty crop received for freshness prediction."
+        )
+
+
+    # Convert OpenCV BGR image to PIL RGB image
+    image = Image.fromarray(
+        cv2.cvtColor(
+            crop,
+            cv2.COLOR_BGR2RGB
+        )
+    )
+
+
+    validate_image_content(image)
+
+
+    processed_image = preprocess_image(
+        image
+    )
+
+
+    try:
+        prediction = model.predict(
+            processed_image,
+            verbose=0
+        )
+
+    except Exception as exc:
+        raise PredictionError(
+            "TensorFlow model prediction failed."
+        ) from exc
+
+
+    try:
+        probability = float(
+            prediction[0][0]
+        )
+
+    except Exception as exc:
+        raise PredictionError(
+            f"Unexpected model output shape: {prediction.shape}"
+        ) from exc
+
+
+    if probability >= PREDICTION_THRESHOLD:
+
+        freshness = POSITIVE_CLASS_LABEL
+        confidence = probability
+
+    else:
+
+        freshness = NEGATIVE_CLASS_LABEL
+        confidence = 1.0 - probability
+
+
+    confidence_percent = round(
+        confidence * 100,
+        2
+    )
+
+
+    return {
+        "freshness": freshness,
+
+        "confidence": confidence,
+
+        "confidence_percent": confidence_percent,
+
+        "model": MODEL_NAME,
+
+        "message":
+            f"Fruit predicted as {freshness} "
+            f"with {confidence_percent}% confidence"
     }

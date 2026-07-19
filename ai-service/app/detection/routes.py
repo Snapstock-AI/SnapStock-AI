@@ -6,6 +6,7 @@ from fastapi import (
     HTTPException,
     Query,
     UploadFile,
+    Request,
 )
 from starlette.concurrency import run_in_threadpool
 
@@ -19,9 +20,12 @@ from app.config import (
 )
 from app.detection.detector import (
     InvalidDetectionImageError,
-    detect_and_count,
+    detect_fruits,
 )
-from app.detection.schemas import DetectionResponse
+from app.detection.schemas import (
+    DetectionResult,
+    DetectedFruit,
+)
 
 
 router = APIRouter(
@@ -32,9 +36,10 @@ router = APIRouter(
 
 @router.post(
     "",
-    response_model=DetectionResponse,
+    response_model=DetectionResult,
 )
 async def detect_objects(
+    request: Request,
     file: Annotated[
         UploadFile,
         File(
@@ -53,7 +58,7 @@ async def detect_objects(
             ),
         ),
     ] = YOLO_CONFIDENCE_THRESHOLD,
-) -> DetectionResponse:
+) -> DetectionResult:
     content_type = file.content_type or ""
 
     if content_type not in ALLOWED_IMAGE_TYPES:
@@ -82,10 +87,25 @@ async def detect_objects(
         )
 
     try:
-        return await run_in_threadpool(
-            detect_and_count,
+        detection_result = await run_in_threadpool(
+            detect_fruits,
+            request.app.state.detection_model,
             image_bytes,
             confidence_threshold,
+        )
+        return DetectionResult(
+            image_width=detection_result.image_width,
+            image_height=detection_result.image_height,
+            model=detection_result.model,
+            detections=[
+                DetectedFruit(
+                    class_id=detected_crop.class_id,
+                    class_name=detected_crop.class_name,
+                    confidence=detected_crop.confidence,
+                    bounding_box=detected_crop.bounding_box,
+                )
+                for detected_crop in detection_result.detections
+            ],
         )
     except InvalidDetectionImageError as error:
         raise HTTPException(
@@ -95,5 +115,5 @@ async def detect_objects(
     except Exception as error:
         raise HTTPException(
             status_code=500,
-            detail="Object detection failed.",
+            detail="Object detection failed."+ str(error),
         ) from error

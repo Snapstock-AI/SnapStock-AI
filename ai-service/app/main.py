@@ -1,13 +1,13 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi import FastAPI
 
-from app.config import ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES
-from app.model_loader import get_model
-from app.predictor import InvalidImageError, PredictionError, predict
-from app.schemas import HealthResponse, PredictionResponse
+from app.freshness.model_loader import get_model
+from app.freshness.schemas import HealthResponse
+from app.freshness.routes import router as prediction_router
 from app.detection.routes import router as detection_router
-
+from app.analysis.routes import router as analysis_router
+from app.detection.model_loader import get_detection_model
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -16,7 +16,8 @@ async def lifespan(app: FastAPI):
     We load the TensorFlow model once and store it in app.state.
     """
 
-    app.state.model = get_model()
+    app.state.freshness_model = get_model()
+    app.state.detection_model = get_detection_model()
 
     yield
 
@@ -31,6 +32,8 @@ app = FastAPI(
 )
 
 app.include_router(detection_router)
+app.include_router(prediction_router)
+app.include_router(analysis_router)
 
 @app.get("/health", response_model=HealthResponse)
 def health():
@@ -38,49 +41,3 @@ def health():
         "status": "running",
         "model_loaded": hasattr(app.state, "model"),
     }
-
-
-@app.post("/predict", response_model=PredictionResponse)
-async def predict_image(file: UploadFile = File(...)):
-    """
-    Receive an uploaded image and return freshness prediction.
-    """
-
-    if file.content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Unsupported file type. Please upload JPEG, PNG, or WEBP image.",
-        )
-
-    image_bytes = await file.read()
-
-    if not image_bytes:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded file is empty.",
-        )
-
-    if len(image_bytes) > MAX_IMAGE_SIZE_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="Image file is too large.",
-        )
-
-    try:
-        result = predict(app.state.model, image_bytes)
-        return result
-
-    except InvalidImageError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-
-    except PredictionError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        ) from exc
-
-    finally:
-        await file.close()

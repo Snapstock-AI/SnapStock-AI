@@ -1,7 +1,9 @@
+import cv2
+import numpy as np
+from typing import Any
 from collections import Counter
 from io import BytesIO
 from threading import Lock
-
 from PIL import Image, UnidentifiedImageError
 
 from app.config import (
@@ -10,12 +12,15 @@ from app.config import (
     YOLO_IMAGE_SIZE,
     YOLO_IOU_THRESHOLD,
 )
-from app.detection.model_loader import get_detection_model
 from app.detection.schemas import (
     BoundingBox,
-    DetectedObject,
     DetectionResponse,
 )
+from app.detection.internal_models import (
+    DetectedCrop,
+    InternalDetectionResult,
+)
+
 
 
 class InvalidDetectionImageError(ValueError):
@@ -28,23 +33,18 @@ _inference_lock = Lock()
 def normalize_class_name(class_name: str) -> str:
     """
     Convert the model's class labels into clean inventory names.
-
-    Examples:
-        Tomato -> tomato
-        tomato -> tomato
-        cucumber/cuke -> cucumber
-        bell pepper/capsicum -> bell pepper
     """
 
     primary_name = class_name.split("/")[0]
-
     return primary_name.strip().lower()
 
 
-def detect_and_count(
+def detect_fruits(
+    model: Any,
     image_bytes: bytes,
     confidence_threshold: float,
-) -> DetectionResponse:
+) -> InternalDetectionResult:
+
     if not image_bytes:
         raise InvalidDetectionImageError(
             "The uploaded image is empty."
@@ -54,6 +54,13 @@ def detect_and_count(
         image = Image.open(
             BytesIO(image_bytes)
         ).convert("RGB")
+
+        # Convert PIL image to OpenCV image
+        opencv_image = cv2.cvtColor(
+            np.array(image),
+            cv2.COLOR_RGB2BGR,
+        )
+
     except (UnidentifiedImageError, OSError) as error:
         raise InvalidDetectionImageError(
             "The uploaded file is not a valid supported image."
@@ -61,7 +68,6 @@ def detect_and_count(
 
     image_width, image_height = image.size
 
-    model = get_detection_model()
 
     with _inference_lock:
         results = model.predict(
@@ -85,10 +91,11 @@ def detect_and_count(
 
     result = results[0]
 
-    detections: list[DetectedObject] = []
+    detections: list[DetectedCrop] = []
     counts: Counter[str] = Counter()
 
     if result.boxes is not None:
+
         boxes = result.boxes.cpu()
 
         coordinates_list = boxes.xyxy.tolist()
@@ -100,32 +107,40 @@ def detect_and_count(
             confidence_list,
             class_id_list,
         ):
+
             class_id = int(class_id_value)
 
             raw_class_name = result.names[class_id]
-            class_name = normalize_class_name(
-                raw_class_name
-            )
+            class_name = normalize_class_name(raw_class_name)
 
-            x1, y1, x2, y2 = [
-                round(value)
-                for value in coordinates
-            ]
+            # Safe coordinates
+            x1 = max(0, round(coordinates[0]))
+            y1 = max(0, round(coordinates[1]))
+            x2 = min(image_width, round(coordinates[2]))
+            y2 = min(image_height, round(coordinates[3]))
+
+            # Crop detected fruit
+            padding = 8
+            crop = opencv_image[y1 + padding:y2 - padding,
+                                x1 + padding:x2 - padding]
+
+            if crop.size == 0:
+                continue
+
+            
 
             detections.append(
-                DetectedObject(
+                DetectedCrop(
                     class_id=class_id,
                     class_name=class_name,
-                    confidence=round(
-                        float(confidence),
-                        4,
-                    ),
+                    confidence=round(float(confidence), 4),
                     bounding_box=BoundingBox(
                         x1=x1,
                         y1=y1,
                         x2=x2,
                         y2=y2,
                     ),
+                    crop=crop,
                 )
             )
 
@@ -135,11 +150,9 @@ def detect_and_count(
         sorted(counts.items())
     )
 
-    return DetectionResponse(
-        total_count=sum(sorted_counts.values()),
-        counts=sorted_counts,
-        detections=detections,
+    return InternalDetectionResult(
         image_width=image_width,
         image_height=image_height,
         model=DETECTION_MODEL_NAME,
+        detections=detections,
     )
