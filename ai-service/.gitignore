@@ -5,6 +5,4 @@ scripts/export_detection_classes.py
 scripts/upload_detection_model.py
 models/*
 !models/.gitkeep
-
 model-upload/
-test-images/
