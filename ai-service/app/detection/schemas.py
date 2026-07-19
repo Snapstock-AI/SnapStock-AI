@@ -7,8 +7,7 @@ class BoundingBox(BaseModel):
     x2: int
     y2: int
 
-
-class DetectedObject(BaseModel):
+class DetectedFruit(BaseModel):
     class_id: int
     class_name: str
 
@@ -20,9 +19,16 @@ class DetectedObject(BaseModel):
     bounding_box: BoundingBox
 
 
+class DetectionResult(BaseModel):
+    image_width: int
+    image_height: int
+    model: str
+    detections: list[DetectedFruit]
+
+
 class DetectionResponse(BaseModel):
     total_count: int
     counts: dict[str, int]
     
-class CropResult(DetectedObject):
-    crop_path: str
+
+
