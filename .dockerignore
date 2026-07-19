@@ -1,7 +1,0 @@
-.git
-.gitignore
-.cursor
-.env
-.env.*
-*.md
-docker-compose*.yml
