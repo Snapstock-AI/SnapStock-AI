@@ -1,11 +1,9 @@
-from pathlib import Path
 import cv2
 import numpy as np
-
+from typing import Any
 from collections import Counter
 from io import BytesIO
 from threading import Lock
-
 from PIL import Image, UnidentifiedImageError
 
 from app.config import (
@@ -14,16 +12,15 @@ from app.config import (
     YOLO_IMAGE_SIZE,
     YOLO_IOU_THRESHOLD,
 )
-from app.detection.model_loader import get_detection_model
 from app.detection.schemas import (
     BoundingBox,
     DetectionResponse,
-    CropResult,
+)
+from app.detection.internal_models import (
+    DetectedCrop,
+    InternalDetectionResult,
 )
 
-# Debug folder to save cropped fruits
-OUTPUT_DIR = Path("outputs/crops")
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class InvalidDetectionImageError(ValueError):
@@ -42,10 +39,11 @@ def normalize_class_name(class_name: str) -> str:
     return primary_name.strip().lower()
 
 
-def detect_and_count(
+def detect_fruits(
+    model: Any,
     image_bytes: bytes,
     confidence_threshold: float,
-) -> DetectionResponse:
+) -> InternalDetectionResult:
 
     if not image_bytes:
         raise InvalidDetectionImageError(
@@ -70,7 +68,6 @@ def detect_and_count(
 
     image_width, image_height = image.size
 
-    model = get_detection_model()
 
     with _inference_lock:
         results = model.predict(
@@ -94,7 +91,7 @@ def detect_and_count(
 
     result = results[0]
 
-    detections: list[CropResult] = []
+    detections: list[DetectedCrop] = []
     counts: Counter[str] = Counter()
 
     if result.boxes is not None:
@@ -130,17 +127,10 @@ def detect_and_count(
             if crop.size == 0:
                 continue
 
-            # Save crop (debug purpose)
-            filename = f"{class_name}_{len(detections)}.jpg"
-            filepath = OUTPUT_DIR / filename
-
-            saved = cv2.imwrite(str(filepath), crop)
-
-            if not saved:
-                continue
+            
 
             detections.append(
-                CropResult(
+                DetectedCrop(
                     class_id=class_id,
                     class_name=class_name,
                     confidence=round(float(confidence), 4),
@@ -150,7 +140,7 @@ def detect_and_count(
                         x2=x2,
                         y2=y2,
                     ),
-                    crop_path=str(filepath),
+                    crop=crop,
                 )
             )
 
@@ -160,11 +150,9 @@ def detect_and_count(
         sorted(counts.items())
     )
 
-    return DetectionResponse(
-        total_count=sum(sorted_counts.values()),
-        counts=sorted_counts,
-        detections=detections,
+    return InternalDetectionResult(
         image_width=image_width,
         image_height=image_height,
         model=DETECTION_MODEL_NAME,
+        detections=detections,
     )
