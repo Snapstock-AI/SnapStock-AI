@@ -18,7 +18,7 @@ router = APIRouter(
 
 @router.post("", response_model=PredictionResponse)
 async def predict_image(
-    request = Request,
+    request: Request,
     file: UploadFile = File(...)):
     """
     Receive an uploaded image and return freshness prediction.
