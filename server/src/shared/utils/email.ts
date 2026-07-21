@@ -1,9 +1,39 @@
 import path from "path";
 import nodemailer from "nodemailer";
+import type { SendMailOptions } from "nodemailer";
 import dotenv from "dotenv";
 
 dotenv.config({
   path: path.resolve(__dirname, "../../../../.env"),
+});
+
+type EmailType = "verification" | "password-reset";
+
+const smtpLog = (
+  level: "info" | "warn" | "error",
+  message: string,
+  meta?: Record<string, unknown>
+) => {
+  const payload = meta ? ` ${JSON.stringify(meta)}` : "";
+
+  if (level === "error") {
+    console.error(`[SMTP] ${message}${payload}`);
+    return;
+  }
+
+  if (level === "warn") {
+    console.warn(`[SMTP] ${message}${payload}`);
+    return;
+  }
+
+  console.log(`[SMTP] ${message}${payload}`);
+};
+
+const getSmtpConfigMeta = () => ({
+  host: process.env.SMTP_HOST || "(missing)",
+  port: Number(process.env.SMTP_PORT || 587),
+  userConfigured: Boolean(process.env.SMTP_USER),
+  passwordConfigured: Boolean(process.env.SMTP_PASS),
 });
 
 const getTransporter = () =>
@@ -16,6 +46,62 @@ const getTransporter = () =>
       pass: process.env.SMTP_PASS,
     },
   });
+
+const sendEmail = async (
+  type: EmailType,
+  to: string,
+  mailOptions: SendMailOptions
+) => {
+  smtpLog("info", "Preparing to send email", {
+    type,
+    to,
+    subject: mailOptions.subject,
+    ...getSmtpConfigMeta(),
+  });
+
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    const error = new Error("SMTP configuration is incomplete");
+    smtpLog("error", "SMTP config validation failed", {
+      type,
+      to,
+      ...getSmtpConfigMeta(),
+      error: error.message,
+    });
+    throw error;
+  }
+
+  try {
+    const info = await getTransporter().sendMail(mailOptions);
+
+    smtpLog("info", "Email sent successfully", {
+      type,
+      to,
+      messageId: info.messageId,
+      accepted: info.accepted,
+      rejected: info.rejected,
+      response: info.response,
+    });
+
+    return info;
+  } catch (error: unknown) {
+    const err = error as NodeJS.ErrnoException & {
+      response?: string;
+      responseCode?: number;
+    };
+
+    smtpLog("error", "Failed to send email", {
+      type,
+      to,
+      subject: mailOptions.subject,
+      error: err.message,
+      code: err.code,
+      response: err.response,
+      responseCode: err.responseCode,
+    });
+
+    throw error;
+  }
+};
 
 const clientUrl = () =>
   process.env.CLIENT_URL || process.env.VITE_API_URL?.replace(":5000", ":5173") || "http://localhost:5173";
@@ -70,7 +156,7 @@ const emailTemplate = (
 export const sendVerificationEmail = async (email: string, token: string) => {
   const link = `${clientUrl()}/verify-email?token=${token}`;
 
-  await getTransporter().sendMail({
+  await sendEmail("verification", email, {
     from: `"SnapStock AI" <${process.env.SMTP_USER}>`,
     to: email,
     subject: "Welcome to SnapStock AI — verify your email",
@@ -89,7 +175,7 @@ export const sendVerificationEmail = async (email: string, token: string) => {
 export const sendPasswordResetEmail = async (email: string, token: string) => {
   const link = `${clientUrl()}/reset-password?token=${token}`;
 
-  await getTransporter().sendMail({
+  await sendEmail("password-reset", email, {
     from: `"SnapStock AI" <${process.env.SMTP_USER}>`,
     to: email,
     subject: "Reset your SnapStock AI password",
