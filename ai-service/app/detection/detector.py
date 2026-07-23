@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from typing import Any
+from ultralytics import YOLO
 from collections import Counter
 from io import BytesIO
 from threading import Lock
@@ -40,7 +40,7 @@ def normalize_class_name(class_name: str) -> str:
 
 
 def detect_fruits(
-    model: Any,
+    model: YOLO,
     image_bytes: bytes,
     confidence_threshold: float,
 ) -> InternalDetectionResult:
