@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from app.logger import logger
 import tensorflow as tf
 from huggingface_hub import hf_hub_download
 
@@ -19,14 +19,14 @@ def get_model():
     model_path = MODEL_PATH
 
     if MODEL_PATH.exists():
-        print("Using existing model")
+        logger.info("Using existing model")
 
     elif LEGACY_MODEL_PATH.exists():
-        print("Using legacy model path")
+        logger.info("Using legacy model path")
         model_path = LEGACY_MODEL_PATH
 
     else:
-        print("Model not found. Downloading...")
+        logger.info("Model not found. Downloading...")
 
         downloaded_path = hf_hub_download(
             repo_id=HF_REPO_ID,
@@ -36,13 +36,13 @@ def get_model():
 
         model_path = Path(downloaded_path)
 
-    print("Loading TensorFlow model...")
+    logger.info("Loading TensorFlow model...")
 
     model = tf.keras.models.load_model(
         model_path,
         compile=False,
     )
 
-    print("Model loaded")
+    logger.info("Model loaded")
 
     return model
