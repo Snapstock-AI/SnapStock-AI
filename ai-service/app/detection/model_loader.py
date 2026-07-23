@@ -2,7 +2,7 @@ import os
 import shutil
 from functools import lru_cache
 from pathlib import Path
-
+from app.logger import logger
 from huggingface_hub import hf_hub_download
 from ultralytics import YOLO
 
@@ -31,15 +31,15 @@ def ensure_detection_model() -> Path:
     """
 
     if detection_model_exists():
-        print(
+        logger.info(
             "YOLO detection model found locally:\n"
             f"{DETECTION_MODEL_PATH}"
         )
         return DETECTION_MODEL_PATH
 
-    print("YOLO detection model is not available locally.")
-    print(f"Repository: {HF_DETECTION_REPO_ID}")
-    print(f"Model file: {HF_DETECTION_MODEL_FILE}")
+    logger.info("YOLO detection model is not available locally.")
+    logger.info(f"Repository: {HF_DETECTION_REPO_ID}")
+    logger.info(f"Model file: {HF_DETECTION_MODEL_FILE}")
 
     DETECTION_MODEL_PATH.parent.mkdir(
         parents=True,
@@ -84,7 +84,7 @@ def ensure_detection_model() -> Path:
             "checkpoint is missing or empty."
         )
 
-    print(
+    logger.info(
         "YOLO detection model downloaded successfully:\n"
         f"{DETECTION_MODEL_PATH}"
     )
@@ -102,7 +102,7 @@ def get_detection_model() -> YOLO:
 
     model_path = ensure_detection_model()
 
-    print(f"Loading YOLO model: {model_path}")
+    logger.info(f"Loading YOLO model: {model_path}")
 
     try:
         model = YOLO(str(model_path))
@@ -111,7 +111,7 @@ def get_detection_model() -> YOLO:
             "The YOLO checkpoint exists, but it could not be loaded."
         ) from error
 
-    print(
+    logger.info(
         "YOLO model loaded successfully. "
         f"Supported classes: {len(model.names)}"
     )
