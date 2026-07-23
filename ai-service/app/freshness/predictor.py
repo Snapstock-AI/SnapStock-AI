@@ -1,5 +1,5 @@
 from io import BytesIO
-from typing import Any
+from keras import Model
 
 import cv2
 import numpy as np
@@ -78,7 +78,7 @@ def preprocess_image(image: Image.Image) -> np.ndarray:
 
 
 def _predict_probability(
-    model: Any,
+    model: Model,
     image: Image.Image,
 ) -> float:
     """
@@ -141,7 +141,7 @@ def _build_prediction_result(
 
 
 def predict(
-    model: Any,
+    model: Model,
     image_bytes: bytes,
 ) -> dict:
     """
@@ -163,7 +163,7 @@ def predict(
 
 
 def predict_crop(
-    model: Any,
+    model: Model,
     crop: np.ndarray,
 ) -> dict:
     """
