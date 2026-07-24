@@ -17,6 +17,7 @@ import ScansPage from '@/pages/dashboard/ScansPage'
 import AlertsPage from '@/pages/dashboard/AlertsPage'
 import AnalyticsPage from '@/pages/dashboard/AnalyticsPage'
 import SettingsPage from '@/pages/dashboard/SettingsPage'
+import ShelvesPage from '@/pages/dashboard/ShelvesPage'
 
 const authPaths = [
   '/login',
@@ -49,6 +50,7 @@ function AppRoutes() {
             <Route index element={<DashboardHome />} />
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="scans" element={<ScansPage />} />
+            <Route path="shelves" element={<ShelvesPage />} />
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="settings" element={<SettingsPage />} />
