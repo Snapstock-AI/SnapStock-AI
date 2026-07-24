@@ -8,6 +8,7 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 import { AppDataSource } from "./config/data-source";
 import authRoutes from "./modules/auth/auth.routes";
+import detectionRoutes from "./modules/detection/detection.routes";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -16,6 +17,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/auth", authRoutes);
+app.use("/detection", detectionRoutes);
 
 app.get("", (_req, res) => {
   res.send("express is working");
