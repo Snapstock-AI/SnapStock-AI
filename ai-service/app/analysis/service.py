@@ -1,6 +1,6 @@
 from collections import Counter
-from typing import Any
-
+from ultralytics import YOLO
+from keras import Model
 from app.detection.detector import detect_fruits
 from app.freshness.predictor import predict_crop
 
@@ -13,8 +13,8 @@ from app.config import YOLO_CONFIDENCE_THRESHOLD
 
 
 def analyze_image(
-    detection_model: Any,
-    freshness_model: Any,
+    detection_model: YOLO,
+    freshness_model: Model,
     image_bytes: bytes,
 ) -> AnalysisResponse:
 
@@ -39,11 +39,9 @@ def analyze_image(
                 class_name=fruit.class_name,
                 confidence=fruit.confidence,
                 bounding_box=fruit.bounding_box,
-                freshness=prediction["freshness"],
-                freshness_confidence=prediction["confidence"],
-                freshness_confidence_percent=prediction[
-                    "confidence_percent"
-                ],
+                freshness=prediction.freshness,
+                freshness_confidence=prediction.confidence,
+                freshness_confidence_percent=prediction.confidence_percent,
             )
         )
 
