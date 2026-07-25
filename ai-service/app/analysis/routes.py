@@ -11,7 +11,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.analysis.schemas import AnalysisResponse
 from app.analysis.service import analyze_image
-from app.config import YOLO_CONFIDENCE_THRESHOLD
+
 from app.config import (
     ALLOWED_IMAGE_TYPES,
     MAX_IMAGE_SIZE_BYTES,

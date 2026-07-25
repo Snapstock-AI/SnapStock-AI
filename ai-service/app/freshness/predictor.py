@@ -3,78 +3,26 @@ from keras import Model
 
 import cv2
 import numpy as np
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 
 from app.config import (
-    IMAGE_SIZE,
     MODEL_NAME,
     NEGATIVE_CLASS_LABEL,
     POSITIVE_CLASS_LABEL,
     PREDICTION_THRESHOLD,
-    PREPROCESSING_MODE,
 )
 
+from app.common.image_utils import (
+    validate_image_content,
+    load_image_from_bytes,
+    preprocess_image,
 
-class InvalidImageError(Exception):
-    """Raised when the uploaded file is not a valid image."""
+)
 
-
-class PredictionError(Exception):
-    """Raised when prediction fails."""
-
-
-def validate_image_content(image: Image.Image) -> None:
-    """
-    Reject images that are technically valid but visually useless.
-    """
-
-    image_array = np.array(image).astype("float32")
-
-    pixel_std = float(np.std(image_array))
-
-    if pixel_std < 10.0:
-        raise InvalidImageError(
-            "Image does not contain enough visual information for prediction."
-        )
-
-
-def load_image_from_bytes(image_bytes: bytes) -> Image.Image:
-    """
-    Convert uploaded image bytes into a PIL RGB image.
-    """
-
-    try:
-        image = Image.open(BytesIO(image_bytes))
-        return image.convert("RGB")
-
-    except UnidentifiedImageError as exc:
-        raise InvalidImageError(
-            "Uploaded file is not a valid image."
-        ) from exc
-
-
-def preprocess_image(image: Image.Image) -> np.ndarray:
-    """
-    Prepare image for TensorFlow prediction.
-    """
-
-    image = image.resize(IMAGE_SIZE)
-
-    image_array = np.array(image).astype("float32")
-
-    if PREPROCESSING_MODE == "rescale_0_1":
-        image_array = image_array / 255.0
-    else:
-        raise PredictionError(
-            f"Unsupported preprocessing mode: {PREPROCESSING_MODE}"
-        )
-
-    image_array = np.expand_dims(
-        image_array,
-        axis=0,
-    )
-
-    return image_array
+from app.common.exceptions import (
+    InvalidImageError,
+    PredictionError,
+)
 
 
 def _predict_probability(
