@@ -7,8 +7,9 @@ from fastapi import (
     status,
 )
 from app.config import ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES
-from app.freshness.predictor import InvalidImageError, PredictionError, predict
+from app.freshness.predictor import predict
 from app.freshness.schemas import PredictionResponse
+from app.common.exceptions import InvalidImageError, PredictionError
 
 router = APIRouter(
     prefix="/predict",

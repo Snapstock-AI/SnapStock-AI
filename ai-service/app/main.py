@@ -21,8 +21,6 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Cleanup can be added later if needed.
-
 
 app = FastAPI(
     title="SnapStock-AI Service",
