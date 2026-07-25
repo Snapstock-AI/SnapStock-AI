@@ -39,11 +39,9 @@ def analyze_image(
                 class_name=fruit.class_name,
                 confidence=fruit.confidence,
                 bounding_box=fruit.bounding_box,
-                freshness=prediction["freshness"],
-                freshness_confidence=prediction["confidence"],
-                freshness_confidence_percent=prediction[
-                    "confidence_percent"
-                ],
+                freshness=prediction.freshness,
+                freshness_confidence=prediction.confidence,
+                freshness_confidence_percent=prediction.confidence_percent,
             )
         )
 

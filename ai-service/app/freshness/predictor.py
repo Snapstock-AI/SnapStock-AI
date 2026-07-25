@@ -18,6 +18,7 @@ from app.common.image_utils import (
     preprocess_image,
 
 )
+from app.freshness.schemas import PredictionResponse
 
 from app.common.exceptions import (
     InvalidImageError,
@@ -59,7 +60,7 @@ def _predict_probability(
 
 def _build_prediction_result(
     probability: float,
-) -> dict:
+) -> PredictionResponse:
     """
     Convert the probability into the final prediction response.
     """
@@ -76,22 +77,22 @@ def _build_prediction_result(
         2,
     )
 
-    return {
-        "freshness": freshness,
-        "confidence": confidence,
-        "confidence_percent": confidence_percent,
-        "model": MODEL_NAME,
-        "message": (
+    return PredictionResponse(
+        freshness=freshness,
+        confidence=confidence,
+        confidence_percent=confidence_percent,
+        model=MODEL_NAME,
+        message=(
             f"Fruit predicted as {freshness} "
             f"with {confidence_percent}% confidence"
         ),
-    }
+    )
 
 
 def predict(
     model: Model,
     image_bytes: bytes,
-) -> dict:
+) -> PredictionResponse:
     """
     Predict freshness from uploaded image bytes.
     """
@@ -113,7 +114,7 @@ def predict(
 def predict_crop(
     model: Model,
     crop: np.ndarray,
-) -> dict:
+) -> PredictionResponse:
     """
     Predict freshness from a YOLO detected crop.
     """
