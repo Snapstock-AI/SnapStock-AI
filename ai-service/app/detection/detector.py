@@ -21,10 +21,14 @@ from app.detection.internal_models import (
     InternalDetectionResult,
 )
 
+from app.common.image_utils import (
+    pil_to_opencv,
+    load_image_from_bytes,
+)
 
-
-class InvalidDetectionImageError(ValueError):
-    """Raised when the provided file is not a valid image."""
+from app.common.exceptions import (
+    InvalidDetectionImageError
+)
 
 
 _inference_lock = Lock()
@@ -51,15 +55,8 @@ def detect_fruits(
         )
 
     try:
-        image = Image.open(
-            BytesIO(image_bytes)
-        ).convert("RGB")
-
-        # Convert PIL image to OpenCV image
-        opencv_image = cv2.cvtColor(
-            np.array(image),
-            cv2.COLOR_RGB2BGR,
-        )
+        image = load_image_from_bytes(image_bytes)
+        opencv_image = pil_to_opencv(image)
 
     except (UnidentifiedImageError, OSError) as error:
         raise InvalidDetectionImageError(
@@ -126,8 +123,6 @@ def detect_fruits(
 
             if crop.size == 0:
                 continue
-
-            
 
             detections.append(
                 DetectedCrop(

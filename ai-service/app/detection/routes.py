@@ -19,14 +19,13 @@ from app.config import (
     YOLO_CONFIDENCE_THRESHOLD,
 )
 from app.detection.detector import (
-    InvalidDetectionImageError,
     detect_fruits,
 )
 from app.detection.schemas import (
     DetectionResult,
     DetectedFruit,
 )
-
+from app.common.exceptions import InvalidDetectionImageError
 
 router = APIRouter(
     prefix="/detect",
