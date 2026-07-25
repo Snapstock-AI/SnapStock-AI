@@ -7,16 +7,19 @@ import {
   LogOut,
   Package,
   Settings,
+  Warehouse,
 } from 'lucide-react'
 import Logo from '@/components/Logo'
 import ThemeToggle from '@/components/ThemeToggle'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 
+
 const sidebarLinks = [
   { to: '/dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/dashboard/inventory', label: 'Inventory', icon: Package },
   { to: '/dashboard/scans', label: 'Scans', icon: Camera },
+   { to: "/dashboard/shelves", label: "Shelves", icon: Warehouse },
   { to: '/dashboard/alerts', label: 'Alerts', icon: AlertTriangle },
   { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/dashboard/settings', label: 'Settings', icon: Settings },
@@ -96,7 +99,7 @@ export default function DashboardLayout() {
 
       {/* Mobile bottom nav — app-like */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-surface-elevated/95 backdrop-blur-md safe-bottom md:hidden">
-        {sidebarLinks.slice(0, 5).map(({ to, label, icon: Icon, end }) => (
+        {sidebarLinks.slice(0, 6).map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
