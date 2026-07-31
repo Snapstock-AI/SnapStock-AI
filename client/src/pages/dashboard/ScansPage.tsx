@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Camera, Upload } from "lucide-react";
 import { analyzeImage } from "../../lib/detection";
 import type { DetectionResult } from "../../lib/detection";
@@ -47,6 +47,13 @@ export default function ScansPage() {
   const [showCamera, setShowCamera] = useState(false);
   const [selectedShelf, setSelectedShelf] = useState<Shelf | null>(null);
 
+  const [imageSize, setImageSize] = useState({
+    width: 0,
+    height: 0,
+  });
+
+  const imageRef = useRef<HTMLImageElement | null>(null);
+
    const showError = (message: string) => {
   setError(message);
 
@@ -71,7 +78,7 @@ export default function ScansPage() {
     setError("");
 
     const data = await analyzeImage(file, shelf);
-
+  
     setResult(data);
 
   } finally {
@@ -94,10 +101,7 @@ export default function ScansPage() {
 
     setError("");
     
-    await analyzeSelectedImage(
-      file,
-      selectedShelf
-    );
+   
 
 
   };
@@ -123,7 +127,7 @@ export default function ScansPage() {
         </label>
 
 
-        <select
+        <select 
           value={selectedShelf?.id || ""}
           onChange={(e)=> {
             const shelf = shelves.find(
@@ -132,13 +136,13 @@ export default function ScansPage() {
 
             setSelectedShelf(shelf || null);
           }}
-          className="border p-2 rounded w-full inline-flex items-center justify-center  rounded-full px-6 py-3 text-sm  "
+          className="border p-2 rounded w-full inline-flex items-center justify-center  rounded-full px-3 py-2 text-sm  "
         >
-
-        <option value="">
-          Select a Shelf
-        </option>
-
+          
+              <option value="" >
+                Select a Shelf
+              </option>
+        
 
         {shelves.map((shelf)=>(
           <option
@@ -345,25 +349,101 @@ export default function ScansPage() {
       )}
 
       {selectedImage && (
-  <div className="relative rounded-xl overflow-hidden">
-    <img
-      src={URL.createObjectURL(selectedImage)}
-      alt="Selected"
-      className="mx-auto max-h-80 w-auto rounded-xl border border-border object-contain"
-    />
+        <div className="relative mx-auto w-fit rounded-xl overflow-hidden">
+        <img
+            ref={imageRef}
+            src={URL.createObjectURL(selectedImage)}
+            alt="Selected"
+            onLoad={() => {
 
-    {loading && (
-      <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent" />
-          <p className="text-white font-medium">
-            Analyzing...
-          </p>
-        </div>
+              if(imageRef.current){
+
+                setImageSize({
+                  width: imageRef.current.clientWidth,
+                  height: imageRef.current.clientHeight,
+                });
+
+              }
+
+            }}
+            className="mx-auto max-h-80 w-auto rounded-xl border border-border object-contain"
+          />
+
+          {result?.detections.map((item,index)=>{
+
+            const scaleX =
+              imageSize.width / result.image_width;
+
+            const scaleY =
+              imageSize.height / result.image_height;
+
+
+            return (
+
+              <div
+
+                key={index}
+
+                className="absolute border-2 border-red-500"
+
+                style={{
+
+                  left:
+                  item.bounding_box.x1 * scaleX,
+
+                  top:
+                  item.bounding_box.y1 * scaleY,
+
+
+                  width:
+                  (item.bounding_box.x2 -
+                  item.bounding_box.x1)
+                  * scaleX,
+
+
+                  height:
+                  (item.bounding_box.y2 -
+                  item.bounding_box.y1)
+                  * scaleY,
+
+                }}
+
+              >
+
+                <span
+                  className="
+                  bg-red-500
+                  text-white
+                  text-xs
+                  px-1
+                  "
+                >
+                  #{index + 1}-{item.freshness}
+                </span>
+                
+
+
+              </div>
+
+            );
+
+          })}
+          
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent" />
+                <p className="text-white font-medium">
+                  Analyzing...
+                </p>
+              </div>
+            </div>
+          )}
       </div>
-    )}
-      </div>
-  )}
+      )}
+      
+
+      
 
       <div className="space-y-6">
         {error && (
@@ -392,7 +472,7 @@ export default function ScansPage() {
       
       
 
-      
+    
       {result && (
         <div className="rounded-2xl border border-border bg-surface-elevated p-6">
 
@@ -412,12 +492,14 @@ export default function ScansPage() {
           <div className="mt-6 space-y-4">
 
             {result.detections.map((item, index) => (
+                
+            
               <div
                 key={index}
                 className="rounded-xl bg-surface-muted p-4"
               >
                 <p className="text-lg font-semibold">
-                  {item.class_name}
+                  #{index+1} {item.class_name}
                 </p>
 
                 <p className="text-sm">
@@ -440,8 +522,10 @@ export default function ScansPage() {
                     {item.freshness_confidence_percent.toFixed(2)}%
                   </span>
                 </p>
-              </div>
+            </div>
+            
             ))}
+          
 
           </div>
         </div>

@@ -32,7 +32,7 @@ export class DetectionService {
       }
     );
 
-
+    
     return response.data;
   }
 

@@ -4,7 +4,10 @@ const API_URL =
 
 
 export type DetectionResult = {
-     shelf?: Shelf;
+     shelf: Shelf;
+
+  image_width: number;
+  image_height: number;
   total_count: number;
 
   counts: Record<string, number>;
