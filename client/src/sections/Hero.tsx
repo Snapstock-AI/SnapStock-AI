@@ -20,7 +20,7 @@ export default function Hero() {
           </h1>
 
           <p className="mt-6 max-w-lg text-base leading-relaxed text-muted md:text-lg">
-            FreshTrack turns a smartphone camera into a real-time inventory and freshness
+            SnapStock-AI turns a smartphone camera into a real-time inventory and freshness
             auditor. No hardware. No barcodes. Just point, scan, and stop losing produce to
             spoilage.
           </p>

@@ -29,7 +29,7 @@ export default function Login() {
     <AuthLayout>
       <div className="w-full max-w-md">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand-500">Welcome back</p>
-        <h1 className="mt-3 font-serif text-3xl font-semibold md:text-4xl">Sign in to FreshTrack</h1>
+        <h1 className="mt-3 font-serif text-3xl font-semibold md:text-4xl">Sign in to SnapStock-AI</h1>
         <p className="mt-3 text-sm text-muted">
           Continue scanning shelves and tracking freshness across your stores.
         </p>
@@ -94,7 +94,7 @@ export default function Login() {
         </form>
 
         <p className="mt-8 text-center text-sm text-muted">
-          New to FreshTrack?{' '}
+          New to SnapStock-AI?{' '}
           <Link to="/signup" className="font-medium text-brand-500 hover:underline">
             Create an account
           </Link>
