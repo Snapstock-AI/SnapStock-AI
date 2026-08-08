@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="grid gap-10 md:grid-cols-4">
           <div className="md:col-span-2">
-            <p className="font-serif text-xl font-semibold">FreshTrack</p>
+            <p className="font-serif text-xl font-semibold">SnapStock-AI</p>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted">
               Computer vision inventory and freshness monitoring for the corner shop, the fruit
               stall, the neighborhood grocer.
@@ -33,7 +33,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 border-t border-border pt-6 text-center text-xs text-muted">
-          © {new Date().getFullYear()} FreshTrack · SnapStock-AI · PID 5. Made for small-scale retailers.
+          © {new Date().getFullYear()} SnapStock-AI · PID 5. Made for small-scale retailers.
         </div>
       </div>
     </footer>

@@ -26,7 +26,7 @@ export default function Logo({ className, showText = true, variant = 'default' }
             variant === 'light' ? 'text-white' : 'text-foreground'
           )}
         >
-          FreshTrack
+          SnapStock-AI
         </span>
       )}
     </>
