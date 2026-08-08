@@ -76,7 +76,7 @@ export default function DashboardLayout() {
       {/* Mobile top bar */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-surface-elevated/95 px-4 backdrop-blur-md safe-top md:hidden">
         <Logo showText={false} />
-        <span className="font-serif text-lg font-semibold">FreshTrack</span>
+        <span className="font-serif text-lg font-semibold">SnapStock-AI</span>
         <ThemeToggle />
       </header>
 
