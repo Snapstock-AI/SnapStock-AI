@@ -2,7 +2,7 @@ const steps = [
   {
     num: '01',
     title: 'Snap the shelf',
-    description: 'Open FreshTrack and capture a photo of your produce section.',
+    description: 'Open SnapStock-AI and capture a photo of your produce section.',
   },
   {
     num: '02',
