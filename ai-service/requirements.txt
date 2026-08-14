@@ -5,3 +5,7 @@ pillow
 tensorflow
 ultralytics
 huggingface_hub
+pytest
+pytest-cov
+pytest-mock
+httpx
