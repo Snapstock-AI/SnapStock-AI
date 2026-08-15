@@ -15,11 +15,12 @@ from app.config import (
     PREDICTION_THRESHOLD,
 )
 from app.freshness.predictor import (
+    predict,
     _build_prediction_result,
     _predict_probability,
     predict_crop,
 )
-
+from app.common.image_utils import image_to_bytes
 
 def create_test_image() -> Image.Image:
     """
@@ -169,3 +170,66 @@ def test_predict_crop_empty_array_raises_error():
             model,
             empty_crop,
         )
+
+def test_predict_success():
+    model = Mock()
+
+    model.predict.return_value = np.array(
+        [[0.80]],
+        dtype=np.float32,
+    )
+
+    image = create_test_image()
+    image_bytes = image_to_bytes(
+        image,
+        "JPEG",
+    )
+
+    result = predict(
+        model,
+        image_bytes,
+    )
+
+    assert result.freshness == POSITIVE_CLASS_LABEL
+
+    assert result.confidence == pytest.approx(
+        0.80,
+        abs=0.01,
+    )
+
+    assert result.model == MODEL_NAME
+
+    model.predict.assert_called_once()
+
+def test_predict_crop_success():
+    model = Mock()
+
+    model.predict.return_value = np.array(
+        [[0.75]],
+        dtype=np.float32,
+    )
+
+    # OpenCV-style BGR crop with visual variation
+    crop = np.zeros(
+        (100, 100, 3),
+        dtype=np.uint8,
+    )
+
+    crop[:50] = [0, 0, 255]
+    crop[50:] = [0, 255, 0]
+
+    result = predict_crop(
+        model,
+        crop,
+    )
+
+    assert result.freshness == POSITIVE_CLASS_LABEL
+
+    assert result.confidence == pytest.approx(
+        0.75,
+        abs=0.01,
+    )
+
+    assert result.model == MODEL_NAME
+
+    model.predict.assert_called_once()
