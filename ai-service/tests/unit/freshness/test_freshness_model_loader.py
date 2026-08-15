@@ -4,7 +4,6 @@ import pytest
 
 import app.freshness.model_loader as model_loader
 
-
 def test_get_model_uses_existing_model(monkeypatch, tmp_path):
     """
     If the normal model already exists locally,
@@ -314,3 +313,4 @@ def test_get_model_tensorflow_load_failure(
         match="Invalid TensorFlow model",
     ):
         model_loader.get_model()
+
