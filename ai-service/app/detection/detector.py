@@ -14,7 +14,6 @@ from app.config import (
 )
 from app.detection.schemas import (
     BoundingBox,
-    DetectionResponse,
 )
 from app.detection.internal_models import (
     DetectedCrop,
@@ -77,13 +76,11 @@ def detect_fruits(
         )
 
     if not results:
-        return DetectionResponse(
-            total_count=0,
-            counts={},
-            detections=[],
+        return InternalDetectionResult(
             image_width=image_width,
             image_height=image_height,
             model=DETECTION_MODEL_NAME,
+            detections=[],
         )
 
     result = results[0]
