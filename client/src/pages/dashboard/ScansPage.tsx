@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Camera, Upload } from "lucide-react";
 import { analyzeImage } from "../../lib/detection";
 import type { DetectionResult } from "../../lib/detection";
 import CameraScanner from "../../components/scanner/CameraScanner";
 import type { Shelf } from "../../types/shelf";
+import { useAuth } from "@/context/AuthContext";
 
 
 const scanHistory = [
@@ -15,24 +16,24 @@ const scanHistory = [
 
 
 export default function ScansPage() {
-
   const shelves: Shelf[] = [
   {
-    id: "shelf-a",
+    id: "550e8400-e29b-41d4-a716-446655440001",
     name: "Shelf A - Bananas",
     category: "Fruit",
   },
   {
-    id: "shelf-b",
+    id: "550e8400-e29b-41d4-a716-446655440002",
     name: "Shelf B - Tomatoes",
     category: "Vegetable",
   },
   {
-    id: "shelf-c",
+    id: "550e8400-e29b-41d4-a716-446655440003",
     name: "Shelf C - Apples",
     category: "Fruit",
   },
 ];
+  
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
@@ -46,6 +47,18 @@ export default function ScansPage() {
 
   const [showCamera, setShowCamera] = useState(false);
   const [selectedShelf, setSelectedShelf] = useState<Shelf | null>(null);
+
+  const [imageSize, setImageSize] = useState({
+    width: 0,
+    height: 0,
+  });
+
+  const imageRef = useRef<HTMLImageElement | null>(null);
+
+  const { token } = useAuth();
+
+  const TEST_BUSINESS_ID =
+  "550e8400-e29b-41d4-a716-446655440000";
 
    const showError = (message: string) => {
   setError(message);
@@ -70,9 +83,28 @@ export default function ScansPage() {
     setLoading(true);
     setError("");
 
-    const data = await analyzeImage(file, shelf);
+    if (!token) {
+      showError("You are not authenticated.");
+      return;
+    }
 
+    const data = await analyzeImage(
+      file,
+      shelf,
+      TEST_BUSINESS_ID,
+      token
+    );
+    console.log("========== SCAN PAGE RESULT ==========");
+console.log(data);
+
+    
+  
     setResult(data);
+  } catch (error: any) {
+
+    showError(
+      error.message || "Image analysis failed."
+    );  
 
   } finally {
     setLoading(false);
@@ -94,10 +126,7 @@ export default function ScansPage() {
 
     setError("");
     
-    await analyzeSelectedImage(
-      file,
-      selectedShelf
-    );
+   
 
 
   };
@@ -123,7 +152,7 @@ export default function ScansPage() {
         </label>
 
 
-        <select
+        <select 
           value={selectedShelf?.id || ""}
           onChange={(e)=> {
             const shelf = shelves.find(
@@ -132,13 +161,13 @@ export default function ScansPage() {
 
             setSelectedShelf(shelf || null);
           }}
-          className="border p-2 rounded w-full inline-flex items-center justify-center  rounded-full px-6 py-3 text-sm  "
+          className="border p-2 rounded w-full inline-flex items-center justify-center  rounded-full px-3 py-2 text-sm  "
         >
-
-        <option value="">
-          Select a Shelf
-        </option>
-
+          
+              <option value="" >
+                Select a Shelf
+              </option>
+        
 
         {shelves.map((shelf)=>(
           <option
@@ -312,25 +341,22 @@ export default function ScansPage() {
 
                     onClick={async () => {
 
-                        setSelectedImage(previewImage);
+  if (!selectedShelf) {
+    showError("Please select a shelf first.");
+    return;
+  }
 
-                        setResult(null);
+  setSelectedImage(previewImage);
+  setResult(null);
+  setError("");
 
-                        setError("");
+  await analyzeSelectedImage(
+    previewImage,
+    selectedShelf
+  );
 
-                        if (!selectedShelf) {
-                            showError("Please select a shelf first.");
-                            return;
-                          }
-
-                          await analyzeSelectedImage(
-                            previewImage,
-                            selectedShelf
-                          );
-
-                        setPreviewImage(null);
-
-                    }}
+  setPreviewImage(null);
+}}
 
                     className="rounded-full bg-brand-500 px-6 py-3 font-semibold text-white hover:bg-brand-600"
 
@@ -345,25 +371,101 @@ export default function ScansPage() {
       )}
 
       {selectedImage && (
-  <div className="relative rounded-xl overflow-hidden">
-    <img
-      src={URL.createObjectURL(selectedImage)}
-      alt="Selected"
-      className="mx-auto max-h-80 w-auto rounded-xl border border-border object-contain"
-    />
+        <div className="relative mx-auto w-fit rounded-xl overflow-hidden">
+        <img
+            ref={imageRef}
+            src={URL.createObjectURL(selectedImage)}
+            alt="Selected"
+            onLoad={() => {
 
-    {loading && (
-      <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent" />
-          <p className="text-white font-medium">
-            Analyzing...
-          </p>
-        </div>
+              if(imageRef.current){
+
+                setImageSize({
+                  width: imageRef.current.clientWidth,
+                  height: imageRef.current.clientHeight,
+                });
+
+              }
+
+            }}
+            className="mx-auto max-h-80 w-auto rounded-xl border border-border object-contain"
+          />
+
+          {result?.detections.map((item,index)=>{
+
+            const scaleX =
+              imageSize.width / result.image_width;
+
+            const scaleY =
+              imageSize.height / result.image_height;
+
+
+            return (
+
+              <div
+
+                key={index}
+
+                className="absolute border-2 border-red-500"
+
+                style={{
+
+                  left:
+                  item.bounding_box.x1 * scaleX,
+
+                  top:
+                  item.bounding_box.y1 * scaleY,
+
+
+                  width:
+                  (item.bounding_box.x2 -
+                  item.bounding_box.x1)
+                  * scaleX,
+
+
+                  height:
+                  (item.bounding_box.y2 -
+                  item.bounding_box.y1)
+                  * scaleY,
+
+                }}
+
+              >
+
+                <span
+                  className="
+                  bg-red-500
+                  text-white
+                  text-xs
+                  px-1
+                  "
+                >
+                  #{index + 1}-{item.freshness}
+                </span>
+                
+
+
+              </div>
+
+            );
+
+          })}
+          
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent" />
+                <p className="text-white font-medium">
+                  Analyzing...
+                </p>
+              </div>
+            </div>
+          )}
       </div>
-    )}
-      </div>
-  )}
+      )}
+      
+
+      
 
       <div className="space-y-6">
         {error && (
@@ -392,61 +494,127 @@ export default function ScansPage() {
       
       
 
-      
+    
       {result && (
-        <div className="rounded-2xl border border-border bg-surface-elevated p-6">
+  <div className="rounded-2xl border border-border bg-surface-elevated p-6">
 
-          <h2 className="font-serif text-xl font-semibold">
-            Scan Result
-          </h2>
-          {result.shelf && (
-            <p className="mt-2 text-sm text-muted">
-              Shelf: {result.shelf.name}
-            </p>
-            )}
+    <h2 className="font-serif text-xl font-semibold">
+      Scan Result
+    </h2>
 
-          <p className="mt-2 text-sm text-muted">
-            Total detected items: {result.total_count}
-          </p>
+    {result.shelf && (
+      <p className="mt-2 text-sm text-muted">
+        Shelf: {result.shelf.name}
+      </p>
+    )}
 
-          <div className="mt-6 space-y-4">
+   
+    <div className="mt-6 grid gap-4 md:grid-cols-2">
 
-            {result.detections.map((item, index) => (
+  
+      <div className="rounded-2xl border border-border bg-surface-muted p-5">
+        <p className="text-sm text-muted">
+          Total Items
+        </p>
+
+        <p className="mt-2 font-serif text-3xl font-semibold">
+          {result.total_count}
+        </p>
+
+        <p className="text-sm text-muted">
+          {result.total_count === 1 ? "item" : "items"} detected
+        </p>
+      </div>
+
+
+     
+      <div className="rounded-2xl border border-border bg-surface-muted p-5">
+
+        <p className="text-sm text-muted">
+          Detected Items
+        </p>
+
+        <div className="mt-3 space-y-2">
+
+          {Object.entries(result.counts).map(
+            ([productName, count]) => (
+
               <div
-                key={index}
-                className="rounded-xl bg-surface-muted p-4"
+                key={productName}
+                className="flex items-center justify-between"
               >
-                <p className="text-lg font-semibold">
-                  {item.class_name}
-                </p>
 
-                <p className="text-sm">
-                  Freshness:
-                  <span className="ml-2 font-medium">
-                    {item.freshness}
-                  </span>
-                </p>
+                <span className="text-sm font-medium capitalize">
+                  {productName}
+                </span>
 
-                <p className="text-sm">
-                  Detection Confidence:
-                  <span className="ml-2">
-                    {(item.confidence * 100).toFixed(2)}%
-                  </span>
-                </p>
+                <span className="text-sm text-muted">
+                  {count} {count === 1 ? "item" : "items"}
+                </span>
 
-                <p className="text-sm">
-                  Freshness Confidence:
-                  <span className="ml-2">
-                    {item.freshness_confidence_percent.toFixed(2)}%
-                  </span>
-                </p>
               </div>
-            ))}
+
+            )
+          )}
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+ 
+    <div className="mt-6">
+
+      <h3 className="mb-4 font-serif text-lg font-semibold">
+        Detected Items
+      </h3>
+
+      <div className="space-y-4">
+
+        {result.detections.map((item, index) => (
+
+          <div
+            key={item.id || index}
+            className="rounded-xl bg-surface-muted p-4"
+          >
+
+            <p className="text-lg font-semibold">
+              #{index + 1} {item.class_name}
+            </p>
+
+            <p className="text-sm">
+              Freshness:
+              <span className="ml-2 font-medium">
+                {item.freshness}
+              </span>
+            </p>
+
+            <p className="text-sm">
+              Detection Confidence:
+              <span className="ml-2">
+                {(item.confidence * 100).toFixed(2)}%
+              </span>
+            </p>
+
+            <p className="text-sm">
+              Freshness Confidence:
+              <span className="ml-2">
+                {item.freshness_confidence_percent.toFixed(2)}%
+              </span>
+            </p>
 
           </div>
-        </div>
-      )}
 
+        ))}
+
+      </div>
+
+    </div>
+
+  </div>
+)}
       <div>
 
         <h2 className="mb-4 font-serif text-lg font-semibold">

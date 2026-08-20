@@ -48,6 +48,8 @@ def analyze_image(
         counts[fruit.class_name] += 1
 
     return AnalysisResponse(
+        image_width=detection_result.image_width,
+        image_height=detection_result.image_height,
         total_count=len(detections),
         counts=dict(counts),
         detections=detections,
