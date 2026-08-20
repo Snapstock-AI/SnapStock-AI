@@ -1,31 +1,22 @@
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { Plus } from "lucide-react";
 
 import ShelfCard from "../../components/shelf/ShelfCard";
 import type { Shelf } from "../../types/shelf";
 import ShelfModal from "../../components/shelf/ShelfModal";
 import DeleteShelfModal from "@/components/shelf/DeleteShelfModel";
+import {
+  getShelves,
+  createShelf,
+  updateShelf,
+  deleteShelf,
+} from "../../lib/shelf";
 
+import { useAuth } from "@/context/AuthContext";
 
 export default function ShelvesPage() {
 
-  const [shelves, setShelves] = useState<Shelf[]>([
-    {
-      id: "1",
-      name: "Shelf A - Bananas",
-      category: "Fruit",
-    },
-    {
-      id: "2",
-      name: "Shelf B - Tomatoes",
-      category: "Vegetable",
-    },
-    {
-      id: "3",
-      name: "Shelf C - Apples",
-      category: "Fruit",
-    },
-  ]);
+  const [shelves, setShelves] = useState<Shelf[]>([])
 
 
   const [showShelfModal,setShowShelfModal] =
@@ -38,50 +29,124 @@ export default function ShelvesPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
 const [shelfToDelete, setShelfToDelete] =
-  useState<Shelf | undefined>(undefined);
+    useState<Shelf | undefined>(undefined);
+  
+  const { token } = useAuth();
+
+useEffect(() => {
+
+  if (!token) return;
+
+  const loadShelves = async () => {
+
+    try {
+
+      const data = await getShelves(token);
+
+      setShelves(data);
+
+    } catch (error: any) {
+
+      console.error(
+        "Failed to load shelves:",
+        error
+      );
+
+    }
+
+  };
+
+  loadShelves();
+
+}, [token]);
 
 
 
-  const handleShelfSubmit = (shelf: Shelf) => {
+  const handleShelfSubmit = async (shelf: Shelf) => {
 
-    if(selectedShelf) {
+  if (!token) {
+    console.error("User is not authenticated");
+    return;
+  }
 
-      
-      setShelves((prev)=>
-        prev.map((item)=>
-          item.id === shelf.id
-            ? shelf
+  try {
+
+    if (selectedShelf) {
+
+      const updatedShelf = await updateShelf(
+        shelf.id,
+        shelf.name,
+        shelf.category,
+        token
+      );
+
+      setShelves((prev) =>
+        prev.map((item) =>
+          item.id === updatedShelf.id
+            ? updatedShelf
             : item
         )
       );
 
-    }
-    else {
+    } else {
 
-   
-      setShelves((prev)=>[
+      const newShelf = await createShelf(
+        shelf.name,
+        shelf.category,
+        token
+      );
+
+      setShelves((prev) => [
         ...prev,
-        shelf
+        newShelf,
       ]);
 
     }
 
-   
+    setShowShelfModal(false);
+    setSelectedShelf(undefined);
 
-  };
+  } catch (error: any) {
 
-  const handleDeleteShelf = () => {
+    console.error(
+      "Failed to save shelf:",
+      error
+    );
 
-  if (!shelfToDelete) return;
+  }
+};
 
-  setShelves((prev) =>
-    prev.filter(
-      (shelf) => shelf.id !== shelfToDelete.id
-    )
-  );
+  const handleDeleteShelf = async () => {
 
-  setShowDeleteModal(false);
-  setShelfToDelete(undefined);
+  if (!shelfToDelete || !token) {
+    return;
+  }
+
+  try {
+
+    await deleteShelf(
+      shelfToDelete.id,
+      token
+    );
+
+    setShelves((prev) =>
+      prev.filter(
+        (shelf) =>
+          shelf.id !== shelfToDelete.id
+      )
+    );
+
+    setShowDeleteModal(false);
+    setShelfToDelete(undefined);
+
+  } catch (error: any) {
+
+    console.error(
+      "Failed to delete shelf:",
+      error
+    );
+
+  }
 };
 
 

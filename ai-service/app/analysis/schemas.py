@@ -24,6 +24,10 @@ class FruitAnalysis(BaseModel):
 
 
 class AnalysisResponse(BaseModel):
+    image_width: int
+
+    image_height: int
+    
     total_count: int
 
     counts: dict[str, int]

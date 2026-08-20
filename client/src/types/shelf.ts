@@ -9,6 +9,7 @@ export type ShelfCategory = typeof SHELF_CATEGORIES[number];
 
 export interface Shelf {
   id: string;
+  business_id?: string;
   name: string;
   category: string;
 }
