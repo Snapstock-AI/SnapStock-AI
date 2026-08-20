@@ -4,6 +4,7 @@ import { analyzeImage } from "../../lib/detection";
 import type { DetectionResult } from "../../lib/detection";
 import CameraScanner from "../../components/scanner/CameraScanner";
 import type { Shelf } from "../../types/shelf";
+import { useAuth } from "@/context/AuthContext";
 
 
 const scanHistory = [
@@ -15,24 +16,24 @@ const scanHistory = [
 
 
 export default function ScansPage() {
-
   const shelves: Shelf[] = [
   {
-    id: "shelf-a",
+    id: "550e8400-e29b-41d4-a716-446655440001",
     name: "Shelf A - Bananas",
     category: "Fruit",
   },
   {
-    id: "shelf-b",
+    id: "550e8400-e29b-41d4-a716-446655440002",
     name: "Shelf B - Tomatoes",
     category: "Vegetable",
   },
   {
-    id: "shelf-c",
+    id: "550e8400-e29b-41d4-a716-446655440003",
     name: "Shelf C - Apples",
     category: "Fruit",
   },
 ];
+  
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
@@ -53,6 +54,11 @@ export default function ScansPage() {
   });
 
   const imageRef = useRef<HTMLImageElement | null>(null);
+
+  const { token } = useAuth();
+
+  const TEST_BUSINESS_ID =
+  "550e8400-e29b-41d4-a716-446655440000";
 
    const showError = (message: string) => {
   setError(message);
@@ -77,9 +83,28 @@ export default function ScansPage() {
     setLoading(true);
     setError("");
 
-    const data = await analyzeImage(file, shelf);
+    if (!token) {
+      showError("You are not authenticated.");
+      return;
+    }
+
+    const data = await analyzeImage(
+      file,
+      shelf,
+      TEST_BUSINESS_ID,
+      token
+    );
+    console.log("========== SCAN PAGE RESULT ==========");
+console.log(data);
+
+    
   
     setResult(data);
+  } catch (error: any) {
+
+    showError(
+      error.message || "Image analysis failed."
+    );  
 
   } finally {
     setLoading(false);
@@ -316,25 +341,22 @@ export default function ScansPage() {
 
                     onClick={async () => {
 
-                        setSelectedImage(previewImage);
+  if (!selectedShelf) {
+    showError("Please select a shelf first.");
+    return;
+  }
 
-                        setResult(null);
+  setSelectedImage(previewImage);
+  setResult(null);
+  setError("");
 
-                        setError("");
+  await analyzeSelectedImage(
+    previewImage,
+    selectedShelf
+  );
 
-                        if (!selectedShelf) {
-                            showError("Please select a shelf first.");
-                            return;
-                          }
-
-                          await analyzeSelectedImage(
-                            previewImage,
-                            selectedShelf
-                          );
-
-                        setPreviewImage(null);
-
-                    }}
+  setPreviewImage(null);
+}}
 
                     className="rounded-full bg-brand-500 px-6 py-3 font-semibold text-white hover:bg-brand-600"
 
@@ -474,63 +496,125 @@ export default function ScansPage() {
 
     
       {result && (
-        <div className="rounded-2xl border border-border bg-surface-elevated p-6">
+  <div className="rounded-2xl border border-border bg-surface-elevated p-6">
 
-          <h2 className="font-serif text-xl font-semibold">
-            Scan Result
-          </h2>
-          {result.shelf && (
-            <p className="mt-2 text-sm text-muted">
-              Shelf: {result.shelf.name}
-            </p>
-            )}
+    <h2 className="font-serif text-xl font-semibold">
+      Scan Result
+    </h2>
 
-          <p className="mt-2 text-sm text-muted">
-            Total detected items: {result.total_count}
-          </p>
+    {result.shelf && (
+      <p className="mt-2 text-sm text-muted">
+        Shelf: {result.shelf.name}
+      </p>
+    )}
 
-          <div className="mt-6 space-y-4">
+   
+    <div className="mt-6 grid gap-4 md:grid-cols-2">
 
-            {result.detections.map((item, index) => (
-                
-            
+  
+      <div className="rounded-2xl border border-border bg-surface-muted p-5">
+        <p className="text-sm text-muted">
+          Total Items
+        </p>
+
+        <p className="mt-2 font-serif text-3xl font-semibold">
+          {result.total_count}
+        </p>
+
+        <p className="text-sm text-muted">
+          {result.total_count === 1 ? "item" : "items"} detected
+        </p>
+      </div>
+
+
+     
+      <div className="rounded-2xl border border-border bg-surface-muted p-5">
+
+        <p className="text-sm text-muted">
+          Detected Items
+        </p>
+
+        <div className="mt-3 space-y-2">
+
+          {Object.entries(result.counts).map(
+            ([productName, count]) => (
+
               <div
-                key={index}
-                className="rounded-xl bg-surface-muted p-4"
+                key={productName}
+                className="flex items-center justify-between"
               >
-                <p className="text-lg font-semibold">
-                  #{index+1} {item.class_name}
-                </p>
 
-                <p className="text-sm">
-                  Freshness:
-                  <span className="ml-2 font-medium">
-                    {item.freshness}
-                  </span>
-                </p>
+                <span className="text-sm font-medium capitalize">
+                  {productName}
+                </span>
 
-                <p className="text-sm">
-                  Detection Confidence:
-                  <span className="ml-2">
-                    {(item.confidence * 100).toFixed(2)}%
-                  </span>
-                </p>
+                <span className="text-sm text-muted">
+                  {count} {count === 1 ? "item" : "items"}
+                </span>
 
-                <p className="text-sm">
-                  Freshness Confidence:
-                  <span className="ml-2">
-                    {item.freshness_confidence_percent.toFixed(2)}%
-                  </span>
-                </p>
-            </div>
-            
-            ))}
-          
+              </div>
+
+            )
+          )}
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+ 
+    <div className="mt-6">
+
+      <h3 className="mb-4 font-serif text-lg font-semibold">
+        Detected Items
+      </h3>
+
+      <div className="space-y-4">
+
+        {result.detections.map((item, index) => (
+
+          <div
+            key={item.id || index}
+            className="rounded-xl bg-surface-muted p-4"
+          >
+
+            <p className="text-lg font-semibold">
+              #{index + 1} {item.class_name}
+            </p>
+
+            <p className="text-sm">
+              Freshness:
+              <span className="ml-2 font-medium">
+                {item.freshness}
+              </span>
+            </p>
+
+            <p className="text-sm">
+              Detection Confidence:
+              <span className="ml-2">
+                {(item.confidence * 100).toFixed(2)}%
+              </span>
+            </p>
+
+            <p className="text-sm">
+              Freshness Confidence:
+              <span className="ml-2">
+                {item.freshness_confidence_percent.toFixed(2)}%
+              </span>
+            </p>
 
           </div>
-        </div>
-      )}
 
+        ))}
+
+      </div>
+
+    </div>
+
+  </div>
+)}
       <div>
 
         <h2 className="mb-4 font-serif text-lg font-semibold">

@@ -1,10 +1,12 @@
 import type { Shelf } from "../types/shelf";
+
 const API_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-
 export type DetectionResult = {
-     shelf: Shelf;
+  shelf: Shelf;
+
+  scanId: string;
 
   image_width: number;
   image_height: number;
@@ -13,7 +15,10 @@ export type DetectionResult = {
   counts: Record<string, number>;
 
   detections: {
+    id?: string;
+
     class_name: string;
+
     confidence: number;
 
     bounding_box: {
@@ -33,36 +38,34 @@ export type DetectionResult = {
 
 
 export async function analyzeImage(
-  file: File, shelf:Shelf
+  file: File,
+  shelf: Shelf,
+  businessId: string,
+  token: string
 ): Promise<DetectionResult> {
 
   const formData = new FormData();
 
-  formData.append(
-    "file",
-    file
-    );
-    
-    formData.append(
-  "shelfId",
-  shelf.id
-);
+  // Image
+  formData.append("file", file);
 
-formData.append(
-  "shelfName",
-  shelf.name
-);
+  // Database shelf ID
+  formData.append("shelfId", shelf.id);
 
-formData.append(
-    "category",
-    shelf.category || ""
-);
+  // Temporary business ID
+  formData.append("businessId", businessId);
 
+  
+  
 
   const response = await fetch(
     `${API_URL}/detection/analyze`,
     {
       method: "POST",
+
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
 
       body: formData,
     }
@@ -71,6 +74,9 @@ formData.append(
 
   const body = await response.json();
 
+  console.log("========== FRONTEND API RESPONSE ==========");
+console.log(body);
+
 
   if (!response.ok || body.success === false) {
     throw new Error(
@@ -78,9 +84,12 @@ formData.append(
     );
   }
 
+  console.log("========== FRONTEND DETECTION DATA ==========");
+console.log(body.data);
 
-    return {
-        ...body.data,
-        shelf
-    };
+
+  return {
+    ...body.data,
+    shelf,
+  };
 }
