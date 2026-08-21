@@ -25,7 +25,7 @@ from app.detection.schemas import (
     DetectionResult,
     DetectedFruit,
 )
-from app.common.exceptions import InvalidDetectionImageError
+from app.common.exceptions import InvalidImageError,InvalidDetectionImageError
 
 router = APIRouter(
     prefix="/detect",
@@ -106,7 +106,7 @@ async def detect_objects(
                 for detected_crop in detection_result.detections
             ],
         )
-    except InvalidDetectionImageError as error:
+    except (InvalidDetectionImageError,InvalidImageError) as error:
         raise HTTPException(
             status_code=400,
             detail=str(error),
