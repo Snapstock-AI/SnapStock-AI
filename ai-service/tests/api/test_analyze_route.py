@@ -56,6 +56,8 @@ def setup_models():
 
 def create_analysis_response():
     return AnalysisResponse(
+        image_width=640,
+        image_height=480,
         total_count=2,
         counts={
             "apple": 1,
@@ -175,6 +177,8 @@ def test_analyze_zero_detections(
     monkeypatch,
 ):
     fake_result = AnalysisResponse(
+        image_width=640,
+        image_height=480,
         total_count=0,
         counts={},
         detections=[],
