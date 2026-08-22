@@ -3,6 +3,7 @@ import type { Shelf } from "../types/shelf";
 const API_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+
 export type DetectionResult = {
   shelf: Shelf;
 
@@ -51,27 +52,17 @@ export async function analyzeImage(
 
   const formData = new FormData();
 
- 
   formData.append("file", file);
-
-
   formData.append("shelfId", shelf.id);
-
-
   formData.append("businessId", businessId);
-
-  
-  
 
   const response = await fetch(
     `${API_URL}/detection/analyze`,
     {
       method: "POST",
-
       headers: {
         Authorization: `Bearer ${token}`,
       },
-
       body: formData,
     }
   );
@@ -85,8 +76,6 @@ export async function analyzeImage(
       body.message || "Image analysis failed"
     );
   }
-
-
 
   return {
     ...body.data,
