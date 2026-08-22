@@ -70,8 +70,6 @@ export class DetectionService {
       );
 
 
-  
-
       const formData = new FormData();
 
       formData.append(
