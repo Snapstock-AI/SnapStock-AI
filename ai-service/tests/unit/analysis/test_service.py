@@ -3,7 +3,10 @@ from unittest.mock import Mock
 import numpy as np
 
 from app.analysis.service import analyze_image
-from app.analysis.schemas import AnalysisResponse
+from app.analysis.schemas import (
+    AnalysisResponse,
+    CategorySummary,
+)
 from app.detection.internal_models import (
     DetectedCrop,
     InternalDetectionResult,
@@ -177,7 +180,11 @@ def test_analyze_image_single_detection(
     assert result.total_count == 1
 
     assert result.counts == {
-        "apple": 1
+        "apple": CategorySummary(
+            fresh=1,
+            rotten=0,
+            total=1,
+        )
     }
 
     assert len(result.detections) == 1
@@ -273,8 +280,16 @@ def test_analyze_image_multiple_detections(
     assert result.total_count == 3
 
     assert result.counts == {
-        "apple": 2,
-        "orange": 1,
+        "apple": CategorySummary(
+            fresh=1,
+            rotten=1,
+            total=2,
+        ),
+        "orange": CategorySummary(
+            fresh=1,
+            rotten=0,
+            total=1,
+        ),
     }
 
     assert len(result.detections) == 3
@@ -295,6 +310,73 @@ def test_analyze_image_multiple_detections(
     )
 
     assert mock_predict.call_count == 3
+
+
+# ============================================================
+# Single category, mixed freshness
+# ============================================================
+
+def test_analyze_image_single_category_mixed_freshness(
+    monkeypatch,
+):
+    """
+    One fruit category should still be split into
+    fresh and rotten counts.
+    """
+
+    detection_model = Mock()
+    freshness_model = Mock()
+
+    detection_result = InternalDetectionResult(
+        image_width=640,
+        image_height=480,
+        model="test-yolo",
+        detections=[
+            create_detected_crop(
+                class_name="banana",
+            )
+            for _ in range(4)
+        ],
+    )
+
+    mock_detect = Mock(
+        return_value=detection_result
+    )
+
+    mock_predict = Mock(
+        side_effect=[
+            create_prediction("good"),
+            create_prediction("bad"),
+            create_prediction("good"),
+            create_prediction("good"),
+        ]
+    )
+
+    monkeypatch.setattr(
+        "app.analysis.service.detect_fruits",
+        mock_detect,
+    )
+
+    monkeypatch.setattr(
+        "app.analysis.service.predict_crop",
+        mock_predict,
+    )
+
+    result = analyze_image(
+        detection_model,
+        freshness_model,
+        b"fake-image",
+    )
+
+    assert result.total_count == 4
+
+    assert result.counts == {
+        "banana": CategorySummary(
+            fresh=3,
+            rotten=1,
+            total=4,
+        )
+    }
 
 
 # ============================================================

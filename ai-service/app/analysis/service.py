@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import defaultdict
 from ultralytics import YOLO
 from keras import Model
 from app.detection.detector import detect_fruits
@@ -6,10 +6,14 @@ from app.freshness.predictor import predict_crop
 
 from app.analysis.schemas import (
     AnalysisResponse,
+    CategorySummary,
     FruitAnalysis,
 )
 
-from app.config import YOLO_CONFIDENCE_THRESHOLD
+from app.config import (
+    POSITIVE_CLASS_LABEL,
+    YOLO_CONFIDENCE_THRESHOLD,
+)
 
 
 def analyze_image(
@@ -25,7 +29,7 @@ def analyze_image(
     )
 
     detections = []
-    counts = Counter()
+    counts: dict[str, CategorySummary] = defaultdict(CategorySummary)
 
     for fruit in detection_result.detections:
 
@@ -45,7 +49,14 @@ def analyze_image(
             )
         )
 
-        counts[fruit.class_name] += 1
+        summary = counts[fruit.class_name]
+
+        if prediction.freshness == POSITIVE_CLASS_LABEL:
+            summary.fresh += 1
+        else:
+            summary.rotten += 1
+
+        summary.total += 1
 
     return AnalysisResponse(
         image_width=detection_result.image_width,

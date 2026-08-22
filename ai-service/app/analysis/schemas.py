@@ -23,13 +23,30 @@ class FruitAnalysis(BaseModel):
     freshness_confidence_percent: float
 
 
+class CategorySummary(BaseModel):
+    fresh: int = Field(
+        ge=0,
+        default=0,
+    )
+
+    rotten: int = Field(
+        ge=0,
+        default=0,
+    )
+
+    total: int = Field(
+        ge=0,
+        default=0,
+    )
+
+
 class AnalysisResponse(BaseModel):
     image_width: int
 
     image_height: int
-    
+
     total_count: int
 
-    counts: dict[str, int]
+    counts: dict[str, CategorySummary]
 
     detections: list[FruitAnalysis]
