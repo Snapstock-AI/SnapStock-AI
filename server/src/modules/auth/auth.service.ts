@@ -8,13 +8,64 @@ import {
   ForgotPasswordDTO,
   ResetPasswordDTO,
   ResendVerificationDTO,
+  RefreshTokenDTO,
 } from "./auth.types";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
 } from "../../shared/utils/email";
 
+const ACCESS_TOKEN_TTL = "1d";
+const REFRESH_TOKEN_DAYS = 7;
+
 export class AuthService {
+
+  private static signAccessToken(user: {
+    id: string;
+    email: string;
+    system_role: string;
+  }, sessionId: string) {
+    return jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        system_role: user.system_role,
+        sessionId,
+      },
+      process.env.JWT_SECRET!,
+      { expiresIn: ACCESS_TOKEN_TTL }
+    );
+  }
+
+  private static async createSessionTokens(user: {
+    id: string;
+    email: string;
+    system_role: string;
+    full_name: string;
+  }) {
+    const refreshToken = crypto.randomBytes(48).toString("hex");
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_DAYS);
+
+    const session = await AuthRepository.createSession(
+      user.id,
+      refreshToken,
+      expiresAt
+    );
+
+    const token = AuthService.signAccessToken(user, session.id);
+
+    return {
+      token,
+      refreshToken,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        system_role: user.system_role,
+      },
+    };
+  }
 
   //REGISTER USER
   static async register(data: RegisterDTO) {
@@ -70,31 +121,51 @@ export class AuthService {
       throw new Error("Please verify your email first");
     }
 
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        system_role: user.system_role
-      },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" }
-    );
+    const session = await AuthService.createSessionTokens(user);
 
     return {
       message: "Login successful",
-      token,
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        email: user.email,
-        system_role: user.system_role
-      }
+      ...session,
     };
   }
 
-  static async logout() {
+  static async logout(sessionId?: string) {
+    if (sessionId) {
+      await AuthRepository.revokeSession(sessionId);
+    }
+
     return {
       message: "Logout successful"
+    };
+  }
+
+  static async refresh(data: RefreshTokenDTO) {
+    const session = await AuthRepository.findActiveSessionByRefreshToken(
+      data.refreshToken
+    );
+
+    if (!session || new Date() > session.expires_at) {
+      throw new Error("Invalid or expired refresh token");
+    }
+
+    const user = await AuthRepository.findById(session.user_id);
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await AuthRepository.revokeSession(session.id);
+
+    const next = await AuthService.createSessionTokens({
+      id: user.id,
+      email: user.email,
+      system_role: user.system_role,
+      full_name: user.full_name,
+    });
+
+    return {
+      message: "Token refreshed",
+      ...next,
     };
   }
 
@@ -193,6 +264,7 @@ export class AuthService {
     const password_hash = await bcrypt.hash(data.password, 10);
     await AuthRepository.updatePassword(record.user_id, password_hash);
     await AuthRepository.deletePasswordResetToken(data.token);
+    await AuthRepository.revokeSessionsForUser(record.user_id);
 
     return {
       message: "Password reset successfully"
