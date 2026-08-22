@@ -24,6 +24,10 @@ export interface ResendVerificationDTO {
   email: string;
 }
 
+export interface RefreshTokenDTO {
+  refreshToken: string;
+}
+
 export interface EmailVerificationToken {
   user_id: string;
   token: string;

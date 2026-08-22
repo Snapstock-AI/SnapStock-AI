@@ -1,4 +1,6 @@
 import type { Shelf } from "../types/shelf";
+import { getToken } from "./auth";
+
 const API_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -55,12 +57,17 @@ formData.append(
     shelf.category || ""
 );
 
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   const response = await fetch(
     `${API_URL}/detection/analyze`,
     {
       method: "POST",
-
+      headers,
       body: formData,
     }
   );
