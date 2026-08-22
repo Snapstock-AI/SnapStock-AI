@@ -34,6 +34,10 @@ describe("DetectionController", () => {
 
       user: {
         id: "user-123",
+        userId: "user-123",
+        email: "test@example.com",
+        system_role: "BUSINESS_USER",
+        sessionId: "session-123",
       },
     };
 
