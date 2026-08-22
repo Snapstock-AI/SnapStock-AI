@@ -12,7 +12,12 @@ export type DetectionResult = {
   image_height: number;
   total_count: number;
 
-  counts: Record<string, number>;
+  counts: Record< string,{
+      fresh: number;
+      rotten: number;
+      total: number;
+    }
+    >;
 
   detections: {
     id?: string;
@@ -46,13 +51,13 @@ export async function analyzeImage(
 
   const formData = new FormData();
 
-  // Image
+ 
   formData.append("file", file);
 
-  // Database shelf ID
+
   formData.append("shelfId", shelf.id);
 
-  // Temporary business ID
+
   formData.append("businessId", businessId);
 
   
@@ -74,9 +79,6 @@ export async function analyzeImage(
 
   const body = await response.json();
 
-  console.log("========== FRONTEND API RESPONSE ==========");
-console.log(body);
-
 
   if (!response.ok || body.success === false) {
     throw new Error(
@@ -84,8 +86,6 @@ console.log(body);
     );
   }
 
-  console.log("========== FRONTEND DETECTION DATA ==========");
-console.log(body.data);
 
 
   return {

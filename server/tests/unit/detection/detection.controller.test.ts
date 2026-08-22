@@ -65,13 +65,38 @@ describe("DetectionController", () => {
     it("should call DetectionService and return 200 on success", async () => {
       const result = {
         scanId: "scan-123",
+
         image_width: 640,
         image_height: 480,
+
         total_count: 1,
+
         counts: {
-          Apple: 1,
+          apple: {
+            fresh: 1,
+            rotten: 0,
+            total: 1,
+          },
         },
-        detections: [],
+
+        detections: [
+          {
+            id: "detection-1",
+            class_name: "Apple",
+            confidence: 0.95,
+
+            bounding_box: {
+              x1: 10,
+              y1: 20,
+              x2: 100,
+              y2: 200,
+            },
+
+            freshness: "Fresh",
+            freshness_confidence: 0.9,
+            freshness_confidence_percent: 90,
+          },
+        ],
       };
 
       mockedService.analyze.mockResolvedValue(result);
