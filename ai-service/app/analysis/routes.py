@@ -12,6 +12,8 @@ from starlette.concurrency import run_in_threadpool
 from app.analysis.schemas import AnalysisResponse
 from app.analysis.service import analyze_image
 
+from app.common.exceptions import InvalidImageError,InvalidDetectionImageError
+
 from app.config import (
     ALLOWED_IMAGE_TYPES,
     MAX_IMAGE_SIZE_BYTES,
@@ -78,6 +80,15 @@ async def analyze(
             image_bytes,
             
         )
+
+    except (
+        InvalidImageError,
+        InvalidDetectionImageError,
+    ) as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
 
     except Exception as error:
 
