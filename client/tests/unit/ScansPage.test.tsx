@@ -10,15 +10,18 @@ import "@testing-library/jest-dom";
 import ScansPage from "../../src/pages/dashboard/ScansPage";
 import { analyzeImage } from "../../src/lib/detection";
 
+
 vi.mock("../../src/lib/detection", () => ({
   analyzeImage: vi.fn(),
 }));
+
 
 vi.mock("../../src/context/AuthContext", () => ({
   useAuth: () => ({
     token: "test-token",
   }),
 }));
+
 
 vi.mock("../../src/components/scanner/CameraScanner", () => ({
   default: ({
@@ -46,8 +49,12 @@ vi.mock("../../src/components/scanner/CameraScanner", () => ({
   ),
 }));
 
+
 const shelfId =
   "550e8400-e29b-41d4-a716-446655440001";
+
+const businessId =
+  "550e8400-e29b-41d4-a716-446655440000";
 
 const mockShelf = {
   id: shelfId,
@@ -64,8 +71,16 @@ const mockResult = {
   total_count: 2,
 
   counts: {
-    Apple: 1,
-    Banana: 1,
+    apple: {
+      fresh: 1,
+      rotten: 0,
+      total: 1,
+    },
+    lemon: {
+      fresh: 1,
+      rotten: 0,
+      total: 1,
+    },
   },
 
   detections: [
@@ -99,7 +114,7 @@ beforeEach(() => {
 });
 
 describe("ScansPage", () => {
-  
+
 
   it("should render the shelf scanning page", () => {
     render(<ScansPage />);
@@ -130,6 +145,7 @@ describe("ScansPage", () => {
   });
 
 
+
   it("should display available shelves", () => {
     render(<ScansPage />);
 
@@ -152,7 +168,6 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
   });
 
- 
   it("should allow the user to select a shelf", () => {
     render(<ScansPage />);
 
@@ -187,8 +202,6 @@ describe("ScansPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  
-
   it("should open the camera after selecting a shelf", () => {
     render(<ScansPage />);
 
@@ -215,7 +228,6 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
   });
 
-  
   it("should close the camera when close is clicked", () => {
     render(<ScansPage />);
 
@@ -248,7 +260,7 @@ describe("ScansPage", () => {
     ).not.toBeInTheDocument();
   });
 
-
+ 
 
   it("should show the preview after capturing an image", () => {
     render(<ScansPage />);
@@ -292,8 +304,6 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
   });
 
-  
-
   it("should reopen the camera when retake is clicked", () => {
     render(<ScansPage />);
 
@@ -328,7 +338,7 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
   });
 
-  
+
 
   it("should show the preview after uploading an image", async () => {
     render(<ScansPage />);
@@ -366,7 +376,8 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
   });
 
-  
+ 
+
   it("should analyze the selected image", async () => {
     vi.mocked(analyzeImage).mockResolvedValue(
       mockResult
@@ -419,12 +430,10 @@ describe("ScansPage", () => {
     expect(analyzeImage).toHaveBeenCalledWith(
       file,
       mockShelf,
-      "550e8400-e29b-41d4-a716-446655440000",
+      businessId,
       "test-token"
     );
   });
-
- 
 
   it("should display the scan result after successful analysis", async () => {
     vi.mocked(analyzeImage).mockResolvedValue(
@@ -470,26 +479,28 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
 
     expect(
-  screen.getByText("items detected")
-).toBeInTheDocument();
-
-
-
-    expect(
-      screen.getByText("Apple")
+      screen.getByText("2")
     ).toBeInTheDocument();
 
     expect(
-      screen.getByText("Fresh")
+      screen.getByText("apple")
     ).toBeInTheDocument();
 
     expect(
-      screen.getByText("95.00%")
+      screen.getByText("lemon")
     ).toBeInTheDocument();
 
     expect(
-      screen.getByText("90.00%")
-    ).toBeInTheDocument();
+      screen.getAllByText("Total")
+    ).toHaveLength(2);
+
+    expect(
+      screen.getAllByText("Fresh")
+    ).toHaveLength(2);
+
+    expect(
+      screen.getAllByText("Rotten")
+    ).toHaveLength(2);
   });
 
 
@@ -538,5 +549,4 @@ describe("ScansPage", () => {
       )
     ).toBeInTheDocument();
   });
-
 });
