@@ -172,8 +172,16 @@ describe("DetectionService", () => {
           total_count: 2,
 
           counts: {
-            Apple: 1,
-            Banana: 1,
+            apple: {
+          fresh: 1,
+          rotten: 0,
+          total: 1,
+            },
+            banana: {
+          fresh: 1,
+          rotten: 0,
+          total: 1,
+        },
           },
 
           detections: [
@@ -309,9 +317,7 @@ describe("DetectionService", () => {
         "COMPLETED"
       );
 
-      // --------------------------------------------------------
-      // Verify final result
-      // --------------------------------------------------------
+ 
 
       expect(result).toEqual({
         scanId: "scan-123",
@@ -322,8 +328,19 @@ describe("DetectionService", () => {
         total_count: 2,
 
         counts: {
-          Apple: 1,
-          Banana: 1,
+          apple: {
+            fresh: 1,
+            rotten: 0,
+            total: 1,
+          },
+    
+          banana: {
+            fresh: 1,
+            rotten: 0,
+            total: 1,
+        
+          }
+        
         },
 
         detections: [
