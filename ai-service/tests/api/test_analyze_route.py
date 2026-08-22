@@ -8,6 +8,7 @@ from app.config import MAX_IMAGE_SIZE_BYTES
 
 from app.analysis.schemas import (
     AnalysisResponse,
+    CategorySummary,
     FruitAnalysis,
 )
 from app.detection.schemas import BoundingBox
@@ -60,8 +61,16 @@ def create_analysis_response():
         image_height=480,
         total_count=2,
         counts={
-            "apple": 1,
-            "orange": 1,
+            "apple": CategorySummary(
+                fresh=1,
+                rotten=0,
+                total=1,
+            ),
+            "orange": CategorySummary(
+                fresh=0,
+                rotten=1,
+                total=1,
+            ),
         },
         detections=[
             FruitAnalysis(
@@ -136,8 +145,16 @@ def test_analyze_success(
     assert data["total_count"] == 2
 
     assert data["counts"] == {
-        "apple": 1,
-        "orange": 1,
+        "apple": {
+            "fresh": 1,
+            "rotten": 0,
+            "total": 1,
+        },
+        "orange": {
+            "fresh": 0,
+            "rotten": 1,
+            "total": 1,
+        },
     }
 
     assert len(data["detections"]) == 2
