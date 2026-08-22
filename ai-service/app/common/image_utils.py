@@ -52,6 +52,20 @@ def pil_to_opencv(image: Image.Image) -> np.ndarray:
         cv2.COLOR_RGB2BGR,
     )
 
+def image_to_bytes(
+    image: Image.Image,
+    image_format: str = "JPEG",
+) -> bytes:
+
+    buffer = BytesIO()
+
+    image.save(
+        buffer,
+        format=image_format,
+    )
+
+    return buffer.getvalue()
+
 def preprocess_image(image: Image.Image) -> np.ndarray:
     """
     Prepare image for TensorFlow prediction.

@@ -31,7 +31,3 @@ class PredictionResponse(BaseModel):
         description="Human-readable prediction message."
     )
 
-
-class HealthResponse(BaseModel):
-    status: str
-    model_loaded: bool

@@ -1,18 +1,30 @@
 import type { Shelf } from "../types/shelf";
-import { getToken } from "./auth";
 
 const API_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 
 export type DetectionResult = {
-     shelf?: Shelf;
+  shelf: Shelf;
+
+  scanId: string;
+
+  image_width: number;
+  image_height: number;
   total_count: number;
 
-  counts: Record<string, number>;
+  counts: Record< string,{
+      fresh: number;
+      rotten: number;
+      total: number;
+    }
+    >;
 
   detections: {
+    id?: string;
+
     class_name: string;
+
     confidence: number;
 
     bounding_box: {
@@ -32,42 +44,25 @@ export type DetectionResult = {
 
 
 export async function analyzeImage(
-  file: File, shelf:Shelf
+  file: File,
+  shelf: Shelf,
+  businessId: string,
+  token: string
 ): Promise<DetectionResult> {
 
   const formData = new FormData();
 
-  formData.append(
-    "file",
-    file
-    );
-    
-    formData.append(
-  "shelfId",
-  shelf.id
-);
-
-formData.append(
-  "shelfName",
-  shelf.name
-);
-
-formData.append(
-    "category",
-    shelf.category || ""
-);
-
-  const headers: Record<string, string> = {};
-  const token = getToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+  formData.append("file", file);
+  formData.append("shelfId", shelf.id);
+  formData.append("businessId", businessId);
 
   const response = await fetch(
     `${API_URL}/detection/analyze`,
     {
       method: "POST",
-      headers,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       body: formData,
     }
   );
@@ -82,9 +77,8 @@ formData.append(
     );
   }
 
-
-    return {
-        ...body.data,
-        shelf
-    };
+  return {
+    ...body.data,
+    shelf,
+  };
 }

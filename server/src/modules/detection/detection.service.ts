@@ -1,39 +1,186 @@
 import axios from "axios";
 import FormData from "form-data";
 
+import { DetectionRepository } from "./detection.repository";
+
+function mapFreshness(
+  freshness: string | null | undefined
+): "Fresh" | "Spoiled" | "UNKNOWN" {
+
+  if (!freshness) {
+    return "UNKNOWN";
+  }
+
+  switch (freshness.toLowerCase()) {
+
+    case "good":
+      return "Fresh";
+
+    case "bad":
+      return "Spoiled";
+
+    default:
+      return "UNKNOWN";
+  }
+}
+
 export class DetectionService {
 
-  static async analyze(file?: Express.Multer.File) {
+  static async analyze(
+    file: Express.Multer.File | undefined,
+    businessId: string,
+    shelfId: string,
+    userId: string
+  ) {
 
     if (!file) {
       throw new Error("No image uploaded.");
     }
 
+    if (!businessId) {
+      throw new Error("Business ID is required.");
+    }
 
-    const formData = new FormData();
+    if (!shelfId) {
+      throw new Error("Shelf ID is required.");
+    }
 
-    formData.append(
-      "file",
-      file.buffer,
-      {
-        filename: file.originalname,
-        contentType: file.mimetype,
-      }
+    if (!userId) {
+      throw new Error("User ID is required.");
+    }
+
+
+
+    const scan = await DetectionRepository.createScan(
+      businessId,
+      shelfId,
+      userId
     );
 
+    const scanId = scan.id;
 
-    const response = await axios.post(
-      `${process.env.AI_SERVICE_URL}/analyze`,
-      formData,
-      {
-        headers: {
-          ...formData.getHeaders(),
-        },
+
+    try {
+
+
+
+      await DetectionRepository.updateScanStatus(
+        scanId,
+        "PROCESSING"
+      );
+
+
+      const formData = new FormData();
+
+      formData.append(
+        "file",
+        file.buffer,
+        {
+          filename: file.originalname,
+          contentType: file.mimetype,
+        }
+      );
+
+
+      const response = await axios.post(
+        `${process.env.AI_SERVICE_URL}/analyze`,
+        formData,
+        {
+          headers: {
+            ...formData.getHeaders(),
+          },
+        }
+      );
+
+
+      const aiResult = response.data;
+
+      console.log("========== AI SERVICE RESULT ==========");
+console.log(JSON.stringify(aiResult, null, 2));
+
+
+
+
+      const savedDetections = [];
+
+      for (const detection of aiResult.detections) {
+
+     
+        const product =
+          await DetectionRepository.findProductByName(
+            businessId,
+            detection.class_name
+          );
+
+
+        const savedDetection =
+          await DetectionRepository.createDetection(
+            scanId,
+            detection.class_name,
+            product ? product.id : null,
+            detection.confidence,
+            detection.bounding_box,
+            mapFreshness(detection.freshness),
+            detection.freshness_confidence
+          );
+        
+        const boundingBox =
+  typeof savedDetection.bbox_json === "string"
+    ? JSON.parse(savedDetection.bbox_json)
+    : savedDetection.bbox_json;
+
+        savedDetections.push({
+          id: savedDetection.id,
+
+          class_name: savedDetection.product_label,
+
+          confidence: Number(savedDetection.confidence),
+
+          bounding_box:boundingBox,
+
+          freshness: savedDetection.freshness,
+
+          freshness_confidence: Number(
+            savedDetection.freshness_confidence
+          ),
+
+          freshness_confidence_percent:
+            Number(savedDetection.freshness_confidence) * 100,
+        });
       }
-    );
 
 
-    return response.data;
+      await DetectionRepository.updateScanStatus(
+        scanId,
+        "COMPLETED"
+      );
+
+
+            const result = {
+        scanId,
+        image_width: aiResult.image_width,
+        image_height: aiResult.image_height,
+        total_count: aiResult.total_count,
+        counts: aiResult.counts,
+        detections: savedDetections,
+      };
+
+      console.log("========== BACKEND RESPONSE ==========");
+      console.log(JSON.stringify(result, null, 2));
+
+      return result;
+
+
+    } catch (error: any) {
+
+        
+      await DetectionRepository.updateScanStatus(
+        scanId,
+        "FAILED",
+        error.message
+      );
+
+      throw error;
+    }
   }
-
 }
