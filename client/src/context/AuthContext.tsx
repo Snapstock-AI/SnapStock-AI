@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await apiRequest<{
       message: string
       token: string
+      refreshToken: string
       user: AuthUser
     }>('/auth/login', {
       method: 'POST',
@@ -44,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Login failed')
     }
 
-    setAuth(result.data.token, result.data.user)
+    setAuth(result.data.token, result.data.user, result.data.refreshToken)
     setToken(result.data.token)
     setUser(result.data.user)
   }, [])
@@ -63,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await apiRequest('/auth/logout', { method: 'POST' })
+      await apiRequest('/auth/logout', { method: 'POST' }, true)
     } catch {
       // Client logout still proceeds if API is unreachable
     }
