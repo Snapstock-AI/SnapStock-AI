@@ -22,6 +22,28 @@ export interface AIAnalysisResponse {
   image_width: number;
   image_height: number;
   total_count: number;
-  counts: Record<string, number>;
+  counts: Record<string, {
+  fresh: number;
+  rotten: number;
+  total: number;
+}>
   detections: AIDetection[];
+}
+
+
+export interface SavedDetection extends AIDetection {
+  id: string;
+}
+
+export interface DetectionResult {
+  scanId: string;
+  image_width: number;
+  image_height: number;
+  total_count: number;
+  counts: Record<string, {
+  fresh: number;
+  rotten: number;
+  total: number;
+}>;
+  detections: SavedDetection[];
 }
