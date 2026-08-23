@@ -1,6 +1,14 @@
 import axios from "axios";
 import FormData from "form-data";
 
+import type {
+  AnalyzeRequest,
+  AIDetection,
+  AIAnalysisResponse,
+  SavedDetection,
+  DetectionResult,
+} from "./detection.types";
+
 import { DetectionRepository } from "./detection.repository";
 
 function mapFreshness(
@@ -31,7 +39,7 @@ export class DetectionService {
     businessId: string,
     shelfId: string,
     userId: string
-  ) {
+  ): Promise<DetectionResult> { 
 
     if (!file) {
       throw new Error("No image uploaded.");
@@ -49,26 +57,27 @@ export class DetectionService {
       throw new Error("User ID is required.");
     }
 
-
-
-    const scan = await DetectionRepository.createScan(
+    
+    const analyzeRequest: AnalyzeRequest = {
       businessId,
       shelfId,
-      userId
+      userId,
+    };
+
+    const scan = await DetectionRepository.createScan(
+      analyzeRequest.businessId,
+      analyzeRequest.shelfId,
+      analyzeRequest.userId
     );
 
     const scanId = scan.id;
 
-
     try {
-
-
 
       await DetectionRepository.updateScanStatus(
         scanId,
         "PROCESSING"
       );
-
 
       const formData = new FormData();
 
@@ -81,8 +90,8 @@ export class DetectionService {
         }
       );
 
-
-      const response = await axios.post(
+     
+      const response = await axios.post<AIAnalysisResponse>(
         `${process.env.AI_SERVICE_URL}/analyze`,
         formData,
         {
@@ -92,26 +101,27 @@ export class DetectionService {
         }
       );
 
+      
+      const aiResult: AIAnalysisResponse = response.data;
 
-      const aiResult = response.data;
+      console.log(
+        "========== AI SERVICE RESULT =========="
+      );
 
-      console.log("========== AI SERVICE RESULT ==========");
-console.log(JSON.stringify(aiResult, null, 2));
+      console.log(
+        JSON.stringify(aiResult, null, 2)
+      );
 
-
-
-
-      const savedDetections = [];
+    
+      const savedDetections: SavedDetection[] = [];
 
       for (const detection of aiResult.detections) {
 
-     
         const product =
           await DetectionRepository.findProductByName(
-            businessId,
+            analyzeRequest.businessId,
             detection.class_name
           );
-
 
         const savedDetection =
           await DetectionRepository.createDetection(
@@ -123,20 +133,23 @@ console.log(JSON.stringify(aiResult, null, 2));
             mapFreshness(detection.freshness),
             detection.freshness_confidence
           );
-        
+
         const boundingBox =
-  typeof savedDetection.bbox_json === "string"
-    ? JSON.parse(savedDetection.bbox_json)
-    : savedDetection.bbox_json;
+          typeof savedDetection.bbox_json === "string"
+            ? JSON.parse(savedDetection.bbox_json)
+            : savedDetection.bbox_json;
 
         savedDetections.push({
+
           id: savedDetection.id,
 
           class_name: savedDetection.product_label,
 
-          confidence: Number(savedDetection.confidence),
+          confidence: Number(
+            savedDetection.confidence
+          ),
 
-          bounding_box:boundingBox,
+          bounding_box: boundingBox,
 
           freshness: savedDetection.freshness,
 
@@ -145,35 +158,45 @@ console.log(JSON.stringify(aiResult, null, 2));
           ),
 
           freshness_confidence_percent:
-            Number(savedDetection.freshness_confidence) * 100,
+            Number(
+              savedDetection.freshness_confidence
+            ) * 100,
         });
       }
-
 
       await DetectionRepository.updateScanStatus(
         scanId,
         "COMPLETED"
       );
 
+     
+      const result: DetectionResult = {
 
-            const result = {
         scanId,
+
         image_width: aiResult.image_width,
+
         image_height: aiResult.image_height,
+
         total_count: aiResult.total_count,
+
         counts: aiResult.counts,
+
         detections: savedDetections,
       };
 
-      console.log("========== BACKEND RESPONSE ==========");
-      console.log(JSON.stringify(result, null, 2));
+      console.log(
+        "========== BACKEND RESPONSE =========="
+      );
+
+      console.log(
+        JSON.stringify(result, null, 2)
+      );
 
       return result;
 
-
     } catch (error: any) {
 
-        
       await DetectionRepository.updateScanStatus(
         scanId,
         "FAILED",
