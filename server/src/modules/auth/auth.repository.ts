@@ -1,7 +1,9 @@
+import { IsNull } from "typeorm";
 import { AppDataSource } from "../../config/data-source";
 import { User } from "../../entities/User";
 import { EmailVerificationToken } from "../../entities/EmailVerificationToken";
 import { PasswordResetToken } from "../../entities/PasswordResetToken";
+import { Session } from "../../entities/Session";
 import { RegisterDTO } from "./auth.types";
 
 export class AuthRepository {
@@ -125,6 +127,48 @@ export class AuthRepository {
     await AppDataSource.getRepository(User).update(
       { id: userId },
       { password_hash }
+    );
+  }
+
+  static async createSession(
+    userId: string,
+    refreshToken: string,
+    expiresAt: Date
+  ) {
+    const repo = AppDataSource.getRepository(Session);
+    return repo.save(
+      repo.create({
+        user_id: userId,
+        refresh_token: refreshToken,
+        expires_at: expiresAt,
+        revoked_at: null,
+      })
+    );
+  }
+
+  static async findActiveSessionById(sessionId: string) {
+    return AppDataSource.getRepository(Session).findOne({
+      where: { id: sessionId, revoked_at: IsNull() },
+    });
+  }
+
+  static async findActiveSessionByRefreshToken(refreshToken: string) {
+    return AppDataSource.getRepository(Session).findOne({
+      where: { refresh_token: refreshToken, revoked_at: IsNull() },
+    });
+  }
+
+  static async revokeSession(sessionId: string) {
+    await AppDataSource.getRepository(Session).update(
+      { id: sessionId },
+      { revoked_at: new Date() }
+    );
+  }
+
+  static async revokeSessionsForUser(userId: string) {
+    await AppDataSource.getRepository(Session).update(
+      { user_id: userId, revoked_at: IsNull() },
+      { revoked_at: new Date() }
     );
   }
 }
