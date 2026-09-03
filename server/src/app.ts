@@ -6,7 +6,7 @@ import authRoutes from "./modules/auth/auth.routes";
 import detectionRoutes from "./modules/detection/detection.routes";
 
 const app = express();
-
+// CI/CD deployment test
 app.use(cors());
 app.use(express.json());
 
