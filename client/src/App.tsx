@@ -27,7 +27,7 @@ const authPaths = [
   '/verify-email',
   '/resend-verification',
 ]
-
+// CI/CD frontend deployment test
 function AppRoutes() {
   const location = useLocation()
   const isAuthPage = authPaths.includes(location.pathname)
