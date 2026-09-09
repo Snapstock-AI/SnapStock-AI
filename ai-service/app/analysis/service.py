@@ -46,6 +46,7 @@ def analyze_image(
                 freshness=prediction.freshness,
                 freshness_confidence=prediction.confidence,
                 freshness_confidence_percent=prediction.confidence_percent,
+                explanation=prediction.explanation,
             )
         )
 
