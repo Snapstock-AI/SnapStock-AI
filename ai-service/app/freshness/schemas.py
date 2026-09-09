@@ -31,3 +31,5 @@ class PredictionResponse(BaseModel):
         description="Human-readable prediction message."
     )
 
+    explanation:str | None = None
+
