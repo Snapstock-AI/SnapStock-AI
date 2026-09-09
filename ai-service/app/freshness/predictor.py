@@ -62,6 +62,16 @@ def _predict_probability(
             verbose=0,
         )
 
+
+    except Exception as exc:
+
+        raise PredictionError(
+            "TensorFlow model prediction failed."
+        ) from exc
+
+
+    try:
+
         return (
             float(prediction[0][0]),
             processed_image
@@ -71,7 +81,7 @@ def _predict_probability(
     except Exception as exc:
 
         raise PredictionError(
-            "TensorFlow model prediction failed."
+            f"Unexpected model output shape: {prediction.shape}"
         ) from exc
 
 
