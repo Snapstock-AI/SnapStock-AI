@@ -3,7 +3,6 @@ import FormData from "form-data";
 
 import type {
   AnalyzeRequest,
-  AIDetection,
   AIAnalysisResponse,
   SavedDetection,
   DetectionResult,
