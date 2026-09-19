@@ -11,3 +11,4 @@ model-upload/
 coverage.xml
 htmlcov/
 __pycache__/
+temp/
