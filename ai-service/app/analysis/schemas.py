@@ -22,6 +22,8 @@ class FruitAnalysis(BaseModel):
 
     freshness_confidence_percent: float
 
+    explanation: str | None = None
+
 
 class CategorySummary(BaseModel):
     fresh: int = Field(
