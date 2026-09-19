@@ -5,6 +5,8 @@ import { User } from "../entities/User";
 import { EmailVerificationToken } from "../entities/EmailVerificationToken";
 import { PasswordResetToken } from "../entities/PasswordResetToken";
 import { Session } from "../entities/Session";
+import { Business } from "../entities/Business";
+import { BusinessUser } from "../entities/BusinessUser";
 
 dotenv.config({
   path: path.resolve(__dirname, "../../../.env"),
@@ -15,5 +17,12 @@ export const AppDataSource = new DataSource({
   url: process.env.DATABASE_URL,
   synchronize: false,
   logging: false,
-  entities: [User, EmailVerificationToken, PasswordResetToken, Session],
+  entities: [
+    User,
+    EmailVerificationToken,
+    PasswordResetToken,
+    Session,
+    Business,
+    BusinessUser,
+  ],
 });
