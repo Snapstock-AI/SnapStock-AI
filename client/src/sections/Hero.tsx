@@ -7,18 +7,13 @@ import { Button } from '@/components/ui/button'
 export default function Hero() {
   return (
     <section id="overview" className="relative overflow-hidden">
-      {/* Half-page creative background on the right */}
       <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 lg:block">
-        <div className="absolute inset-0 bg-gradient-to-l from-brand-50 via-brand-50/80 to-transparent dark:from-brand-900/30 dark:via-brand-900/10 dark:to-transparent" />
-        <div className="absolute -right-24 top-1/2 h-[520px] w-[520px] -translate-y-1/2 rounded-full border border-brand-200/60 dark:border-brand-700/40" />
-        <div className="absolute -right-8 top-1/2 h-[380px] w-[380px] -translate-y-1/2 rounded-full border border-dashed border-brand-300/50 dark:border-brand-600/30" />
-        <div className="absolute right-[18%] top-[18%] h-3 w-3 rounded-full bg-brand-400/50" />
-        <div className="absolute right-[28%] bottom-[22%] h-2 w-2 rounded-full bg-accent-orange/60" />
+        <div className="absolute inset-0 bg-gradient-to-l from-brand-50 via-brand-50/70 to-transparent dark:from-brand-900/25 dark:via-brand-900/10 dark:to-transparent" />
       </div>
 
       <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:gap-12 md:px-6 md:py-20 lg:grid-cols-2 lg:py-24">
         <div className="relative z-10">
-          <Badge variant="success" className="mb-6 gap-2 px-3.5 py-1 text-xs font-semibold">
+          <Badge variant="success" className="mb-6 w-fit gap-2 px-3.5 py-1 text-xs font-semibold">
             <Sparkles className="h-3.5 w-3.5" />
             Built for small-scale retailers
           </Badge>
@@ -60,8 +55,8 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="relative z-10 mx-auto w-full max-w-md lg:max-w-none">
-          <BrandVisual className="min-h-[480px] shadow-xl shadow-brand-500/20" />
+        <div className="relative z-10 mx-auto w-full max-w-md lg:max-w-none lg:py-4">
+          <BrandVisual className="min-h-[420px]" />
         </div>
       </div>
     </section>
