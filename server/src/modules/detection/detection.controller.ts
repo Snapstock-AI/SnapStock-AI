@@ -4,6 +4,45 @@ import { AuthRequest } from "../../shared/middleware/auth.middleware";
 
 export class DetectionController {
 
+  static async createUploadUrl(
+    req: AuthRequest,
+    res: Response
+  ) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const {
+        businessId,
+        shelfId,
+        fileName,
+        contentType,
+      } = req.body;
+
+      const result = await DetectionService.createUploadUrl({
+        businessId,
+        shelfId,
+        userId: req.user.id,
+        fileName,
+        contentType,
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
   static async analyze(
     req: AuthRequest,
     res: Response
