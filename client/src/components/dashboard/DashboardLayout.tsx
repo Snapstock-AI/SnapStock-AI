@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { useEffect, useState } from 'react'
 import {
   AlertTriangle,
   BarChart3,
@@ -7,27 +8,70 @@ import {
   LogOut,
   Package,
   Settings,
-  Warehouse,
+  Users,
 } from 'lucide-react'
 import Logo from '@/components/Logo'
 import ThemeToggle from '@/components/ThemeToggle'
 import { useAuth } from '@/context/AuthContext'
+import { apiRequest } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import NoBusinessWorkspace from '@/components/dashboard/NoBusinessWorkspace'
+
+type BusinessMembership = {
+  id: string
+  role: 'OWNER' | 'EMPLOYEE'
+}
 
 
 const sidebarLinks = [
   { to: '/dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/dashboard/inventory', label: 'Inventory', icon: Package },
   { to: '/dashboard/scans', label: 'Scans', icon: Camera },
-   { to: "/dashboard/shelves", label: "Shelves", icon: Warehouse },
   { to: '/dashboard/alerts', label: 'Alerts', icon: AlertTriangle },
   { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/dashboard/settings', label: 'Settings', icon: Settings },
 ]
 
+const workspacePromptPaths = [
+  '/dashboard',
+  '/dashboard/inventory',
+  '/dashboard/scans',
+  '/dashboard/scans/history',
+  '/dashboard/alerts',
+  '/dashboard/analytics',
+]
+
 export default function DashboardLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { logout, user } = useAuth()
+  const [isOwner, setIsOwner] = useState(false)
+
+  useEffect(() => {
+    if (!user?.businessId) {
+      setIsOwner(false)
+      return
+    }
+
+    let active = true
+    apiRequest<BusinessMembership[]>('/businesses/mine', {}, true)
+      .then((response) => {
+        if (active) {
+          setIsOwner(
+            response.data?.some(
+              (business) => business.id === user.businessId && business.role === 'OWNER',
+            ) || false,
+          )
+        }
+      })
+      .catch(() => {
+        if (active) setIsOwner(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [user?.businessId])
 
   async function handleLogout() {
     await logout()
@@ -85,6 +129,13 @@ export default function DashboardLayout() {
         <header className="hidden h-16 items-center justify-between border-b border-border bg-surface-elevated px-6 md:flex">
           <p className="text-sm text-muted">SnapStock-AI · PID 5</p>
           <div className="flex items-center gap-3">
+            {isOwner && <NavLink
+              to="/dashboard/invitations"
+              className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-brand-600"
+            >
+              <Users className="h-4 w-4" />
+              Invite employees
+            </NavLink>}
             <ThemeToggle />
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700 dark:bg-brand-900 dark:text-brand-300">
               {(user?.full_name || 'U').charAt(0).toUpperCase()}
@@ -93,7 +144,11 @@ export default function DashboardLayout() {
         </header>
 
         <main className="mx-auto max-w-6xl px-4 py-6 pb-24 md:px-6 md:py-8 md:pb-8">
-          <Outlet />
+          {!user?.businessId && workspacePromptPaths.includes(location.pathname) ? (
+            <NoBusinessWorkspace />
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
 

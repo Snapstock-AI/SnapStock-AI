@@ -13,7 +13,13 @@ router.post(
   "/analyze",
   authMiddleware,
   upload.single("file"),
-  DetectionController.analyze
+  DetectionController.analyze,
+);
+router.get("/history", authMiddleware, DetectionController.history);
+router.patch(
+  "/:detectionId/freshness",
+  authMiddleware,
+  DetectionController.correctFreshness,
 );
 
 export default router;
