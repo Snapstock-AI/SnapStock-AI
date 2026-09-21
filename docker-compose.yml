@@ -37,7 +37,7 @@ services:
     restart: unless-stopped
     environment:
       SERVICES: s3,sqs
-      AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
+      AWS_DEFAULT_REGION: ${AWS_REGION:-ap-south-1}
       S3_UPLOAD_BUCKET: ${S3_UPLOAD_BUCKET:-snapstock-uploads}
       ANALYSIS_REQUEST_QUEUE_NAME: ${ANALYSIS_REQUEST_QUEUE_NAME:-snapstock-analysis-jobs}
       ANALYSIS_RESULT_QUEUE_NAME: ${ANALYSIS_RESULT_QUEUE_NAME:-snapstock-analysis-results}
