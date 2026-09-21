@@ -2,8 +2,8 @@
 
 set -eu
 
-bucket="${S3_BUCKET_NAME:-snapstock-images}"
-request_queue="${ANALYSIS_REQUEST_QUEUE_NAME:-snapstock-analysis-requests}"
+bucket="${S3_UPLOAD_BUCKET:-${S3_BUCKET_NAME:-snapstock-uploads}}"
+request_queue="${ANALYSIS_REQUEST_QUEUE_NAME:-snapstock-analysis-jobs}"
 result_queue="${ANALYSIS_RESULT_QUEUE_NAME:-snapstock-analysis-results}"
 
 awslocal s3api head-bucket --bucket "$bucket" 2>/dev/null || \

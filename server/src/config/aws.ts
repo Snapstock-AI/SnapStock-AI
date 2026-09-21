@@ -25,9 +25,12 @@ export const sqsClient = new SQSClient({
 });
 
 export const awsResourceNames = {
-  bucket: process.env.S3_BUCKET_NAME || "snapstock-images",
+  bucket:
+    process.env.S3_UPLOAD_BUCKET ||
+    process.env.S3_BUCKET_NAME ||
+    "snapstock-uploads",
   analysisRequestQueue:
-    process.env.ANALYSIS_REQUEST_QUEUE_NAME || "snapstock-analysis-requests",
+    process.env.ANALYSIS_REQUEST_QUEUE_NAME || "snapstock-analysis-jobs",
   analysisResultQueue:
     process.env.ANALYSIS_RESULT_QUEUE_NAME || "snapstock-analysis-results",
 } as const;
