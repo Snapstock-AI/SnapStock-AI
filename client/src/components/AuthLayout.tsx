@@ -13,11 +13,8 @@ type AuthLayoutProps = {
 export default function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className="relative min-h-dvh overflow-hidden bg-background">
-      {/* Soft half-page shape field behind auth panel */}
       <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[48%] lg:block">
         <div className="absolute inset-0 bg-gradient-to-bl from-brand-100/80 via-brand-50/40 to-transparent dark:from-brand-900/40 dark:via-brand-900/10" />
-        <div className="absolute -right-32 top-24 h-[420px] w-[420px] rounded-full bg-brand-500/10 blur-2xl" />
-        <div className="absolute bottom-20 right-10 h-48 w-48 rounded-[40%] bg-accent-orange/10 blur-xl" />
       </div>
 
       <header className="relative z-10 flex h-16 items-center justify-between border-b border-border/70 bg-background/70 px-4 backdrop-blur-xl md:px-8">
@@ -40,8 +37,8 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           </Card>
         </div>
 
-        <div className="relative hidden items-center p-6 lg:flex">
-          <BrandVisual quote className="w-full min-h-[560px] shadow-xl shadow-brand-500/15" />
+        <div className="relative hidden items-center justify-center p-8 lg:flex">
+          <BrandVisual className="w-full min-h-[480px]" />
         </div>
       </div>
     </div>

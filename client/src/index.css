@@ -239,6 +239,57 @@ body {
   }
 }
 
+@keyframes brand-device-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes brand-feed-drift {
+  0%,
+  100% {
+    transform: scale(1.06) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.1) translate(-1.5%, 1%);
+  }
+}
+
+@keyframes brand-detect {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  78% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.35;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes brand-pulse-dot {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
 .brand-float {
   animation: brand-float 5s ease-in-out infinite;
 }
@@ -251,15 +302,49 @@ body {
   animation: brand-scan 3.2s ease-in-out infinite;
 }
 
+.brand-scan-glow {
+  animation: brand-scan 3.2s ease-in-out infinite;
+}
+
 .brand-spin-slow {
   animation: brand-spin 48s linear infinite;
+}
+
+.brand-device-float {
+  animation: brand-device-float 5.5s ease-in-out infinite;
+}
+
+.brand-feed-drift {
+  animation: brand-feed-drift 12s ease-in-out infinite;
+}
+
+.brand-detect {
+  animation: brand-detect 4.5s ease-in-out infinite;
+}
+
+.brand-pulse {
+  animation: brand-pulse-dot 2.4s ease-in-out infinite;
+}
+
+.brand-pulse-delayed {
+  animation: brand-pulse-dot 2.8s ease-in-out 0.6s infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .brand-float,
   .brand-float-delayed,
   .brand-scan-line,
-  .brand-spin-slow {
+  .brand-scan-glow,
+  .brand-spin-slow,
+  .brand-device-float,
+  .brand-feed-drift,
+  .brand-detect,
+  .brand-pulse,
+  .brand-pulse-delayed {
     animation: none;
+  }
+
+  .brand-detect {
+    opacity: 1;
   }
 }
