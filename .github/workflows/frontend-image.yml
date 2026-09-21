@@ -9,6 +9,19 @@ on:
       - ".github/workflows/frontend-image.yml"
 
   workflow_dispatch:
+    inputs:
+      action:
+        description: "What to run"
+        required: true
+        type: choice
+        options:
+          - deploy
+          - open-ports
+        default: deploy
+      domain:
+        description: "Public hostname (open-ports only)"
+        required: false
+        default: "snapstock.rashmika.dev"
 
 
 permissions:
@@ -19,20 +32,78 @@ permissions:
 
 jobs:
 
-  build-frontend:
-
+  open-ports:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'open-ports'
     runs-on: ubuntu-latest
-
-
     steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
 
+      - name: Open security group ports 22/80/443
+        env:
+          INSTANCE_ID: ${{ vars.SNAPSTOCK_SERVER_INSTANCE_ID }}
+        run: |
+          set -euo pipefail
+
+          SG_IDS=$(aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --query 'Reservations[0].Instances[0].SecurityGroups[].GroupId' \
+            --output text)
+          echo "Security groups: $SG_IDS"
+
+          PUBLIC_IP=$(aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --query 'Reservations[0].Instances[0].PublicIpAddress' \
+            --output text)
+          echo "Instance public IP: $PUBLIC_IP"
+
+          for SG in $SG_IDS; do
+            for PORT in 22 80 443; do
+              echo "Ensuring TCP $PORT on $SG"
+              aws ec2 authorize-security-group-ingress \
+                --group-id "$SG" \
+                --ip-permissions "IpProtocol=tcp,FromPort=$PORT,ToPort=$PORT,IpRanges=[{CidrIp=0.0.0.0/0,Description=SnapStock public $PORT}]" \
+                && echo "  added $PORT" \
+                || echo "  $PORT already present (or denied)"
+            done
+          done
+
+      - name: Host firewall + cluster inspect via SSM
+        env:
+          INSTANCE_ID: ${{ vars.SNAPSTOCK_SERVER_INSTANCE_ID }}
+          DOMAIN: ${{ inputs.domain }}
+        run: |
+          set -euo pipefail
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Open firewall + inspect OpenChoreo for $DOMAIN" \
+            --timeout-seconds 300 \
+            --parameters commands=["set -euxo pipefail","echo DOMAIN=$DOMAIN","sudo ufw allow 22/tcp || true","sudo ufw allow 80/tcp || true","sudo ufw allow 443/tcp || true","sudo ufw allow 8443/tcp || true","sudo iptables -C INPUT -p tcp --dport 22 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 22 -j ACCEPT","sudo iptables -C INPUT -p tcp --dport 80 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT","sudo iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT","command -v kubectl","kubectl get svc -A | head -80","kubectl get gateway,httproute,certificate,clusterissuer,ingress -A 2>/dev/null | head -120 || true","kubectl get ns | head -40","ls -la /home/ubuntu/*.sh 2>/dev/null || true","curl -s ifconfig.me || true","ss -lntp | head -50 || true","echo DONE"] \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "Command ID: $COMMAND_ID"
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" || true
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID"
+
+  build-frontend:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy')
+    runs-on: ubuntu-latest
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
-
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -40,7 +111,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
@@ -53,31 +123,22 @@ jobs:
           tags: |
             ghcr.io/snapstock-ai/snapstock-client:dev-${{ github.sha }}
 
-
-
   deploy-frontend:
-
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy')
     needs: build-frontend
-
     runs-on: ubuntu-latest
-
-
     steps:
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-
       - name: Deploy frontend through SSM
         env:
           INSTANCE_ID: ${{ vars.SNAPSTOCK_SERVER_INSTANCE_ID }}
           IMAGE: ghcr.io/snapstock-ai/snapstock-client:dev-${{ github.sha }}
-
         run: |
-
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
@@ -86,14 +147,11 @@ jobs:
             --query "Command.CommandId" \
             --output text)
 
-
           echo "Command ID: $COMMAND_ID"
-
 
           aws ssm wait command-executed \
             --command-id "$COMMAND_ID" \
             --instance-id "$INSTANCE_ID"
-
 
           aws ssm get-command-invocation \
             --command-id "$COMMAND_ID" \
