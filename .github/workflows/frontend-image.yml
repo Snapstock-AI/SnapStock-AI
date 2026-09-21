@@ -42,35 +42,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Open security group ports 22/80/443
-        env:
-          INSTANCE_ID: ${{ vars.SNAPSTOCK_SERVER_INSTANCE_ID }}
-        run: |
-          set -euo pipefail
-
-          SG_IDS=$(aws ec2 describe-instances \
-            --instance-ids "$INSTANCE_ID" \
-            --query 'Reservations[0].Instances[0].SecurityGroups[].GroupId' \
-            --output text)
-          echo "Security groups: $SG_IDS"
-
-          PUBLIC_IP=$(aws ec2 describe-instances \
-            --instance-ids "$INSTANCE_ID" \
-            --query 'Reservations[0].Instances[0].PublicIpAddress' \
-            --output text)
-          echo "Instance public IP: $PUBLIC_IP"
-
-          for SG in $SG_IDS; do
-            for PORT in 22 80 443; do
-              echo "Ensuring TCP $PORT on $SG"
-              aws ec2 authorize-security-group-ingress \
-                --group-id "$SG" \
-                --ip-permissions "IpProtocol=tcp,FromPort=$PORT,ToPort=$PORT,IpRanges=[{CidrIp=0.0.0.0/0,Description=SnapStock public $PORT}]" \
-                && echo "  added $PORT" \
-                || echo "  $PORT already present (or denied)"
-            done
-          done
-
+      # Deploy role has SSM only (no EC2 SG mutate). Open host firewall + probe cluster.
       - name: Host firewall + cluster inspect via SSM
         env:
           INSTANCE_ID: ${{ vars.SNAPSTOCK_SERVER_INSTANCE_ID }}
@@ -83,7 +55,7 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --comment "Open firewall + inspect OpenChoreo for $DOMAIN" \
             --timeout-seconds 300 \
-            --parameters commands=["set -euxo pipefail","echo DOMAIN=$DOMAIN","sudo ufw allow 22/tcp || true","sudo ufw allow 80/tcp || true","sudo ufw allow 443/tcp || true","sudo ufw allow 8443/tcp || true","sudo iptables -C INPUT -p tcp --dport 22 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 22 -j ACCEPT","sudo iptables -C INPUT -p tcp --dport 80 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT","sudo iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT","command -v kubectl","kubectl get svc -A | head -80","kubectl get gateway,httproute,certificate,clusterissuer,ingress -A 2>/dev/null | head -120 || true","kubectl get ns | head -40","ls -la /home/ubuntu/*.sh 2>/dev/null || true","curl -s ifconfig.me || true","ss -lntp | head -50 || true","echo DONE"] \
+            --parameters commands=["set -euxo pipefail","echo DOMAIN=$DOMAIN","sudo ufw allow 22/tcp || true","sudo ufw allow 80/tcp || true","sudo ufw allow 443/tcp || true","sudo ufw allow 8443/tcp || true","sudo iptables -C INPUT -p tcp --dport 22 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 22 -j ACCEPT","sudo iptables -C INPUT -p tcp --dport 80 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT","sudo iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null || sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT","command -v kubectl","kubectl get svc -A | head -80","kubectl get gateway,httproute,certificate,clusterissuer,ingress -A 2>/dev/null | head -120 || true","kubectl get httproute -A -o yaml 2>/dev/null | head -200 || true","kubectl get gateway -A -o yaml 2>/dev/null | head -200 || true","kubectl get ns | head -40","ls -la /home/ubuntu/*.sh 2>/dev/null || true","cat /home/ubuntu/deploy-openchoreo.sh 2>/dev/null | head -120 || true","curl -s ifconfig.me || true","ss -lntp | head -50 || true","echo DONE"] \
             --query "Command.CommandId" \
             --output text)
 
