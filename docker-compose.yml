@@ -31,6 +31,21 @@ services:
     volumes:
       - pgadmin-data:/var/lib/pgadmin
 
+  localstack:
+    container_name: snapstock-localstack
+    image: localstack/localstack:3.8.1
+    restart: unless-stopped
+    environment:
+      SERVICES: s3,sqs
+      AWS_DEFAULT_REGION: ${AWS_REGION:-ap-south-1}
+      DEBUG: ${LOCALSTACK_DEBUG:-0}
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack-data:/var/lib/localstack
+      - ./infra/localstack/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh
+
 volumes:
   postgres-data:
   pgadmin-data:
+  localstack-data:
