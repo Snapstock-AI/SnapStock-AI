@@ -38,3 +38,6 @@ export const awsResourceNames = {
   analysisResultQueue:
     process.env.ANALYSIS_RESULT_QUEUE_NAME || "snapstock-analysis-results",
 } as const;
+
+export const analysisRequestQueueUrl =
+  process.env.SQS_ANALYSIS_JOB_QUEUE_URL || undefined;

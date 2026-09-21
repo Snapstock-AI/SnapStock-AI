@@ -4,6 +4,50 @@ import { AuthRequest } from "../../shared/middleware/auth.middleware";
 
 export class DetectionController {
 
+  static async queueUploadedScan(
+    req: AuthRequest,
+    res: Response
+  ) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const {
+        scanId,
+        businessId,
+        shelfId,
+        objectKey,
+        contentType,
+      } = req.body;
+
+      await DetectionService.queueUploadedScan({
+        eventType: "IMAGE_UPLOADED",
+        scanId,
+        businessId,
+        shelfId,
+        userId: req.user.id,
+        bucket: process.env.S3_UPLOAD_BUCKET || "snapstock-uploads",
+        objectKey,
+        contentType,
+        timestamp: new Date().toISOString(),
+      });
+
+      return res.status(202).json({
+        success: true,
+        data: { scanId, status: "QUEUED" },
+      });
+    } catch (error: any) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
   static async createUploadUrl(
     req: AuthRequest,
     res: Response

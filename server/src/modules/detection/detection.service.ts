@@ -3,6 +3,7 @@ import FormData from "form-data";
 import path from "path";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { SendMessageCommand } from "@aws-sdk/client-sqs";
 
 import type {
   AnalyzeRequest,
@@ -13,7 +14,12 @@ import type {
 } from "./detection.types";
 
 import { DetectionRepository } from "./detection.repository";
-import { awsResourceNames, s3Client } from "../../config/aws";
+import {
+  analysisRequestQueueUrl,
+  awsResourceNames,
+  s3Client,
+  sqsClient,
+} from "../../config/aws";
 
 const allowedImageTypes = new Set([
   "image/jpeg",
@@ -38,6 +44,18 @@ export type ScanUploadResponse = {
   expiresInSeconds: number;
 };
 
+export type AnalysisJob = {
+  eventType: "IMAGE_UPLOADED";
+  scanId: string;
+  businessId: string;
+  shelfId: string;
+  userId: string;
+  bucket: string;
+  objectKey: string;
+  contentType: string;
+  timestamp: string;
+};
+
 function mapFreshness(
   freshness: string | null | undefined
 ): "Fresh" | "Spoiled" | "UNKNOWN" {
@@ -60,6 +78,31 @@ function mapFreshness(
 }
 
 export class DetectionService {
+
+  static async queueUploadedScan(
+    scan: AnalysisJob
+  ): Promise<void> {
+    if (!analysisRequestQueueUrl) {
+      throw new Error("SQS_ANALYSIS_JOB_QUEUE_URL is required.");
+    }
+
+    await sqsClient.send(
+      new SendMessageCommand({
+        QueueUrl: analysisRequestQueueUrl,
+        MessageBody: JSON.stringify(scan),
+        MessageAttributes: {
+          eventType: {
+            DataType: "String",
+            StringValue: scan.eventType,
+          },
+          scanId: {
+            DataType: "String",
+            StringValue: scan.scanId,
+          },
+        },
+      })
+    );
+  }
 
   static async createUploadUrl(
     request: ScanUploadRequest
