@@ -38,6 +38,8 @@ export type CreateBusinessInput = {
 export type Business = CreateBusinessInput & {
   id: string
   role: 'OWNER' | 'EMPLOYEE'
+  freshness_alert_threshold?: number
+  low_stock_threshold?: number
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)

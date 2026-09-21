@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authMiddleware } from "../../shared/middleware/auth.middleware";
 import { BusinessController } from "./business.controller";
 import { InvitationController } from "./invitation.controller";
+import { DashboardController } from "../dashboard/dashboard.controller";
 
 const router = Router();
 
@@ -18,5 +19,10 @@ router.delete(
 );
 router.get("/:businessId/invitations", InvitationController.list);
 router.post("/:businessId/invitations", InvitationController.send);
+
+router.get("/:businessId/dashboard", DashboardController.dashboard);
+router.get("/:businessId/analytics", DashboardController.analytics);
+router.get("/:businessId/inventory", DashboardController.inventory);
+router.get("/:businessId/alerts", DashboardController.alerts);
 
 export default router;

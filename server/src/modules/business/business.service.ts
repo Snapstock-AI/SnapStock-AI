@@ -24,14 +24,19 @@ export class BusinessService {
   static async listForUser(userId: string) {
     const memberships = await BusinessRepository.findByUserId(userId);
 
-    return memberships.map((membership) => ({
-      id: (membership as any).business.id,
-      business_name: (membership as any).business.business_name,
-      business_email: (membership as any).business.business_email,
-      address: (membership as any).business.address,
-      contact_number: (membership as any).business.contact_number,
-      role: membership.role,
-    }));
+    return memberships.map((membership) => {
+      const business = (membership as any).business;
+      return {
+        id: business.id,
+        business_name: business.business_name,
+        business_email: business.business_email,
+        address: business.address,
+        contact_number: business.contact_number,
+        freshness_alert_threshold: business.freshness_alert_threshold ?? 65,
+        low_stock_threshold: business.low_stock_threshold ?? 25,
+        role: membership.role,
+      };
+    });
   }
 
   static async createForUser(userId: string, data: CreateBusinessDTO) {
@@ -73,7 +78,17 @@ export class BusinessService {
     if (!business) throw new Error("Business not found.");
 
     Object.assign(business, data);
-    return BusinessRepository.update(business);
+    const saved = await BusinessRepository.update(business);
+    return {
+      id: saved.id,
+      business_name: saved.business_name,
+      business_email: saved.business_email,
+      address: saved.address,
+      contact_number: saved.contact_number,
+      freshness_alert_threshold: saved.freshness_alert_threshold ?? 65,
+      low_stock_threshold: saved.low_stock_threshold ?? 25,
+      role: "OWNER" as const,
+    };
   }
 
   static async deleteForOwner(ownerId: string, businessId: string) {
