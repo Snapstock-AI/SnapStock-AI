@@ -11,7 +11,7 @@ interface ShelfModalProps {
   mode: "add" | "edit";
   shelf?: Shelf;
   onClose: () => void;
-  onSubmit: (shelf: Shelf) => void;
+  onSubmit: (shelf: Shelf) => Promise<void>;
 }
 
 export default function ShelfModal({
@@ -27,6 +27,8 @@ export default function ShelfModal({
   const [category, setCategory] = useState("Fruit");
     
   const [customCategory, setCustomCategory] = useState("");  
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
 
   useEffect(() => {
@@ -43,40 +45,45 @@ export default function ShelfModal({
 
     }
 
+    setCustomCategory("");
+    setError("");
+    setSaving(false);
+
   }, [mode, shelf, open]);
 
 
   if (!open) return null;
 
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
 
-      if (!name.trim()) return;
+      if (!name.trim()) {
+        setError("Shelf name is required.");
+        return;
+      }
       if (category === "Other" && !customCategory.trim()) {
-            
+            setError("Enter a category for this shelf.");
             return;
       }
 
+    setSaving(true);
+    setError("");
 
-    onSubmit({
-
-      id: shelf?.id ?? crypto.randomUUID(),
-
-      name: name.trim(),
-      
-    category:
-        category === "Other"
-            ? customCategory.trim()
-            : category,
-        });
-
-
-
-    setName("");
-
-    setCategory("Fruit");
-
-    onClose();
+    try {
+      await onSubmit({
+        id: shelf?.id ?? crypto.randomUUID(),
+        name: name.trim(),
+        category: category === "Other" ? customCategory.trim() : category,
+      });
+    } catch (submitError: unknown) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Unable to save shelf.",
+      );
+    } finally {
+      setSaving(false);
+    }
 
   };
 
@@ -173,6 +180,12 @@ export default function ShelfModal({
         />
         )}      
 
+        {error && (
+          <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+
 
 
         <div className="flex justify-end gap-3">
@@ -181,6 +194,7 @@ export default function ShelfModal({
           <button
 
             onClick={onClose}
+            disabled={saving}
 
             className="rounded-lg border px-4 py-2"
 
@@ -194,6 +208,7 @@ export default function ShelfModal({
           <button
 
             onClick={handleSubmit}
+            disabled={saving}
 
             className="
               rounded-lg
@@ -205,9 +220,7 @@ export default function ShelfModal({
 
           >
 
-            {mode === "add"
-              ? "Create"
-              : "Save"}
+            {saving ? "Saving..." : mode === "add" ? "Create" : "Save"}
 
           </button>
 

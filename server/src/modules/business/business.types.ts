@@ -8,3 +8,6 @@ export const CreateBusinessSchema = z.object({
 });
 
 export type CreateBusinessDTO = z.infer<typeof CreateBusinessSchema>;
+
+export const UpdateBusinessSchema = CreateBusinessSchema;
+export type UpdateBusinessDTO = z.infer<typeof UpdateBusinessSchema>;

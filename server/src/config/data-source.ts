@@ -7,6 +7,11 @@ import { PasswordResetToken } from "../entities/PasswordResetToken";
 import { Session } from "../entities/Session";
 import { Business } from "../entities/Business";
 import { BusinessUser } from "../entities/BusinessUser";
+import { Product } from "../entities/Product";
+import { Shelf } from "../entities/Shelf";
+import { Scan } from "../entities/Scan";
+import { Detection } from "../entities/Detection";
+import { EmployeeInvitation } from "../entities/EmployeeInvitation";
 
 dotenv.config({
   path: path.resolve(__dirname, "../../../.env"),
@@ -24,5 +29,10 @@ export const AppDataSource = new DataSource({
     Session,
     Business,
     BusinessUser,
+    Product,
+    Shelf,
+    Scan,
+    Detection,
+    EmployeeInvitation,
   ],
 });

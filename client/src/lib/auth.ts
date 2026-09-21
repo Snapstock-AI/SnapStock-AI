@@ -3,6 +3,7 @@ export type AuthUser = {
   full_name: string
   email: string
   system_role: string
+  businessId: string | null
 }
 
 const TOKEN_KEY = 'snapstock_token'
