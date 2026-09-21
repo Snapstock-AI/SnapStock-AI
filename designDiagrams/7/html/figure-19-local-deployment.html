@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Figure 19 — Local Docker + Host Apps</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f0f2f5; padding: 2rem; display: flex; justify-content: center; }
+    .frame { background: #fff; border: 2px solid #212529; padding: 1.5rem 1rem 1.75rem; box-shadow: 0 4px 16px rgba(0,0,0,.08); max-width: 1100px; width: 100%; overflow-x: auto; }
+    h1 { text-align: center; color: #1e4a7a; font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; }
+    svg { display: block; min-width: 1060px; }
+    .caption { margin-top: 0.85rem; text-align: center; font-size: 0.85rem; color: #495057; font-style: italic; }
+    .note { margin-top: 0.5rem; text-align: center; font-size: 0.78rem; color: #6c757d; max-width: 880px; margin-left: auto; margin-right: auto; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <h1>Local Development Environment Deployment Diagram</h1>
+    <svg xmlns="http://www.w3.org/2000/svg" width="1060" height="820" viewBox="0 0 1060 820" role="img">
+      <defs>
+        <marker id="open" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10" fill="none" stroke="#212529" stroke-width="1.5"/>
+        </marker>
+        <style>
+          .dep-frame{fill:#fff;stroke:#212529;stroke-width:1.75}
+          .cube-top{fill:#ececec;stroke:#212529;stroke-width:1.25}
+          .cube-right{fill:#d4d4d4;stroke:#212529;stroke-width:1.25}
+          .cube-front{fill:#fff;stroke:#212529;stroke-width:1.5}
+          .art{fill:#fff;stroke:#212529;stroke-width:1.5}
+          .art-fold{fill:#f8f8f8;stroke:#212529;stroke-width:1.25}
+          .comp-tab{fill:#fff;stroke:#212529;stroke-width:1.25}
+          .comp-body{fill:#fff;stroke:#212529;stroke-width:1.5}
+          .dspec{fill:#fff;stroke:#212529;stroke-width:1.5}
+          .st{font:italic 11px "Segoe UI",Arial,sans-serif;fill:#212529}
+          .nm{font:700 12px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .dt{font:500 10.5px "Segoe UI",Arial,sans-serif;fill:#343a40;text-anchor:middle}
+          .prop{font:500 10px "Segoe UI",Arial,sans-serif;fill:#343a40}
+          .dep-tab{font:600 11px "Segoe UI",Arial,sans-serif;fill:#212529}
+          .comm{stroke:#212529;stroke-width:1.5;fill:none}
+          .comm-dir{stroke:#212529;stroke-width:1.5;fill:none;marker-end:url(#open)}
+          .manifest{stroke:#212529;stroke-width:1.5;fill:none;stroke-dasharray:6 4;marker-end:url(#open)}
+          .deploy-lnk{stroke:#212529;stroke-width:1.5;fill:none;stroke-dasharray:5 4;marker-end:url(#open)}
+          .lbl{font:500 10.5px "Segoe UI",Arial,sans-serif;fill:#212529}
+          .lbl-bg{fill:#fff;stroke:none}
+          .sum{font:500 11px "Segoe UI",Arial,sans-serif;fill:#495057;text-anchor:middle}
+        </style>
+      </defs>
+
+      <path d="M 24 28 L 108 28 L 120 40 L 1036 40 L 1036 780 L 24 780 Z" class="dep-frame"/>
+      
+      <text x="128" y="36" class="dep-tab">Local Development Environment</text>
+
+      <!-- «device» Developer Workstation -->
+      <g id="device">
+        <path d="M 52 76 L 64 64 L 996 64 L 984 76 Z" class="cube-top"/>
+        <path d="M 984 76 L 996 64 L 996 728 L 984 740 Z" class="cube-right"/>
+        <rect x="52" y="76" width="932" height="664" class="cube-front"/>
+        <text x="518" y="100" class="st" text-anchor="middle">&laquo;device&raquo;</text>
+        <text x="518" y="118" class="nm">Developer Workstation</text>
+        <text x="518" y="134" class="dt">Windows / Linux / macOS</text>
+      </g>
+
+      <!-- «executionEnvironment» Host OS -->
+      <g id="host-os">
+        <path d="M 80 156 L 90 146 L 954 146 L 944 156 Z" class="cube-top"/>
+        <path d="M 944 156 L 954 146 L 954 486 L 944 496 Z" class="cube-right"/>
+        <rect x="80" y="156" width="864" height="340" class="cube-front"/>
+        <text x="512" y="180" class="st" text-anchor="middle">&laquo;executionEnvironment&raquo;</text>
+        <text x="512" y="198" class="nm">Host OS</text>
+
+        <!-- runtime artifacts (wider horizontal gaps) -->
+        <g transform="translate(100,236)">
+          <rect x="0" y="0" width="190" height="68" class="art"/>
+          <path d="M 176 0 L 190 0 L 190 14 L 176 14 Z" class="art-fold"/>
+          <text x="95" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="95" y="40" class="nm">client (Vite)</text>
+          <text x="95" y="58" class="dt">:5173  ./client</text>
+        </g>
+        <g transform="translate(400,236)">
+          <rect x="0" y="0" width="190" height="68" class="art"/>
+          <path d="M 176 0 L 190 0 L 190 14 L 176 14 Z" class="art-fold"/>
+          <text x="95" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="95" y="40" class="nm">server (Node)</text>
+          <text x="95" y="58" class="dt">:5000  ./server</text>
+        </g>
+        <g transform="translate(700,236)">
+          <rect x="0" y="0" width="190" height="68" class="art"/>
+          <path d="M 176 0 L 190 0 L 190 14 L 176 14 Z" class="art-fold"/>
+          <text x="95" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="95" y="40" class="nm">ai-service</text>
+          <text x="95" y="58" class="dt">Uvicorn :8000</text>
+        </g>
+
+        <!-- logical components (more vertical gap below artifacts) -->
+        <g transform="translate(110,374)">
+          <rect x="0" y="5" width="12" height="10" class="comp-tab"/>
+          <rect x="0" y="21" width="12" height="10" class="comp-tab"/>
+          <rect x="12" y="0" width="168" height="46" class="comp-body"/>
+          <text x="96" y="20" class="st" text-anchor="middle">&laquo;component&raquo;</text>
+          <text x="96" y="38" class="nm">React Client</text>
+        </g>
+        <g transform="translate(410,374)">
+          <rect x="0" y="5" width="12" height="10" class="comp-tab"/>
+          <rect x="0" y="21" width="12" height="10" class="comp-tab"/>
+          <rect x="12" y="0" width="168" height="46" class="comp-body"/>
+          <text x="96" y="20" class="st" text-anchor="middle">&laquo;component&raquo;</text>
+          <text x="96" y="38" class="nm">Express API</text>
+        </g>
+        <g transform="translate(710,374)">
+          <rect x="0" y="5" width="12" height="10" class="comp-tab"/>
+          <rect x="0" y="21" width="12" height="10" class="comp-tab"/>
+          <rect x="12" y="0" width="168" height="46" class="comp-body"/>
+          <text x="96" y="20" class="st" text-anchor="middle">&laquo;component&raquo;</text>
+          <text x="96" y="38" class="nm">FastAPI AI</text>
+        </g>
+
+        <!-- docker-compose.yml artifact on Host OS (below components, under server column) -->
+        <g transform="translate(405,432)">
+          <rect x="0" y="0" width="180" height="58" class="art"/>
+          <path d="M 166 0 L 180 0 L 180 14 L 166 14 Z" class="art-fold"/>
+          <text x="90" y="18" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="90" y="34" class="nm">docker-compose.yml</text>
+          <text x="10" y="50" class="prop">postgres:16-alpine  :5432</text>
+        </g>
+      </g>
+
+      <!-- «executionEnvironment» Docker Engine (extra gap below Host OS) -->
+      <g id="docker">
+        <path d="M 80 528 L 90 518 L 954 518 L 944 528 Z" class="cube-top"/>
+        <path d="M 944 528 L 954 518 L 954 718 L 944 728 Z" class="cube-right"/>
+        <rect x="80" y="528" width="864" height="200" class="cube-front"/>
+        <text x="512" y="552" class="st" text-anchor="middle">&laquo;executionEnvironment&raquo;</text>
+        <text x="512" y="570" class="nm">Docker Engine</text>
+        <text x="512" y="586" class="dt">network: default / bridgestock-net</text>
+
+        <g transform="translate(140,606)">
+          <rect x="0" y="0" width="248" height="84" class="art"/>
+          <path d="M 234 0 L 248 0 L 248 14 L 234 14 Z" class="art-fold"/>
+          <text x="124" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="124" y="40" class="nm">snapstock-postgres</text>
+          <text x="124" y="58" class="dt">postgres:16-alpine  :5432</text>
+          <text x="124" y="76" class="dt">vol: postgres-data</text>
+        </g>
+        <g transform="translate(580,606)">
+          <rect x="0" y="0" width="248" height="84" class="art"/>
+          <path d="M 234 0 L 248 0 L 248 14 L 234 14 Z" class="art-fold"/>
+          <text x="124" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="124" y="40" class="nm">snapstock-pgadmin</text>
+          <text x="124" y="58" class="dt">dpage/pgadmin4  :5050→80</text>
+        </g>
+      </g>
+
+      <!-- connectors -->
+      <g id="connectors">
+        <!-- HTTP: artifact right edge → left edge at vertical center -->
+        <path d="M 290 270 L 400 270" class="comm"/>
+        <rect x="318" y="252" width="56" height="16" class="lbl-bg"/>
+        <text x="346" y="264" class="lbl" text-anchor="middle">&laquo;HTTP&raquo; :5000</text>
+        <path d="M 590 270 L 700 270" class="comm"/>
+        <rect x="618" y="252" width="56" height="16" class="lbl-bg"/>
+        <text x="646" y="264" class="lbl" text-anchor="middle">&laquo;HTTP&raquo; :8000</text>
+
+        <!-- «manifest»: artifact bottom → component top -->
+        <path d="M 195 304 L 195 374" class="manifest"/>
+        <path d="M 495 304 L 495 374" class="manifest"/>
+        <path d="M 795 304 L 795 374" class="manifest"/>
+        <rect x="203" y="332" width="72" height="16" class="lbl-bg"/>
+        <text x="239" y="344" class="lbl" text-anchor="middle">&laquo;manifest&raquo;</text>
+
+        <!-- docker-compose.yml artifact → Docker Engine (deploys containers) -->
+        <path d="M 570 490 L 570 528" class="deploy-lnk"/>
+        <rect x="578" y="502" width="64" height="16" class="lbl-bg"/>
+        <text x="610" y="514" class="lbl" text-anchor="middle">configures</text>
+
+        <!-- server (Node) artifact → snapstock-postgres artifact -->
+        <path d="M 495 304 L 360 304 L 360 606 L 264 606" class="comm-dir"/>
+        
+        <text x="300" y="460" class="lbl" text-anchor="middle">&laquo;TCP/IP&raquo; :5432</text>
+
+        <!-- pgAdmin artifact → snapstock-postgres artifact -->
+        <path d="M 580 648 L 388 648" class="comm-dir"/>
+        <rect x="448" y="630" width="76" height="16" class="lbl-bg"/>
+        <text x="486" y="642" class="lbl" text-anchor="middle">&laquo;connects to&raquo;</text>
+      </g>
+
+      <text x="530" y="760" class="sum">Port map: 5173 client | 5000 API | 8000 AI | 5432 DB | 5050 pgAdmin</text>
+    </svg>
+    <p class="caption">Figure 19. Deployment — Local Docker + Host Apps</p>
+    <p class="note">docker-compose.yml is a Host OS artifact that configures Docker Engine; runtime DB access is TCP from the server (Node) artifact to snapstock-postgres.</p>
+  </div>
+</body>
+</html>

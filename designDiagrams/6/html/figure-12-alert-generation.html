@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Figure 12 — Alert Generation</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f0f2f5; padding: 2rem; display: flex; justify-content: center; }
+    .frame { background: #fff; border: 2px solid #212529; padding: 1.5rem 1rem 1.75rem; box-shadow: 0 4px 16px rgba(0,0,0,.08); max-width: 1100px; width: 100%; }
+    h1 { text-align: center; color: #1e4a7a; font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; }
+    svg { display: block; max-width: 100%; height: auto; }
+    .caption { margin-top: 0.85rem; text-align: center; font-size: 0.85rem; color: #495057; font-style: italic; }
+    .legend { margin-top: 0.65rem; display: flex; justify-content: center; gap: 2rem; font-size: 0.78rem; color: #495057; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 0.45rem; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <h1>Alert Generation</h1>
+    <!--
+      Spacious layout: boxH=40, gap=44, dia hw=60 hh=40
+      Loop channel at x=300 (left of AlertService boxes)
+    -->
+    <svg xmlns="http://www.w3.org/2000/svg" width="1040" height="960" viewBox="0 0 1040 960" role="img">
+      <defs>
+        <marker id="sa" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#212529"/></marker>
+        <marker id="da" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#212529"/></marker>
+        <style>
+          .hdr{fill:#e9ecef;stroke:#212529;stroke-width:2}.bg{fill:#fff;stroke:#212529;stroke-width:2}
+          .lt{font:700 14px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .act{fill:#fff;stroke:#212529;stroke-width:2}.at{font:600 11.5px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .dia{fill:#fff;stroke:#212529;stroke-width:2}.dt{font:600 10px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .sol{stroke:#212529;stroke-width:2;fill:none;marker-end:url(#sa)}
+          .das{stroke:#212529;stroke-width:1.75;fill:none;stroke-dasharray:6 4;marker-end:url(#da)}
+          .cyl-t{fill:#fff;stroke:#212529;stroke-width:2}.cyl-s{fill:#fff;stroke:#212529;stroke-width:2}
+          .ct{font:600 12px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .yn{font:italic 9.5px "Segoe UI",Arial,sans-serif;fill:#495057}
+        </style>
+      </defs>
+      <rect x="10" y="10" width="1020" height="940" class="bg"/>
+      <line x1="353" y1="10" x2="353" y2="950" stroke="#212529" stroke-width="2"/>
+      <line x1="696" y1="10" x2="696" y2="950" stroke="#212529" stroke-width="2"/>
+      <rect x="10" y="10" width="343" height="42" class="hdr"/>
+      <rect x="353" y="10" width="343" height="42" class="hdr"/>
+      <rect x="696" y="10" width="334" height="42" class="hdr"/>
+      <line x1="10" y1="52" x2="1030" y2="52" stroke="#212529" stroke-width="2"/>
+
+      <g id="connectors">
+        <!-- ScanService -->
+        <line x1="181" y1="99" x2="181" y2="120" class="sol"/>
+        <line x1="181" y1="160" x2="181" y2="188" class="sol"/>
+        <path d="M 286 208 L 360 208 L 360 276 L 419 276" class="das"/>
+        <line x1="181" y1="824" x2="181" y2="852" class="sol"/>
+        <path d="M 419 872 L 330 872 L 330 804 L 286 804" class="das"/>
+
+        <!-- AlertService main flow (box edge to box edge) -->
+        <line x1="524" y1="296" x2="524" y2="336" class="sol"/>
+        <line x1="524" y1="376" x2="524" y2="416" class="sol"/>
+        <line x1="524" y1="496" x2="524" y2="520" class="sol"/>
+        <line x1="524" y1="560" x2="524" y2="584" class="sol"/>
+        <line x1="524" y1="664" x2="524" y2="688" class="sol"/>
+        <line x1="524" y1="728" x2="524" y2="744" class="sol"/>
+        <line x1="524" y1="824" x2="524" y2="852" class="sol"/>
+        <line x1="524" y1="892" x2="524" y2="916" class="sol"/>
+
+        <!-- D1 no: skip upsert → D2 left -->
+        <path d="M 464 456 L 388 456 L 388 624 L 464 624" class="sol"/>
+        <!-- D2 no: skip spoilage → D3 left -->
+        <path d="M 464 624 L 388 624 L 388 784 L 464 784" class="sol"/>
+        <!-- D3 yes: loop back → For each left -->
+        <path d="M 464 784 L 300 784 L 300 356 L 419 356" class="sol"/>
+
+        <!-- PostgreSQL writes (to cylinder left x=785) -->
+        <path d="M 629 540 L 785 540" class="das"/>
+        <path d="M 584 624 L 720 624 L 720 612 L 785 612" class="das"/>
+        <path d="M 629 708 L 785 708" class="das"/>
+      </g>
+
+      <g id="nodes">
+        <text x="181" y="37" class="lt">ScanService</text>
+        <text x="524" y="37" class="lt">AlertService</text>
+        <text x="863" y="37" class="lt">PostgreSQL</text>
+
+        <!-- ScanService -->
+        <circle cx="181" cy="90" r="9" fill="#212529"/>
+        <rect x="76" y="120" width="210" height="40" rx="10" class="act"/>
+        <text x="181" y="145" class="at">Inventory update complete</text>
+        <rect x="76" y="188" width="210" height="40" rx="10" class="act"/>
+        <text x="181" y="213" class="at">Trigger alert evaluation</text>
+        <rect x="76" y="784" width="210" height="40" rx="10" class="act"/>
+        <text x="181" y="809" class="at">Continue scan response</text>
+        <circle cx="181" cy="864" r="11" fill="#fff" stroke="#212529" stroke-width="3"/>
+        <circle cx="181" cy="864" r="5" fill="#212529"/>
+
+        <!-- AlertService -->
+        <rect x="419" y="256" width="210" height="40" rx="10" class="act"/>
+        <text x="524" y="275" class="at">Load products touched</text>
+        <text x="524" y="289" class="at">by this scan</text>
+        <rect x="419" y="336" width="210" height="40" rx="10" class="act"/>
+        <text x="524" y="361" class="at">For each product P</text>
+
+        <polygon points="524,416 584,456 524,496 464,456" class="dia"/>
+        <text x="524" y="460" class="dt">qty &lt; threshold?</text>
+
+        <rect x="419" y="520" width="210" height="40" rx="10" class="act"/>
+        <text x="524" y="538" class="at">Upsert LOW_STOCK</text>
+        <text x="524" y="552" class="at">alert WARN</text>
+
+        <polygon points="524,584 584,624 524,664 464,624" class="dia"/>
+        <text x="524" y="620" class="dt">Freshness</text>
+        <text x="524" y="634" class="dt">Med. / Spoiled?</text>
+
+        <rect x="419" y="688" width="210" height="40" rx="10" class="act"/>
+        <text x="524" y="706" class="at">Create SPOILAGE</text>
+        <text x="524" y="720" class="at">alert by severity</text>
+
+        <polygon points="524,744 584,784 524,824 464,784" class="dia"/>
+        <text x="524" y="788" class="dt">More products?</text>
+
+        <rect x="419" y="852" width="210" height="40" rx="10" class="act"/>
+        <text x="524" y="877" class="at">Return alert ids</text>
+        <circle cx="524" cy="928" r="11" fill="#fff" stroke="#212529" stroke-width="3"/>
+        <circle cx="524" cy="928" r="5" fill="#212529"/>
+
+        <!-- PostgreSQL -->
+        <ellipse cx="863" cy="598" rx="78" ry="12" class="cyl-t"/>
+        <rect x="785" y="598" width="156" height="52" class="cyl-s"/>
+        <ellipse cx="863" cy="650" rx="78" ry="12" class="cyl-t"/>
+        <text x="863" y="628" class="ct">alerts table</text>
+
+        <!-- Decision branch labels -->
+        <text x="536" y="508" class="yn">yes</text>
+        <text x="448" y="448" class="yn">no</text>
+        <text x="536" y="676" class="yn">yes</text>
+        <text x="448" y="616" class="yn">no</text>
+        <text x="418" y="776" class="yn">yes</text>
+        <text x="536" y="838" class="yn">no</text>
+      </g>
+    </svg>
+    <div class="legend">
+      <span class="legend-item"><svg width="28" height="10"><line x1="0" y1="5" x2="28" y2="5" stroke="#212529" stroke-width="2"/></svg> Sequential</span>
+      <span class="legend-item"><svg width="28" height="10"><line x1="0" y1="5" x2="28" y2="5" stroke="#212529" stroke-width="2" stroke-dasharray="5 3"/></svg> Cross-lane</span>
+    </div>
+    <p class="caption">Figure 12. Activity Diagram — Alert Generation (post-scan rule evaluation)</p>
+  </div>
+</body>
+</html>

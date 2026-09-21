@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Figure 21 — Network Zones and Trust Boundaries</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f0f2f5; padding: 2rem; display: flex; justify-content: center; }
+    .frame { background: #fff; border: 2px solid #212529; padding: 1.5rem 1rem 1.75rem; box-shadow: 0 4px 16px rgba(0,0,0,0.08); max-width: 1100px; width: 100%; overflow-x: auto; }
+    h1 { text-align: center; color: #1e4a7a; font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; }
+    svg { display: block; min-width: 1060px; }
+    .caption { margin-top: 0.85rem; text-align: center; font-size: 0.85rem; color: #495057; font-style: italic; }
+    .note { margin-top: 0.5rem; text-align: center; font-size: 0.78rem; color: #6c757d; max-width: 880px; margin-left: auto; margin-right: auto; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <h1>Network Zones and Trust Boundaries Diagram</h1>
+    <svg xmlns="http://www.w3.org/2000/svg" width="1060" height="780" viewBox="0 0 1060 780" role="img">
+      <defs>
+        <marker id="open" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10" fill="none" stroke="#212529" stroke-width="1.5"/>
+        </marker>
+        <style>
+          .dep-frame{fill:#fff;stroke:#212529;stroke-width:1.75}
+          .cube-top{fill:#ececec;stroke:#212529;stroke-width:1.25}
+          .cube-right{fill:#d4d4d4;stroke:#212529;stroke-width:1.25}
+          .cube-front{fill:#fff;stroke:#212529;stroke-width:1.5}
+          .art{fill:#fff;stroke:#212529;stroke-width:1.5}
+          .art-fold{fill:#f8f8f8;stroke:#212529;stroke-width:1.25}
+          .st{font:italic 11px "Segoe UI",Arial,sans-serif;fill:#212529}
+          .nm{font:700 12px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .dt{font:500 10.5px "Segoe UI",Arial,sans-serif;fill:#343a40;text-anchor:middle}
+          .dep-tab{font:600 11px "Segoe UI",Arial,sans-serif;fill:#212529}
+          .zone{font:700 12px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .comm{stroke:#212529;stroke-width:1.5;fill:none}
+          .comm-dir{stroke:#212529;stroke-width:1.5;fill:none;marker-end:url(#open)}
+          .lbl{font:500 10.5px "Segoe UI",Arial,sans-serif;fill:#212529}
+          .lbl-bg{fill:#fff;stroke:none}
+          .rule{font:500 11px "Segoe UI",Arial,sans-serif;fill:#495057}
+          .sum{font:500 11px "Segoe UI",Arial,sans-serif;fill:#495057;text-anchor:middle}
+        </style>
+      </defs>
+
+      <path d="M 24 28 L 108 28 L 120 40 L 1036 40 L 1036 744 L 24 744 Z" class="dep-frame"/>
+      <text x="128" y="36" class="dep-tab">Network Zones and Trust Boundaries</text>
+
+      <!-- ZONE: PUBLIC «device» -->
+      <g id="zone-public">
+        <path d="M 52 72 L 62 62 L 362 62 L 352 72 Z" class="cube-top"/>
+        <path d="M 352 72 L 362 62 L 362 272 L 352 282 Z" class="cube-right"/>
+        <rect x="52" y="72" width="300" height="210" class="cube-front"/>
+        <text x="202" y="98" class="zone">ZONE: PUBLIC</text>
+        <text x="202" y="118" class="st" text-anchor="middle">&laquo;device&raquo; &laquo;client workstation&raquo;</text>
+        <text x="202" y="136" class="nm">Browser clients</text>
+        <text x="202" y="152" class="dt">:443 (prod) / :5173 (dev)</text>
+
+        <g transform="translate(72,172)">
+          <rect x="0" y="0" width="190" height="68" class="art"/>
+          <path d="M 176 0 L 190 0 L 190 14 L 176 14 Z" class="art-fold"/>
+          <text x="95" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="95" y="40" class="nm">browser session</text>
+          <text x="95" y="58" class="dt">no direct DB or AI access</text>
+        </g>
+      </g>
+
+      <!-- ZONE: APPLICATION «executionEnvironment» -->
+      <g id="zone-application">
+        <path d="M 388 72 L 398 62 L 1018 62 L 1008 72 Z" class="cube-top"/>
+        <path d="M 1008 72 L 1018 62 L 1018 372 L 1008 382 Z" class="cube-right"/>
+        <rect x="388" y="72" width="620" height="310" class="cube-front"/>
+        <text x="698" y="98" class="zone">ZONE: APPLICATION (private)</text>
+        <text x="698" y="118" class="st" text-anchor="middle">&laquo;executionEnvironment&raquo;</text>
+        <text x="698" y="136" class="nm">Nginx → server :5000 → ai-service :8000</text>
+
+        <g transform="translate(408,164)">
+          <rect x="0" y="0" width="180" height="68" class="art"/>
+          <path d="M 166 0 L 180 0 L 180 14 L 166 14 Z" class="art-fold"/>
+          <text x="90" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="90" y="40" class="nm">edge-proxy</text>
+          <text x="90" y="58" class="dt">TLS termination</text>
+        </g>
+        <g transform="translate(616,164)">
+          <rect x="0" y="0" width="180" height="68" class="art"/>
+          <path d="M 166 0 L 180 0 L 180 14 L 166 14 Z" class="art-fold"/>
+          <text x="90" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="90" y="40" class="nm">api-server</text>
+          <text x="90" y="58" class="dt">Express  :5000</text>
+        </g>
+        <g transform="translate(824,164)">
+          <rect x="0" y="0" width="180" height="68" class="art"/>
+          <path d="M 166 0 L 180 0 L 180 14 L 166 14 Z" class="art-fold"/>
+          <text x="90" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="90" y="40" class="nm">ai-service</text>
+          <text x="90" y="58" class="dt">FastAPI  :8000</text>
+        </g>
+
+        <text x="420" y="268" class="dt" text-anchor="start">JWT validated only in this zone</text>
+        <text x="420" y="284" class="dt" text-anchor="start">AI accepts requests only from api-server</text>
+        <text x="420" y="300" class="dt" text-anchor="start">network policy / shared secret</text>
+      </g>
+
+      <!-- ZONE: DATA «executionEnvironment» -->
+      <g id="zone-data">
+        <path d="M 388 412 L 398 402 L 1018 402 L 1008 412 Z" class="cube-top"/>
+        <path d="M 1008 412 L 1018 402 L 1018 602 L 1008 612 Z" class="cube-right"/>
+        <rect x="388" y="412" width="620" height="200" class="cube-front"/>
+        <text x="698" y="438" class="zone">ZONE: DATA (private)</text>
+        <text x="698" y="458" class="st" text-anchor="middle">&laquo;executionEnvironment&raquo; &laquo;database system&raquo;</text>
+        <text x="698" y="476" class="nm">PostgreSQL :5432 | S3 / MinIO</text>
+
+        <g transform="translate(448,498)">
+          <rect x="0" y="0" width="248" height="84" class="art"/>
+          <path d="M 234 0 L 248 0 L 248 14 L 234 14 Z" class="art-fold"/>
+          <text x="124" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="124" y="40" class="nm">database</text>
+          <text x="124" y="58" class="dt">PostgreSQL  :5432</text>
+          <text x="124" y="76" class="dt">private subnet</text>
+        </g>
+        <g transform="translate(728,498)">
+          <rect x="0" y="0" width="248" height="84" class="art"/>
+          <path d="M 234 0 L 248 0 L 248 14 L 234 14 Z" class="art-fold"/>
+          <text x="124" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="124" y="40" class="nm">object-storage</text>
+          <text x="124" y="58" class="dt">S3 / MinIO bucket</text>
+          <text x="124" y="76" class="dt">signed URLs</text>
+        </g>
+
+        <text x="698" y="594" class="dt" text-anchor="middle">server-only (+ admin jump host)</text>
+      </g>
+
+      <!-- connectors (artifact edge → artifact edge) -->
+      <g id="connectors">
+        <!-- browser session → edge-proxy (artifact vertical centers) -->
+        <path d="M 262 206 L 408 198" class="comm-dir"/>
+        <rect x="310" y="184" width="52" height="16" class="lbl-bg"/>
+        <text x="336" y="196" class="lbl" text-anchor="middle">&laquo;HTTPS&raquo; :443</text>
+
+        <!-- edge-proxy → api-server -->
+        <path d="M 588 198 L 616 198" class="comm-dir"/>
+        <rect x="586" y="176" width="36" height="16" class="lbl-bg"/>
+        <text x="604" y="188" class="lbl" text-anchor="middle">proxy</text>
+
+        <!-- api-server → ai-service -->
+        <path d="M 796 198 L 824 198" class="comm-dir"/>
+        <rect x="774" y="176" width="72" height="16" class="lbl-bg"/>
+        <text x="810" y="188" class="lbl" text-anchor="middle">&laquo;HTTP&raquo; :8000</text>
+
+        <!-- api-server → database -->
+        <path d="M 706 232 L 706 397 L 572 397 L 572 498" class="comm-dir"/>
+        <rect x="618" y="381" width="72" height="16" class="lbl-bg"/>
+        <text x="654" y="393" class="lbl" text-anchor="middle">&laquo;TCP/IP&raquo; private</text>
+
+        <!-- api-server → object-storage -->
+        <path d="M 706 397 L 852 397 L 852 498" class="comm-dir"/>
+        <rect x="748" y="381" width="120" height="16" class="lbl-bg"/>
+        <text x="808" y="393" class="lbl" text-anchor="middle">object storage API</text>
+      </g>
+
+      <text x="52" y="632" class="zone" text-anchor="start">Trust boundary rules</text>
+      <text x="60" y="656" class="rule">• JWT validated only in APPLICATION zone (api-server).</text>
+      <text x="60" y="678" class="rule">• AI accepts requests only from api-server (network policy / shared secret).</text>
+      <text x="60" y="700" class="rule">• DATA zone accepts connections only from api-server (and admin jump host).</text>
+      <text x="60" y="722" class="rule">• Browsers never reach PostgreSQL or the AI service directly.</text>
+
+      <text x="530" y="760" class="sum">Production firewall rules enforce the same constraints that development enforces by convention.</text>
+    </svg>
+    <p class="caption">Figure 21. Network Zones and Trust Boundaries</p>
+    <p class="note">Communication paths between deployment targets; browsers never reach PostgreSQL or the AI service.</p>
+  </div>
+</body>
+</html>

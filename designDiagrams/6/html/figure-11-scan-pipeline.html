@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scan Processing — Activity Diagram (HTML Sample)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+      background: #f0f2f5;
+      padding: 2rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .frame {
+      background: #fff;
+      border: 2px solid #212529;
+      padding: 1.5rem 1rem 1.75rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,.08);
+    }
+
+    h1 {
+      text-align: center;
+      color: #1e4a7a;
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    svg { display: block; max-width: 100%; height: auto; }
+
+    .caption {
+      margin-top: 0.85rem;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #495057;
+      font-style: italic;
+    }
+
+    .legend {
+      margin-top: 0.65rem;
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      font-size: 0.78rem;
+      color: #495057;
+    }
+
+    .legend-item { display: flex; align-items: center; gap: 0.45rem; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <h1>Scan Processing</h1>
+
+    <!--
+      Lane layout (x bounds, 16px inner padding from dividers):
+        User:    10  – 265   center 137.5
+        Backend: 265 – 520   center 392.5
+        AI:      520 – 775   center 647.5
+        DB:      775 – 1030  center 902.5
+    -->
+    <svg xmlns="http://www.w3.org/2000/svg" width="1040" height="700" viewBox="0 0 1040 700" role="img" aria-label="Scan Processing Activity Diagram">
+      <defs>
+        <marker id="solidArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <polygon points="0,0 8,4 0,8" fill="#212529"/>
+        </marker>
+        <marker id="dashArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <polygon points="0,0 8,4 0,8" fill="#212529"/>
+        </marker>
+        <style>
+          .lane-hdr { fill:#e9ecef; stroke:#212529; stroke-width:2; }
+          .lane-bg { fill:#fff; stroke:#212529; stroke-width:2; }
+          .lane-title { font:700 14px "Segoe UI",Arial,sans-serif; fill:#212529; text-anchor:middle; }
+          .act { fill:#fff; stroke:#212529; stroke-width:2; }
+          .act-text { font:600 12px "Segoe UI",Arial,sans-serif; fill:#212529; text-anchor:middle; }
+          .solid { stroke:#212529; stroke-width:2; fill:none; marker-end:url(#solidArrow); }
+          .dashed { stroke:#212529; stroke-width:1.75; fill:none; stroke-dasharray:6 4; marker-end:url(#dashArrow); }
+          .cyl-top { fill:#fff; stroke:#212529; stroke-width:2; }
+          .cyl-side { fill:#fff; stroke:#212529; stroke-width:2; }
+          .cyl-text { font:600 12px "Segoe UI",Arial,sans-serif; fill:#212529; text-anchor:middle; }
+        </style>
+      </defs>
+
+      <!-- Layer 1: background & lane grid -->
+      <rect x="10" y="10" width="1020" height="660" class="lane-bg"/>
+      <line x1="265" y1="10" x2="265" y2="670" stroke="#212529" stroke-width="2"/>
+      <line x1="520" y1="10" x2="520" y2="670" stroke="#212529" stroke-width="2"/>
+      <line x1="775" y1="10" x2="775" y2="670" stroke="#212529" stroke-width="2"/>
+      <rect x="10" y="10" width="255" height="42" class="lane-hdr"/>
+      <rect x="265" y="10" width="255" height="42" class="lane-hdr"/>
+      <rect x="520" y="10" width="255" height="42" class="lane-hdr"/>
+      <rect x="775" y="10" width="255" height="42" class="lane-hdr"/>
+      <line x1="10" y1="52" x2="1030" y2="52" stroke="#212529" stroke-width="2"/>
+
+      <!-- Layer 2: connectors (behind boxes) -->
+      <g id="connectors">
+        <!-- User lane vertical flow (center x=137) -->
+        <line x1="137" y1="97" x2="137" y2="118" class="solid"/>
+        <line x1="137" y1="158" x2="137" y2="179" class="solid"/>
+        <line x1="137" y1="560" x2="137" y2="581" class="solid"/>
+
+        <!-- Backend vertical flow (center x=393) -->
+        <line x1="393" y1="219" x2="393" y2="240" class="solid"/>
+        <line x1="393" y1="280" x2="393" y2="301" class="solid"/>
+        <line x1="393" y1="500" x2="393" y2="521" class="solid"/>
+
+        <!-- AI vertical flow (center x=648) -->
+        <line x1="648" y1="280" x2="648" y2="301" class="solid"/>
+        <line x1="648" y1="341" x2="648" y2="362" class="solid"/>
+        <line x1="648" y1="402" x2="648" y2="423" class="solid"/>
+
+        <!-- Capture (right 243) -> Validate (left 288) -->
+        <path d="M 243 199 L 288 199" class="dashed"/>
+
+        <!-- Send (right 498, cy=321) -> Receive (left 543, cy=260) -->
+        <path d="M 498 321 L 530 321 L 530 260 L 543 260" class="dashed"/>
+
+        <!-- Detect (right 753) -> Image Storage (left 824) -->
+        <path d="M 753 321 L 824 321" class="dashed"/>
+
+        <!-- AI Return -> PostgreSQL (down then right, clear of boxes) -->
+        <path d="M 648 463 L 648 494 L 814 494" class="dashed"/>
+
+        <!-- AI Return (left 543) -> Save Results (top 393) via gap at y=448 -->
+        <path d="M 543 448 L 393 448 L 393 460" class="dashed"/>
+
+        <!-- Backend Return (left 288) -> Display (right 238) at y=532 — avoids lane border & center vertical -->
+        <path d="M 288 532 L 238 532" class="dashed"/>
+      </g>
+
+      <!-- Layer 3: nodes -->
+      <g id="nodes">
+        <text x="137" y="37" class="lane-title">Vendor User</text>
+        <text x="392" y="37" class="lane-title">System (Backend)</text>
+        <text x="647" y="37" class="lane-title">AI Service</text>
+        <text x="902" y="37" class="lane-title">Database / Storage</text>
+
+        <!-- Vendor User (boxes x=38 w=200, inside lane with 28px side margin) -->
+        <circle cx="137" cy="88" r="9" fill="#212529"/>
+        <rect x="38" y="118" width="200" height="40" rx="10" class="act"/>
+        <text x="138" y="143" class="act-text">Open Scan Page</text>
+        <rect x="33" y="179" width="210" height="40" rx="10" class="act"/>
+        <text x="138" y="204" class="act-text">Capture / Upload Image</text>
+        <rect x="38" y="520" width="200" height="40" rx="10" class="act"/>
+        <text x="138" y="545" class="act-text">Display Results to User</text>
+        <circle cx="137" cy="596" r="11" fill="#fff" stroke="#212529" stroke-width="3"/>
+        <circle cx="137" cy="596" r="5" fill="#212529"/>
+
+        <!-- Backend (x=288 w=210 — 23px from each lane border) -->
+        <rect x="288" y="179" width="210" height="40" rx="10" class="act"/>
+        <text x="393" y="204" class="act-text">Validate Image</text>
+        <rect x="288" y="240" width="210" height="40" rx="10" class="act"/>
+        <text x="393" y="265" class="act-text">Store Image (Temp)</text>
+        <rect x="288" y="301" width="210" height="40" rx="10" class="act"/>
+        <text x="393" y="326" class="act-text">Send Image for Analysis</text>
+        <rect x="288" y="460" width="210" height="40" rx="10" class="act"/>
+        <text x="393" y="485" class="act-text">Save Results to Database</text>
+        <rect x="288" y="521" width="210" height="40" rx="10" class="act"/>
+        <text x="393" y="546" class="act-text">Return Analysis Results</text>
+
+        <!-- AI Service (x=543 w=210 — 23px from each lane border) -->
+        <rect x="543" y="240" width="210" height="40" rx="10" class="act"/>
+        <text x="648" y="265" class="act-text">Receive Image</text>
+        <rect x="543" y="301" width="210" height="40" rx="10" class="act"/>
+        <text x="648" y="326" class="act-text">Detect Objects (YOLOv8)</text>
+        <rect x="543" y="362" width="210" height="40" rx="10" class="act"/>
+        <text x="648" y="387" class="act-text">Classify Freshness (MobileNet)</text>
+        <rect x="543" y="423" width="210" height="40" rx="10" class="act"/>
+        <text x="648" y="448" class="act-text">Return Analysis Results</text>
+
+        <!-- Database cylinders (centered in lane 4) -->
+        <ellipse cx="902" cy="318" rx="78" ry="12" class="cyl-top"/>
+        <rect x="824" y="318" width="156" height="52" class="cyl-side"/>
+        <ellipse cx="902" cy="370" rx="78" ry="12" class="cyl-top"/>
+        <text x="902" y="350" class="cyl-text">Image Storage</text>
+
+        <ellipse cx="902" cy="468" rx="88" ry="12" class="cyl-top"/>
+        <rect x="814" y="468" width="176" height="52" class="cyl-side"/>
+        <ellipse cx="902" cy="520" rx="88" ry="12" class="cyl-top"/>
+        <text x="902" y="498" class="cyl-text">PostgreSQL Database</text>
+      </g>
+    </svg>
+
+    <div class="legend">
+      <div class="legend-item">
+        <svg width="32" height="12"><line x1="0" y1="6" x2="32" y2="6" stroke="#212529" stroke-width="2"/></svg>
+        Sequential flow
+      </div>
+      <div class="legend-item">
+        <svg width="32" height="12"><line x1="0" y1="6" x2="32" y2="6" stroke="#212529" stroke-width="2" stroke-dasharray="5 3"/></svg>
+        Cross-component communication
+      </div>
+    </div>
+
+    <p class="caption">Figure 11. Activity Diagram — Scan Pipeline</p>
+  </div>
+</body>
+</html>

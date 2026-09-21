@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Figure 13 — AI Inference Pipeline</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f0f2f5; padding: 2rem; display: flex; justify-content: center; }
+    .frame { background: #fff; border: 2px solid #212529; padding: 1.5rem 1rem 1.75rem; box-shadow: 0 4px 16px rgba(0,0,0,.08); max-width: 700px; width: 100%; }
+    h1 { text-align: center; color: #1e4a7a; font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; }
+    svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+    .caption { margin-top: 0.85rem; text-align: center; font-size: 0.85rem; color: #495057; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <h1>AI Inference Pipeline</h1>
+    <svg xmlns="http://www.w3.org/2000/svg" width="520" height="920" viewBox="0 0 520 920" role="img">
+      <defs>
+        <marker id="sa" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#212529"/></marker>
+        <style>
+          .bg{fill:#fff;stroke:#212529;stroke-width:2}.hdr{fill:#e9ecef;stroke:#212529;stroke-width:2}
+          .lt{font:700 14px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .act{fill:#fff;stroke:#212529;stroke-width:2}.at{font:600 11px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .sub{font:500 10px "Segoe UI",Arial,sans-serif;fill:#495057;text-anchor:middle}
+          .dia{fill:#fff;stroke:#212529;stroke-width:2}.dt{font:600 11px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .sol{stroke:#212529;stroke-width:2;fill:none;marker-end:url(#sa)}
+          .yn{font:italic 9.5px "Segoe UI",Arial,sans-serif;fill:#495057}
+        </style>
+      </defs>
+      <rect x="10" y="10" width="500" height="900" class="bg"/>
+      <rect x="10" y="10" width="500" height="42" class="hdr"/>
+      <line x1="10" y1="52" x2="510" y2="52" stroke="#212529" stroke-width="2"/>
+      <text x="260" y="37" class="lt">AI Service — /analysis endpoint</text>
+
+      <g id="connectors">
+        <line x1="260" y1="72" x2="260" y2="96" class="sol"/>
+        <line x1="260" y1="124" x2="260" y2="168" class="sol"/>
+        <line x1="260" y1="248" x2="260" y2="292" class="sol"/>
+        <line x1="260" y1="372" x2="260" y2="416" class="sol"/>
+        <path d="M 210 456 L 188 456 L 188 512" class="sol"/>
+        <path d="M 310 456 L 332 456 L 332 568" class="sol"/>
+        <line x1="332" y1="624" x2="332" y2="668" class="sol"/>
+        <line x1="332" y1="724" x2="332" y2="768" class="sol"/>
+        <path d="M 215 796 L 188 796 L 188 768 L 145 768" class="sol"/>
+      </g>
+
+      <g id="nodes">
+        <rect x="180" y="96" width="160" height="28" rx="8" class="act"/>
+        <text x="260" y="114" class="at">multipart image in</text>
+
+        <rect x="95" y="168" width="330" height="80" rx="10" class="act"/>
+        <text x="260" y="192" class="at">1. PREPROCESS</text>
+        <text x="260" y="208" class="sub">decode JPEG/PNG · EXIF orient · resize</text>
+        <text x="260" y="222" class="sub">normalize RGB (Pillow / OpenCV)</text>
+
+        <rect x="95" y="292" width="330" height="80" rx="10" class="act"/>
+        <text x="260" y="316" class="at">2. YOLO DETECT — ObjectDetector</text>
+        <text x="260" y="332" class="sub">Ultralytics YOLOv8</text>
+        <text x="260" y="346" class="sub">output: [label, conf, bbox] × N</text>
+
+        <polygon points="260,416 310,456 260,496 210,456" class="dia"/>
+        <text x="260" y="460" class="dt">N == 0?</text>
+
+        <rect x="55" y="512" width="190" height="56" rx="10" class="act"/>
+        <text x="150" y="536" class="at">Return empty</text>
+        <text x="150" y="552" class="at">detections[]</text>
+
+        <rect x="215" y="568" width="210" height="56" rx="10" class="act"/>
+        <text x="320" y="592" class="at">3. CROP each bbox</text>
+        <text x="320" y="608" class="sub">padding · clamp to image</text>
+
+        <rect x="215" y="668" width="210" height="56" rx="10" class="act"/>
+        <text x="320" y="692" class="at">4. CNN CLASSIFY</text>
+        <text x="320" y="708" class="sub">Fresh · Medium · Spoiled + conf</text>
+
+        <rect x="215" y="768" width="210" height="56" rx="10" class="act"/>
+        <text x="320" y="792" class="at">5. AGGREGATE</text>
+        <text x="320" y="808" class="sub">group · sum counts · timings</text>
+
+        <rect x="55" y="768" width="100" height="56" rx="10" class="act"/>
+        <text x="105" y="792" class="at">6. RESPONSE</text>
+        <text x="105" y="808" class="sub">JSON out</text>
+
+        <text x="188" y="450" class="yn">yes</text>
+        <text x="328" y="450" class="yn">no</text>
+      </g>
+    </svg>
+    <p class="caption">Figure 13. AI Inference Pipeline (image in → response JSON)</p>
+  </div>
+</body>
+</html>

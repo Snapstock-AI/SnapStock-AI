@@ -1,4 +1,6 @@
 import { AlertTriangle, Bell, Package } from 'lucide-react'
+import { PageHeader } from '@/components/PageHeader'
+import { Card, CardContent } from '@/components/ui/card'
 
 const alerts = [
   {
@@ -28,32 +30,31 @@ const alerts = [
 ]
 
 const typeStyles: Record<string, string> = {
-  critical: 'border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-900/20',
+  critical: 'border-destructive/50 bg-destructive/10',
   warning: 'border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/20',
-  info: 'border-border bg-surface-elevated',
+  info: '',
 }
 
 export default function AlertsPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-serif text-2xl font-semibold md:text-3xl">Alerts</h1>
-        <p className="mt-1 text-sm text-muted">Spoilage warnings and low-stock notifications</p>
-      </div>
+      <PageHeader
+        title="Alerts"
+        description="Spoilage warnings and low-stock notifications"
+      />
 
       <div className="space-y-3">
         {alerts.map((alert) => (
-          <div
-            key={alert.id}
-            className={`flex gap-4 rounded-2xl border p-4 ${typeStyles[alert.type]}`}
-          >
-            <alert.icon className="mt-0.5 h-5 w-5 shrink-0 text-muted" />
-            <div className="flex-1">
-              <p className="font-medium">{alert.title}</p>
-              <p className="mt-1 text-sm text-muted">{alert.detail}</p>
-            </div>
-            <span className="shrink-0 text-xs text-muted">{alert.time}</span>
-          </div>
+          <Card key={alert.id} className={typeStyles[alert.type]}>
+            <CardContent className="flex gap-4 p-4">
+              <alert.icon className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+              <div className="flex-1">
+                <p className="font-medium">{alert.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{alert.detail}</p>
+              </div>
+              <span className="shrink-0 text-xs text-muted-foreground">{alert.time}</span>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </div>

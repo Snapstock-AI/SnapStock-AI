@@ -19,6 +19,9 @@ vi.mock("../../src/lib/detection", () => ({
 vi.mock("../../src/context/AuthContext", () => ({
   useAuth: () => ({
     token: "test-token",
+    user: {
+      businessId: "550e8400-e29b-41d4-a716-446655440000",
+    },
   }),
 }));
 
