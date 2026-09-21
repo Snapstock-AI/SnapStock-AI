@@ -9,5 +9,8 @@ export const CreateBusinessSchema = z.object({
 
 export type CreateBusinessDTO = z.infer<typeof CreateBusinessSchema>;
 
-export const UpdateBusinessSchema = CreateBusinessSchema;
+export const UpdateBusinessSchema = CreateBusinessSchema.partial().extend({
+  freshness_alert_threshold: z.number().int().min(0).max(100).optional(),
+  low_stock_threshold: z.number().int().min(0).max(10000).optional(),
+});
 export type UpdateBusinessDTO = z.infer<typeof UpdateBusinessSchema>;

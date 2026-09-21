@@ -31,6 +31,9 @@ export default function SettingsPage() {
     address: '',
     contact_number: '',
   })
+  const [lowStockThreshold, setLowStockThreshold] = useState(25)
+  const [freshnessThreshold, setFreshnessThreshold] = useState(65)
+  const [savingThresholds, setSavingThresholds] = useState(false)
   const [savingProfile, setSavingProfile] = useState(false)
   const [deletingBusiness, setDeletingBusiness] = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
@@ -57,6 +60,8 @@ export default function SettingsPage() {
             address: currentBusiness.address,
             contact_number: currentBusiness.contact_number,
           })
+          setLowStockThreshold(currentBusiness.low_stock_threshold ?? 25)
+          setFreshnessThreshold(currentBusiness.freshness_alert_threshold ?? 65)
         }
       })
       .catch((error: unknown) => {
@@ -111,6 +116,45 @@ export default function SettingsPage() {
       setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete business.')
     } finally {
       setDeletingBusiness(false)
+    }
+  }
+
+  async function handleThresholdsSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!user?.businessId || business?.role !== 'OWNER') return
+    setSavingThresholds(true)
+    setMessage('')
+    setError('')
+    try {
+      const response = await apiRequest<Business>(
+        `/businesses/${user.businessId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            low_stock_threshold: Number(lowStockThreshold),
+            freshness_alert_threshold: Number(freshnessThreshold),
+          }),
+        },
+        true,
+      )
+      if (response.data) {
+        setBusiness((prev) =>
+          prev
+            ? {
+                ...prev,
+                ...response.data,
+                role: prev.role,
+              }
+            : response.data!,
+        )
+        setLowStockThreshold(response.data.low_stock_threshold ?? lowStockThreshold)
+        setFreshnessThreshold(response.data.freshness_alert_threshold ?? freshnessThreshold)
+      }
+      setMessage('Alert thresholds saved.')
+    } catch (saveError: unknown) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to save thresholds.')
+    } finally {
+      setSavingThresholds(false)
     }
   }
 
@@ -296,18 +340,48 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Alert thresholds</CardTitle>
+            <CardDescription>
+              Used for low-stock and freshness-risk alerts across the dashboard
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <form onSubmit={handleThresholdsSave} className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="low-stock">Low stock threshold</Label>
-                <Input id="low-stock" type="number" defaultValue={25} />
+                <Label htmlFor="low-stock">Low stock threshold (count)</Label>
+                <Input
+                  id="low-stock"
+                  type="number"
+                  min={0}
+                  value={lowStockThreshold}
+                  onChange={(e) => setLowStockThreshold(Number(e.target.value))}
+                  disabled={business?.role !== 'OWNER'}
+                />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="freshness-alert">Freshness alert below</Label>
-                <Input id="freshness-alert" type="number" defaultValue={65} />
+                <Label htmlFor="freshness-alert">Freshness risk alert at / above (%)</Label>
+                <Input
+                  id="freshness-alert"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={freshnessThreshold}
+                  onChange={(e) => setFreshnessThreshold(Number(e.target.value))}
+                  disabled={business?.role !== 'OWNER'}
+                />
               </div>
-            </div>
+              {business?.role === 'OWNER' ? (
+                <div className="sm:col-span-2">
+                  <Button type="submit" disabled={savingThresholds}>
+                    <Save className="h-4 w-4" />
+                    {savingThresholds ? 'Saving...' : 'Save thresholds'}
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground sm:col-span-2">
+                  Only the business owner can change alert thresholds.
+                </p>
+              )}
+            </form>
           </CardContent>
         </Card>
       </div>

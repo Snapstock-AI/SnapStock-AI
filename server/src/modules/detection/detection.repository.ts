@@ -24,7 +24,7 @@ export class DetectionRepository {
         "COUNT(detection.id) FILTER (WHERE COALESCE(detection.corrected_freshness, detection.freshness) = 'Fresh')::int AS fresh_count",
         "COUNT(detection.id) FILTER (WHERE COALESCE(detection.corrected_freshness, detection.freshness) = 'Medium')::int AS medium_count",
         "COUNT(detection.id) FILTER (WHERE COALESCE(detection.corrected_freshness, detection.freshness) = 'Spoiled')::int AS spoiled_count",
-        "COALESCE(JSON_AGG(JSON_BUILD_OBJECT('type', detection.product_label, 'freshness', COALESCE(detection.corrected_freshness, detection.freshness)) ORDER BY detection.created_at) FILTER (WHERE detection.id IS NOT NULL), '[]') AS items",
+        "COALESCE(JSON_AGG(JSON_BUILD_OBJECT('id', detection.id, 'type', detection.product_label, 'freshness', COALESCE(detection.corrected_freshness, detection.freshness)) ORDER BY detection.created_at) FILTER (WHERE detection.id IS NOT NULL), '[]') AS items",
       ])
       .where("scan.business_id = :businessId", { businessId })
       .andWhere("scan.created_at >= :startDate", { startDate })
