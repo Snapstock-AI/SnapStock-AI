@@ -4,7 +4,9 @@ import { SQSClient } from "@aws-sdk/client-sqs";
 const region = process.env.AWS_REGION || "ap-south-1";
 const endpoint = process.env.AWS_ENDPOINT_URL || undefined;
 
-const credentials = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+const credentials = endpoint &&
+  process.env.AWS_ACCESS_KEY_ID &&
+  process.env.AWS_SECRET_ACCESS_KEY
   ? {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
