@@ -10,6 +10,26 @@ awslocal s3api head-bucket --bucket "$bucket" 2>/dev/null || \
   awslocal s3api create-bucket \
     --bucket "$bucket"
 
+cat > /tmp/s3-cors.json <<'JSON'
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+      ],
+      "AllowedMethods": ["PUT", "GET", "HEAD"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"]
+    }
+  ]
+}
+JSON
+
+awslocal s3api put-bucket-cors \
+  --bucket "$bucket" \
+  --cors-configuration file:///tmp/s3-cors.json
+
 create_queue_with_dlq() {
   queue_name="$1"
   dlq_name="${queue_name}-dlq"

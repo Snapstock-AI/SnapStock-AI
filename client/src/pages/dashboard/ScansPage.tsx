@@ -1,6 +1,6 @@
 import { useState} from "react";
 import { Camera, Upload } from "lucide-react";
-import { analyzeImage } from "../../lib/detection";
+import { uploadScanImage } from "../../lib/detection";
 import type { DetectionResult } from "../../lib/detection";
 import CameraScanner from "../../components/scanner/CameraScanner";
 import type { Shelf } from "../../types/shelf";
@@ -45,6 +45,11 @@ export default function ScansPage() {
 
   const [error, setError] = useState("");
 
+  const [queuedScan, setQueuedScan] = useState<{
+    scanId: string;
+    objectKey: string;
+  } | null>(null);
+
   const [showCamera, setShowCamera] = useState(false);
   const [selectedShelf, setSelectedShelf] = useState<Shelf | null>(null);
 
@@ -81,18 +86,16 @@ export default function ScansPage() {
       return;
     }
 
-    const data = await analyzeImage(
+    const data = await uploadScanImage(
       file,
       shelf,
       TEST_BUSINESS_ID,
       token
     );
-    console.log("========== SCAN PAGE RESULT ==========");
-console.log(data);
-
-    
-  
-    setResult(data);
+    setQueuedScan({
+      scanId: data.scanId,
+      objectKey: data.objectKey,
+    });
   } catch (error: any) {
 
     showError(
@@ -376,7 +379,7 @@ console.log(data);
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent" />
           <p className="font-medium text-white">
-            Analyzing...
+            Uploading scan...
           </p>
         </div>
       </div>
@@ -416,6 +419,29 @@ console.log(data);
       
 
     
+      {queuedScan && !result && (
+        <div className="rounded-2xl border border-border bg-surface-elevated p-6">
+          <h2 className="font-serif text-xl font-semibold">
+            Scan queued
+          </h2>
+          <p className="mt-2 text-sm text-muted">
+            Your image was uploaded successfully and is waiting for AI analysis.
+          </p>
+          <dl className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">Status</dt>
+              <dd className="font-semibold">PENDING</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">Scan ID</dt>
+              <dd className="max-w-[70%] truncate font-mono text-xs">
+                {queuedScan.scanId}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      )}
+
       {result && (
   <div className="rounded-2xl border border-border bg-surface-elevated p-6">
 

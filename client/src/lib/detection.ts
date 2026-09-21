@@ -42,6 +42,55 @@ export type DetectionResult = {
   }[];
 };
 
+export type ScanUploadResponse = {
+  scanId: string;
+  status: "PENDING";
+  objectKey: string;
+  uploadUrl: string;
+  expiresInSeconds: number;
+};
+
+export async function uploadScanImage(
+  file: File,
+  shelf: Shelf,
+  businessId: string,
+  token: string
+): Promise<ScanUploadResponse> {
+  const response = await fetch(`${API_URL}/detection/upload-url`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      businessId,
+      shelfId: shelf.id,
+      fileName: file.name,
+      contentType: file.type,
+    }),
+  });
+
+  const body = await response.json();
+
+  if (!response.ok || body.success === false) {
+    throw new Error(body.message || "Could not prepare image upload");
+  }
+
+  const uploadResponse = await fetch(body.data.uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type,
+    },
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error("Image upload failed");
+  }
+
+  return body.data;
+}
+
 
 export async function analyzeImage(
   file: File,

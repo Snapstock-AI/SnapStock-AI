@@ -75,6 +75,28 @@ export class DetectionRepository {
     return result.rows[0];
   }
 
+  static async updateScanImageMetadata(
+    scanId: string,
+    imageKey: string,
+    contentType: string,
+    originalName: string
+  ) {
+    const result = await db.query(
+      `
+      UPDATE scans
+      SET
+        image_key = $1,
+        image_content_type = $2,
+        image_original_name = $3
+      WHERE id = $4
+      RETURNING *;
+      `,
+      [imageKey, contentType, originalName, scanId]
+    );
+
+    return result.rows[0];
+  }
+
 
   static async findProductByName(
     businessId: string,

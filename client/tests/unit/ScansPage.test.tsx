@@ -8,11 +8,11 @@ import {
 import "@testing-library/jest-dom";
 
 import ScansPage from "../../src/pages/dashboard/ScansPage";
-import { analyzeImage } from "../../src/lib/detection";
+import { uploadScanImage } from "../../src/lib/detection";
 
 
 vi.mock("../../src/lib/detection", () => ({
-  analyzeImage: vi.fn(),
+  uploadScanImage: vi.fn(),
 }));
 
 
@@ -379,9 +379,13 @@ describe("ScansPage", () => {
  
 
   it("should analyze the selected image", async () => {
-    vi.mocked(analyzeImage).mockResolvedValue(
-      mockResult
-    );
+    vi.mocked(uploadScanImage).mockResolvedValue({
+      scanId: "scan-123",
+      status: "PENDING",
+      objectKey: "business-123/scan-123/shelf.jpg",
+      uploadUrl: "http://signed-upload-url",
+      expiresInSeconds: 900,
+    });
 
     render(<ScansPage />);
 
@@ -424,10 +428,10 @@ describe("ScansPage", () => {
     );
 
     await waitFor(() => {
-      expect(analyzeImage).toHaveBeenCalledTimes(1);
+      expect(uploadScanImage).toHaveBeenCalledTimes(1);
     });
 
-    expect(analyzeImage).toHaveBeenCalledWith(
+    expect(uploadScanImage).toHaveBeenCalledWith(
       file,
       mockShelf,
       businessId,
@@ -436,9 +440,13 @@ describe("ScansPage", () => {
   });
 
   it("should display the scan result after successful analysis", async () => {
-    vi.mocked(analyzeImage).mockResolvedValue(
-      mockResult
-    );
+    vi.mocked(uploadScanImage).mockResolvedValue({
+      scanId: "scan-123",
+      status: "PENDING",
+      objectKey: "business-123/scan-123/shelf.jpg",
+      uploadUrl: "http://signed-upload-url",
+      expiresInSeconds: 900,
+    });
 
     render(<ScansPage />);
 
@@ -474,38 +482,21 @@ describe("ScansPage", () => {
       })
     );
 
+    await waitFor(() => {
+      expect(uploadScanImage).toHaveBeenCalledTimes(1);
+    });
+
     expect(
-      await screen.findByText("Scan Result")
+      await screen.findByText("Scan queued")
     ).toBeInTheDocument();
 
-    expect(
-      screen.getByText("2")
-    ).toBeInTheDocument();
-
-    expect(
-      screen.getByText("apple")
-    ).toBeInTheDocument();
-
-    expect(
-      screen.getByText("lemon")
-    ).toBeInTheDocument();
-
-    expect(
-      screen.getAllByText("Total")
-    ).toHaveLength(2);
-
-    expect(
-      screen.getAllByText("Fresh")
-    ).toHaveLength(2);
-
-    expect(
-      screen.getAllByText("Rotten")
-    ).toHaveLength(2);
+    expect(screen.getByText("PENDING")).toBeInTheDocument();
+    expect(screen.getByText("scan-123")).toBeInTheDocument();
   });
 
 
   it("should display an error when image analysis fails", async () => {
-    vi.mocked(analyzeImage).mockRejectedValue(
+    vi.mocked(uploadScanImage).mockRejectedValue(
       new Error("AI service unavailable")
     );
 

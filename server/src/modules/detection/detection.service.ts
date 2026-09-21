@@ -1,5 +1,8 @@
 import axios from "axios";
 import FormData from "form-data";
+import path from "path";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import type {
   AnalyzeRequest,
@@ -10,6 +13,30 @@ import type {
 } from "./detection.types";
 
 import { DetectionRepository } from "./detection.repository";
+import { awsResourceNames, s3Client } from "../../config/aws";
+
+const allowedImageTypes = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+]);
+
+export type ScanUploadRequest = {
+  businessId: string;
+  shelfId: string;
+  userId: string;
+  fileName: string;
+  contentType: string;
+};
+
+export type ScanUploadResponse = {
+  scanId: string;
+  status: "PENDING";
+  objectKey: string;
+  uploadUrl: string;
+  expiresInSeconds: number;
+};
 
 function mapFreshness(
   freshness: string | null | undefined
@@ -33,6 +60,70 @@ function mapFreshness(
 }
 
 export class DetectionService {
+
+  static async createUploadUrl(
+    request: ScanUploadRequest
+  ): Promise<ScanUploadResponse> {
+    if (!request.businessId) {
+      throw new Error("Business ID is required.");
+    }
+
+    if (!request.shelfId) {
+      throw new Error("Shelf ID is required.");
+    }
+
+    if (!request.userId) {
+      throw new Error("User ID is required.");
+    }
+
+    if (!request.fileName) {
+      throw new Error("File name is required.");
+    }
+
+    if (!allowedImageTypes.has(request.contentType)) {
+      throw new Error("Unsupported image type. Upload JPEG, PNG or WebP.");
+    }
+
+    const scan = await DetectionRepository.createScan(
+      request.businessId,
+      request.shelfId,
+      request.userId
+    );
+
+    const safeFileName = path.basename(request.fileName).replace(
+      /[^a-zA-Z0-9._-]/g,
+      "_"
+    );
+    const objectKey = `${request.businessId}/${scan.id}/${safeFileName}`;
+    const expiresInSeconds = Number(
+      process.env.S3_PRESIGN_EXPIRY_SECONDS || 900
+    );
+
+    await DetectionRepository.updateScanImageMetadata(
+      scan.id,
+      objectKey,
+      request.contentType,
+      safeFileName
+    );
+
+    const command = new PutObjectCommand({
+      Bucket: awsResourceNames.bucket,
+      Key: objectKey,
+      ContentType: request.contentType,
+    });
+
+    const uploadUrl = await getSignedUrl(s3Client, command, {
+      expiresIn: expiresInSeconds,
+    });
+
+    return {
+      scanId: scan.id,
+      status: "PENDING",
+      objectKey,
+      uploadUrl,
+      expiresInSeconds,
+    };
+  }
 
   static async analyze(
     file: Express.Multer.File | undefined,

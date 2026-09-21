@@ -15,6 +15,8 @@ export const s3Client = new S3Client({
   region,
   endpoint,
   forcePathStyle: Boolean(endpoint),
+  requestChecksumCalculation: "WHEN_REQUIRED",
+  responseChecksumValidation: "WHEN_REQUIRED",
   credentials,
 });
 

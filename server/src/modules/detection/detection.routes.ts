@@ -10,6 +10,12 @@ const upload = multer({
 });
 
 router.post(
+  "/upload-url",
+  authMiddleware,
+  DetectionController.createUploadUrl
+);
+
+router.post(
   "/analyze",
   authMiddleware,
   upload.single("file"),
