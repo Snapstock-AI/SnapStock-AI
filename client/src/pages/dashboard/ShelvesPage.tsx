@@ -1,5 +1,6 @@
 import { useState,useEffect } from "react";
-import { Plus } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
+import { Link } from "react-router";
 
 import ShelfCard from "../../components/shelf/ShelfCard";
 import type { Shelf } from "../../types/shelf";
@@ -30,8 +31,9 @@ export default function ShelvesPage() {
 
 const [shelfToDelete, setShelfToDelete] =
     useState<Shelf | undefined>(undefined);
+  const [error, setError] = useState("");
   
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
 useEffect(() => {
 
@@ -41,7 +43,9 @@ useEffect(() => {
 
     try {
 
-      const data = await getShelves(token);
+      if (!user?.businessId) return;
+
+      const data = await getShelves(token, user.businessId);
 
       setShelves(data);
 
@@ -58,16 +62,21 @@ useEffect(() => {
 
   loadShelves();
 
-}, [token]);
+}, [token, user?.businessId]);
 
 
 
-  const handleShelfSubmit = async (shelf: Shelf) => {
+  const handleShelfSubmit = async (shelf: Shelf): Promise<void> => {
 
   if (!token) {
-    console.error("User is not authenticated");
-    return;
+    throw new Error("You are not authenticated.");
   }
+
+  if (!user?.businessId) {
+    throw new Error("Your account is not connected to a business.");
+  }
+
+  setError("");
 
   try {
 
@@ -89,11 +98,11 @@ useEffect(() => {
       );
 
     } else {
-
       const newShelf = await createShelf(
         shelf.name,
         shelf.category,
-        token
+        token,
+        user.businessId,
       );
 
       setShelves((prev) => [
@@ -106,13 +115,10 @@ useEffect(() => {
     setShowShelfModal(false);
     setSelectedShelf(undefined);
 
-  } catch (error: any) {
-
-    console.error(
-      "Failed to save shelf:",
-      error
-    );
-
+  } catch (saveError: unknown) {
+    const message = saveError instanceof Error ? saveError.message : "Failed to save shelf.";
+    setError(message);
+    throw saveError;
   }
 };
 
@@ -158,6 +164,12 @@ useEffect(() => {
       <div className="flex items-center justify-between">
 
         <div>
+          <Link
+            to="/dashboard/scans"
+            className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to scans
+          </Link>
           <h1 className="font-serif text-3xl font-semibold">
             Shelves
           </h1>
@@ -184,6 +196,12 @@ useEffect(() => {
 
 
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
 
 

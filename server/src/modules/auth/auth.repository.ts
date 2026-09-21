@@ -7,6 +7,13 @@ import { Session } from "../../entities/Session";
 import { RegisterDTO } from "./auth.types";
 
 export class AuthRepository {
+  static async updateFullName(userId: string, full_name: string) {
+    await AppDataSource.getRepository(User).update(
+      { id: userId },
+      { full_name },
+    );
+    return this.findById(userId);
+  }
 
   //CREATE USER-REGISTER
   static async createUser(data: RegisterDTO & { password_hash: string }) {
@@ -70,7 +77,7 @@ export class AuthRepository {
         user_id: userId,
         token,
         expires_at: expiresAt,
-      })
+      }),
     );
   }
 
@@ -83,7 +90,7 @@ export class AuthRepository {
   static async verifyUser(userId: string) {
     await AppDataSource.getRepository(User).update(
       { id: userId },
-      { email_verified: true }
+      { email_verified: true },
     );
   }
 
@@ -100,7 +107,7 @@ export class AuthRepository {
   static async savePasswordResetToken(
     userId: string,
     token: string,
-    expiresAt: Date
+    expiresAt: Date,
   ) {
     const repo = AppDataSource.getRepository(PasswordResetToken);
     await repo.delete({ user_id: userId });
@@ -109,7 +116,7 @@ export class AuthRepository {
         user_id: userId,
         token,
         expires_at: expiresAt,
-      })
+      }),
     );
   }
 
@@ -126,14 +133,14 @@ export class AuthRepository {
   static async updatePassword(userId: string, password_hash: string) {
     await AppDataSource.getRepository(User).update(
       { id: userId },
-      { password_hash }
+      { password_hash },
     );
   }
 
   static async createSession(
     userId: string,
     refreshToken: string,
-    expiresAt: Date
+    expiresAt: Date,
   ) {
     const repo = AppDataSource.getRepository(Session);
     return repo.save(
@@ -142,7 +149,7 @@ export class AuthRepository {
         refresh_token: refreshToken,
         expires_at: expiresAt,
         revoked_at: null,
-      })
+      }),
     );
   }
 
@@ -161,14 +168,14 @@ export class AuthRepository {
   static async revokeSession(sessionId: string) {
     await AppDataSource.getRepository(Session).update(
       { id: sessionId },
-      { revoked_at: new Date() }
+      { revoked_at: new Date() },
     );
   }
 
   static async revokeSessionsForUser(userId: string) {
     await AppDataSource.getRepository(Session).update(
       { user_id: userId, revoked_at: IsNull() },
-      { revoked_at: new Date() }
+      { revoked_at: new Date() },
     );
   }
 }

@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { AlertTriangle, ArrowRight, Camera, Package, TrendingDown } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Building2, Camera, Package, TrendingDown } from 'lucide-react'
+import { useAuth, type Business } from '@/context/AuthContext'
+import { apiRequest } from '@/lib/api'
 
 const stats = [
   { label: 'Total SKUs', value: '48', change: '+3 this week', icon: Package },
@@ -21,12 +24,85 @@ const statusColor: Record<string, string> = {
 }
 
 export default function DashboardHome() {
+  const { token, user } = useAuth()
+  const [business, setBusiness] = useState<Business | null>(null)
+  const [businessError, setBusinessError] = useState('')
+  useEffect(() => {
+    const businessId = user?.businessId
+
+    setBusinessError('')
+
+    if (!token || !businessId) {
+      setBusiness(null)
+      return
+    }
+
+    let active = true
+
+    async function loadBusiness() {
+      try {
+        const response = await apiRequest<Business[]>('/businesses/mine', {}, true)
+        const currentBusiness = response.data?.find((item) => item.id === businessId)
+
+        if (active) {
+          setBusiness(currentBusiness || null)
+        }
+      } catch (error: unknown) {
+        if (active) {
+          setBusinessError(error instanceof Error ? error.message : 'Unable to load business details.')
+        }
+      }
+    }
+
+    loadBusiness()
+
+    return () => {
+      active = false
+    }
+  }, [token, user?.businessId])
+
+  if (!user?.businessId) {
+    return (
+      <div className="mx-auto max-w-3xl py-8">
+        <div className="rounded-3xl border border-brand-200 bg-brand-50 p-6 dark:border-brand-800 dark:bg-brand-900/20 md:p-10">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300">
+            <Building2 className="h-7 w-7" />
+          </div>
+          <p className="mt-6 text-xs font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-300">Welcome to SnapStock-AI</p>
+          <h1 className="mt-3 font-serif text-3xl font-semibold md:text-4xl">Create your business workspace</h1>
+          <p className="mt-4 max-w-xl text-sm leading-6 text-muted">
+            You are signed in, but your account is not connected to a business yet. Create one to manage inventory, shelves, and freshness scans.
+          </p>
+          <Link
+            to="/onboarding/business"
+            className="mt-7 inline-flex items-center gap-2 rounded-full bg-brand-500 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-600"
+          >
+            Create a business
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (businessError) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+        {businessError}
+      </div>
+    )
+  }
+
+  if (!business) {
+    return <div className="text-sm text-muted">Loading your business details...</div>
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-serif text-2xl font-semibold md:text-3xl">Good morning, Priya</h1>
-          <p className="mt-1 text-sm text-muted">Priya&apos;s Fresh Mart · Last scan 2 hours ago</p>
+          <h1 className="font-serif text-2xl font-semibold md:text-3xl">Good morning, {user.full_name.split(' ')[0]}</h1>
+          <p className="mt-1 text-sm text-muted">{business.business_name}</p>
         </div>
         <Link
           to="/dashboard/scans"

@@ -14,26 +14,49 @@ import {
   sendVerificationEmail,
   sendPasswordResetEmail,
 } from "../../shared/utils/email";
+import { BusinessRepository } from "../business/business.repository";
 
 const ACCESS_TOKEN_TTL = "1d";
 const REFRESH_TOKEN_DAYS = 7;
 
 export class AuthService {
+  static async updateProfile(userId: string, full_name: string) {
+    const normalizedName = full_name.trim();
+    if (!normalizedName || normalizedName.length > 100) {
+      throw new Error(
+        "Full name is required and must be 100 characters or fewer.",
+      );
+    }
 
-  private static signAccessToken(user: {
-    id: string;
-    email: string;
-    system_role: string;
-  }, sessionId: string) {
+    const user = await AuthRepository.updateFullName(userId, normalizedName);
+    if (!user) throw new Error("User not found");
+
+    return {
+      id: user.id,
+      full_name: user.full_name,
+      email: user.email,
+      system_role: user.system_role,
+    };
+  }
+  private static signAccessToken(
+    user: {
+      id: string;
+      email: string;
+      system_role: string;
+    },
+    sessionId: string,
+    businessId: string | null,
+  ) {
     return jwt.sign(
       {
         userId: user.id,
         email: user.email,
         system_role: user.system_role,
         sessionId,
+        businessId,
       },
       process.env.JWT_SECRET!,
-      { expiresIn: ACCESS_TOKEN_TTL }
+      { expiresIn: ACCESS_TOKEN_TTL },
     );
   }
 
@@ -50,10 +73,11 @@ export class AuthService {
     const session = await AuthRepository.createSession(
       user.id,
       refreshToken,
-      expiresAt
+      expiresAt,
     );
 
-    const token = AuthService.signAccessToken(user, session.id);
+    const businessId = await BusinessRepository.findBusinessIdByUserId(user.id);
+    const token = AuthService.signAccessToken(user, session.id, businessId);
 
     return {
       token,
@@ -63,13 +87,13 @@ export class AuthService {
         full_name: user.full_name,
         email: user.email,
         system_role: user.system_role,
+        businessId,
       },
     };
   }
 
   //REGISTER USER
   static async register(data: RegisterDTO) {
-
     const existingUser = await AuthRepository.findByEmail(data.email);
 
     if (existingUser) {
@@ -80,7 +104,7 @@ export class AuthService {
 
     const user = await AuthRepository.createUser({
       ...data,
-      password_hash
+      password_hash,
     });
 
     const token = crypto.randomBytes(32).toString("hex");
@@ -94,24 +118,19 @@ export class AuthService {
 
     return {
       message: "User registered successfully-Please verify your mail",
-      user
+      user,
     };
   }
 
-
   //LOGIN USER
   static async login(data: LoginDTO) {
-
     const user = await AuthRepository.findByEmail(data.email);
 
     if (!user) {
       throw new Error("Invalid credentials");
     }
 
-    const isMatch = await bcrypt.compare(
-      data.password,
-      user.password_hash
-    );
+    const isMatch = await bcrypt.compare(data.password, user.password_hash);
 
     if (!isMatch) {
       throw new Error("Invalid credentials");
@@ -135,13 +154,36 @@ export class AuthService {
     }
 
     return {
-      message: "Logout successful"
+      message: "Logout successful",
     };
+  }
+
+  static async rotateSession(sessionId: string) {
+    const session = await AuthRepository.findActiveSessionById(sessionId);
+
+    if (!session || new Date() > session.expires_at) {
+      throw new Error("Session expired or revoked");
+    }
+
+    const user = await AuthRepository.findById(session.user_id);
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await AuthRepository.revokeSession(session.id);
+
+    return AuthService.createSessionTokens({
+      id: user.id,
+      email: user.email,
+      system_role: user.system_role,
+      full_name: user.full_name,
+    });
   }
 
   static async refresh(data: RefreshTokenDTO) {
     const session = await AuthRepository.findActiveSessionByRefreshToken(
-      data.refreshToken
+      data.refreshToken,
     );
 
     if (!session || new Date() > session.expires_at) {
@@ -179,7 +221,7 @@ export class AuthService {
     if (new Date() > record.expires_at) {
       throw new Error("Token expired");
     }
-    
+
     const user = await AuthRepository.findById(record.user_id);
 
     if (!user) {
@@ -188,7 +230,7 @@ export class AuthService {
 
     if (user.email_verified) {
       return {
-        message: "Email already verified"
+        message: "Email already verified",
       };
     }
 
@@ -196,7 +238,7 @@ export class AuthService {
     await AuthRepository.deleteEmailToken(token);
 
     return {
-      message: "Email verified successfully"
+      message: "Email verified successfully",
     };
   }
 
@@ -205,13 +247,13 @@ export class AuthService {
 
     if (!user) {
       return {
-        message: "If an account exists, a verification email has been sent"
+        message: "If an account exists, a verification email has been sent",
       };
     }
 
     if (user.email_verified) {
       return {
-        message: "Email already verified"
+        message: "Email already verified",
       };
     }
 
@@ -225,7 +267,7 @@ export class AuthService {
     await sendVerificationEmail(user.email, token);
 
     return {
-      message: "If an account exists, a verification email has been sent"
+      message: "If an account exists, a verification email has been sent",
     };
   }
 
@@ -234,7 +276,7 @@ export class AuthService {
 
     if (!user) {
       return {
-        message: "If an account exists, a password reset email has been sent"
+        message: "If an account exists, a password reset email has been sent",
       };
     }
 
@@ -246,7 +288,7 @@ export class AuthService {
     await sendPasswordResetEmail(user.email, token);
 
     return {
-      message: "If an account exists, a password reset email has been sent"
+      message: "If an account exists, a password reset email has been sent",
     };
   }
 
@@ -267,7 +309,7 @@ export class AuthService {
     await AuthRepository.revokeSessionsForUser(record.user_id);
 
     return {
-      message: "Password reset successfully"
+      message: "Password reset successfully",
     };
   }
 }

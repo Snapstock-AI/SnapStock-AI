@@ -1,7 +1,26 @@
 import { BusinessRepository } from "./business.repository";
-import { CreateBusinessDTO } from "./business.types";
+import { CreateBusinessDTO, UpdateBusinessDTO } from "./business.types";
 
 export class BusinessService {
+  static async getMembership(userId: string, businessId: string) {
+    const membership = (await BusinessRepository.findByUserId(userId)).find(
+      (item) => item.business_id === businessId,
+    );
+
+    if (!membership) {
+      return null;
+    }
+
+    return {
+      role: membership.role,
+      business_name: (membership as any).business.business_name as string,
+    };
+  }
+
+  static async findBusinessIdByUserId(userId: string) {
+    return BusinessRepository.findBusinessIdByUserId(userId);
+  }
+
   static async listForUser(userId: string) {
     const memberships = await BusinessRepository.findByUserId(userId);
 
@@ -38,5 +57,69 @@ export class BusinessService {
     if (!(await BusinessRepository.isMember(userId, businessId))) {
       throw new Error("You do not belong to this business");
     }
+  }
+
+  static async updateForOwner(
+    ownerId: string,
+    businessId: string,
+    data: UpdateBusinessDTO,
+  ) {
+    const membership = await this.getMembership(ownerId, businessId);
+    if (!membership || membership.role !== "OWNER") {
+      throw new Error("Only the business owner can update business details.");
+    }
+
+    const business = await BusinessRepository.findById(businessId);
+    if (!business) throw new Error("Business not found.");
+
+    Object.assign(business, data);
+    return BusinessRepository.update(business);
+  }
+
+  static async deleteForOwner(ownerId: string, businessId: string) {
+    const membership = await this.getMembership(ownerId, businessId);
+    if (!membership || membership.role !== "OWNER") {
+      throw new Error("Only the business owner can delete the business.");
+    }
+
+    const result = await BusinessRepository.delete(businessId);
+    if (!result.affected) throw new Error("Business not found.");
+  }
+
+  static async isMember(userId: string, businessId: string) {
+    return BusinessRepository.isMember(userId, businessId);
+  }
+
+  static async listEmployees(ownerId: string, businessId: string) {
+    const membership = await this.getMembership(ownerId, businessId);
+
+    if (!membership || membership.role !== "OWNER") {
+      throw new Error("Only the business owner can view employees.");
+    }
+
+    return BusinessRepository.findEmployeesByBusinessId(businessId);
+  }
+
+  static async removeEmployee(
+    ownerId: string,
+    businessId: string,
+    employeeId: string,
+  ) {
+    const membership = await this.getMembership(ownerId, businessId);
+
+    if (!membership || membership.role !== "OWNER") {
+      throw new Error("Only the business owner can remove employees.");
+    }
+
+    const employee = await BusinessRepository.findMembership(
+      employeeId,
+      businessId,
+    );
+
+    if (!employee || employee.role !== "EMPLOYEE") {
+      throw new Error("Employee not found in this business.");
+    }
+
+    await BusinessRepository.removeEmployee(employeeId, businessId);
   }
 }
