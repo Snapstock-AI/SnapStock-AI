@@ -1,105 +1,108 @@
-import db from "../../config/db";
+import { AppDataSource } from "../../config/data-source";
+import { Detection } from "../../entities/Detection";
+import { Product } from "../../entities/Product";
+import { Scan, ScanStatus } from "../../entities/Scan";
 
 export class DetectionRepository {
-
-  static async createScan(
+  static async findScanHistory(
     businessId: string,
-    shelfId: string,
-    userId: string
+    startDate: Date,
+    endDate: Date,
   ) {
-    const result = await db.query(
-      `
-      INSERT INTO scans (
-        business_id,
-        shelf_id,
-        user_id,
-        status
-      )
-      VALUES ($1, $2, $3, 'PENDING')
-      RETURNING id;
-      `,
-      [
-        businessId,
-        shelfId,
-        userId,
-      ]
-    );
-
-    return result.rows[0];
+    return AppDataSource.getRepository(Scan)
+      .createQueryBuilder("scan")
+      .innerJoin("shelves", "shelf", "shelf.id = scan.shelf_id")
+      .leftJoin(Detection, "detection", "detection.scan_id = scan.id")
+      .select([
+        "scan.id AS id",
+        "scan.shelf_id AS shelf_id",
+        "shelf.name AS shelf_name",
+        "scan.status AS status",
+        "TO_CHAR(scan.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"') AS created_at",
+        "CASE WHEN scan.completed_at IS NULL THEN NULL ELSE TO_CHAR(scan.completed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"') END AS completed_at",
+        "COUNT(detection.id)::int AS item_count",
+        "COUNT(detection.id) FILTER (WHERE COALESCE(detection.corrected_freshness, detection.freshness) = 'Fresh')::int AS fresh_count",
+        "COUNT(detection.id) FILTER (WHERE COALESCE(detection.corrected_freshness, detection.freshness) = 'Medium')::int AS medium_count",
+        "COUNT(detection.id) FILTER (WHERE COALESCE(detection.corrected_freshness, detection.freshness) = 'Spoiled')::int AS spoiled_count",
+        "COALESCE(JSON_AGG(JSON_BUILD_OBJECT('type', detection.product_label, 'freshness', COALESCE(detection.corrected_freshness, detection.freshness)) ORDER BY detection.created_at) FILTER (WHERE detection.id IS NOT NULL), '[]') AS items",
+      ])
+      .where("scan.business_id = :businessId", { businessId })
+      .andWhere("scan.created_at >= :startDate", { startDate })
+      .andWhere("scan.created_at < :endDate", { endDate })
+      .groupBy("scan.id")
+      .addGroupBy("shelf.name")
+      .orderBy("scan.created_at", "DESC")
+      .getRawMany();
   }
 
+  static async findForCorrection(detectionId: string) {
+    return AppDataSource.getRepository(Detection)
+      .createQueryBuilder("detection")
+      .innerJoin(Scan, "scan", "scan.id = detection.scan_id")
+      .addSelect(["scan.business_id", "scan.user_id"])
+      .where("detection.id = :detectionId", { detectionId })
+      .getRawAndEntities();
+  }
+
+  static async correctFreshness(
+    detectionId: string,
+    freshness: Detection["corrected_freshness"],
+    correctedBy: string,
+  ) {
+    const repository = AppDataSource.getRepository(Detection);
+    await repository.update(
+      { id: detectionId },
+      {
+        corrected_freshness: freshness,
+        corrected_by: correctedBy,
+        corrected_at: new Date(),
+        needs_review: true,
+      },
+    );
+
+    return repository.findOneBy({ id: detectionId });
+  }
+
+  static async createScan(businessId: string, shelfId: string, userId: string) {
+    const repository = AppDataSource.getRepository(Scan);
+    return repository.save(
+      repository.create({
+        business_id: businessId,
+        shelf_id: shelfId,
+        user_id: userId,
+        status: "PENDING",
+        error_message: null,
+        completed_at: null,
+      }),
+    );
+  }
 
   static async updateScanStatus(
     scanId: string,
-    status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED",
-    errorMessage?: string
+    status: ScanStatus,
+    errorMessage?: string,
   ) {
-
-    if (status === "COMPLETED") {
-
-      const result = await db.query(
-        `
-        UPDATE scans
-        SET
-          status = $1,
-          completed_at = CURRENT_TIMESTAMP
-        WHERE id = $2
-        RETURNING *;
-        `,
-        [
-          status,
-          scanId,
-        ]
-      );
-
-      return result.rows[0];
-    }
-
-
-    const result = await db.query(
-      `
-      UPDATE scans
-      SET
-        status = $1,
-        error_message = $2
-      WHERE id = $3
-      RETURNING *;
-      `,
-      [
+    const repository = AppDataSource.getRepository(Scan);
+    await repository.update(
+      { id: scanId },
+      {
         status,
-        errorMessage ?? null,
-        scanId,
-      ]
+        error_message: status === "COMPLETED" ? null : (errorMessage ?? null),
+        ...(status === "COMPLETED" ? { completed_at: new Date() } : {}),
+      },
     );
-
-    return result.rows[0];
+    return repository.findOneBy({ id: scanId });
   }
 
-
-  static async findProductByName(
-    businessId: string,
-    productName: string
-  ) {
-
-    const result = await db.query(
-      `
-      SELECT id
-      FROM products
-      WHERE business_id = $1
-        AND LOWER(name) = LOWER($2)
-        AND is_active = TRUE
-        AND deleted_at IS NULL
-      LIMIT 1;
-      `,
-      [
-        businessId,
-        productName,
-      ]
-    );
-
-    return result.rows[0] ?? null;
+  static async findProductByName(businessId: string, productName: string) {
+    return AppDataSource.getRepository(Product)
+      .createQueryBuilder("product")
+      .where("product.business_id = :businessId", { businessId })
+      .andWhere("LOWER(product.name) = LOWER(:productName)", { productName })
+      .andWhere("product.is_active = :isActive", { isActive: true })
+      .andWhere("product.deleted_at IS NULL")
+      .getOne();
   }
-
 
   static async createDetection(
     scanId: string,
@@ -108,42 +111,23 @@ export class DetectionRepository {
     confidence: number,
     bbox: object,
     freshness: string | null,
-    freshnessConfidence: number | null
+    freshnessConfidence: number | null,
   ) {
-
-    const result = await db.query(
-      `
-      INSERT INTO detections (
-        scan_id,
-        product_label,
-        product_id,
+    const repository = AppDataSource.getRepository(Detection);
+    return repository.save(
+      repository.create({
+        scan_id: scanId,
+        product_label: productLabel,
+        product_id: productId,
         confidence,
-        bbox_json,
-        freshness,
-        freshness_confidence
-      )
-      VALUES (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7
-      )
-      RETURNING *;
-      `,
-      [
-        scanId,
-        productLabel,
-        productId,
-        confidence,
-        JSON.stringify(bbox),
-        freshness,
-        freshnessConfidence,
-      ]
+        bbox_json: bbox,
+        freshness: freshness as Detection["freshness"],
+        freshness_confidence: freshnessConfidence,
+        needs_review: false,
+        corrected_freshness: null,
+        corrected_by: null,
+        corrected_at: null,
+      }),
     );
-
-    return result.rows[0];
   }
 }

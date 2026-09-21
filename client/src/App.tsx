@@ -14,10 +14,14 @@ import ResendVerification from '@/pages/ResendVerification'
 import DashboardHome from '@/pages/dashboard/DashboardHome'
 import InventoryPage from '@/pages/dashboard/InventoryPage'
 import ScansPage from '@/pages/dashboard/ScansPage'
+import ScanHistoryPage from '@/pages/dashboard/ScanHistoryPage'
 import AlertsPage from '@/pages/dashboard/AlertsPage'
 import AnalyticsPage from '@/pages/dashboard/AnalyticsPage'
 import SettingsPage from '@/pages/dashboard/SettingsPage'
 import ShelvesPage from '@/pages/dashboard/ShelvesPage'
+import InvitationsPage from '@/pages/dashboard/InvitationsPage'
+import CreateBusiness from '@/pages/CreateBusiness'
+import AcceptInvitation from '@/pages/AcceptInvitation'
 
 const authPaths = [
   '/login',
@@ -45,14 +49,18 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/resend-verification" element={<ResendVerification />} />
+        <Route path="/accept-invitation" element={<AcceptInvitation />} />
         <Route element={<ProtectedRoute />}>
+          <Route path="/onboarding/business" element={<CreateBusiness />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<DashboardHome />} />
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="scans" element={<ScansPage />} />
+            <Route path="scans/history" element={<ScanHistoryPage />} />
             <Route path="shelves" element={<ShelvesPage />} />
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="invitations" element={<InvitationsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Route>
