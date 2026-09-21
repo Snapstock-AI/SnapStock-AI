@@ -24,6 +24,14 @@ export class Business {
   @Column({ type: "varchar", length: 20 })
   contact_number!: string;
 
+  /** Share of Medium+Spoiled (or spoilage-related) that triggers a warning alert (0–100). */
+  @Column({ type: "int", default: 65 })
+  freshness_alert_threshold!: number;
+
+  /** Minimum detection count below which a product is considered low stock. */
+  @Column({ type: "int", default: 25 })
+  low_stock_threshold!: number;
+
   @CreateDateColumn({ type: "timestamp" })
   created_at!: Date;
 
