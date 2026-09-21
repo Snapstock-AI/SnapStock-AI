@@ -50,6 +50,35 @@ export type ScanUploadResponse = {
   expiresInSeconds: number;
 };
 
+export async function queueUploadedScan(
+  upload: ScanUploadResponse,
+  shelf: Shelf,
+  businessId: string,
+  contentType: string,
+  token: string
+): Promise<void> {
+  const response = await fetch(`${API_URL}/detection/queue`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      scanId: upload.scanId,
+      businessId,
+      shelfId: shelf.id,
+      objectKey: upload.objectKey,
+      contentType,
+    }),
+  });
+
+  const body = await response.json();
+
+  if (!response.ok || body.success === false) {
+    throw new Error(body.message || "Could not queue scan");
+  }
+}
+
 export async function uploadScanImage(
   file: File,
   shelf: Shelf,

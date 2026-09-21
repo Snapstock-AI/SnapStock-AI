@@ -8,10 +8,14 @@ import {
 import "@testing-library/jest-dom";
 
 import ScansPage from "../../src/pages/dashboard/ScansPage";
-import { uploadScanImage } from "../../src/lib/detection";
+import {
+  queueUploadedScan,
+  uploadScanImage,
+} from "../../src/lib/detection";
 
 
 vi.mock("../../src/lib/detection", () => ({
+  queueUploadedScan: vi.fn(),
   uploadScanImage: vi.fn(),
 }));
 
@@ -111,6 +115,7 @@ const mockResult = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(queueUploadedScan).mockResolvedValue(undefined);
 });
 
 describe("ScansPage", () => {

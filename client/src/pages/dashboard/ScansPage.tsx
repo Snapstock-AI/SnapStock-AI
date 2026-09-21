@@ -1,6 +1,9 @@
 import { useState} from "react";
 import { Camera, Upload } from "lucide-react";
-import { uploadScanImage } from "../../lib/detection";
+import {
+  queueUploadedScan,
+  uploadScanImage,
+} from "../../lib/detection";
 import type { DetectionResult } from "../../lib/detection";
 import CameraScanner from "../../components/scanner/CameraScanner";
 import type { Shelf } from "../../types/shelf";
@@ -92,6 +95,14 @@ export default function ScansPage() {
       TEST_BUSINESS_ID,
       token
     );
+    await queueUploadedScan(
+      data,
+      shelf,
+      TEST_BUSINESS_ID,
+      file.type,
+      token
+    );
+
     setQueuedScan({
       scanId: data.scanId,
       objectKey: data.objectKey,

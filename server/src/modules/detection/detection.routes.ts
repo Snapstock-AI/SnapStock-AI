@@ -16,6 +16,12 @@ router.post(
 );
 
 router.post(
+  "/queue",
+  authMiddleware,
+  DetectionController.queueUploadedScan
+);
+
+router.post(
   "/analyze",
   authMiddleware,
   upload.single("file"),
