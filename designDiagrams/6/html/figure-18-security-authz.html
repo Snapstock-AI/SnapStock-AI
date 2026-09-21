@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Figure 18 — Security / Authorization Flow</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f0f2f5; padding: 2rem; display: flex; justify-content: center; }
+    .frame { background: #fff; border: 2px solid #212529; padding: 1.5rem 1rem 1.75rem; box-shadow: 0 4px 16px rgba(0,0,0,.08); max-width: 680px; width: 100%; }
+    h1 { text-align: center; color: #1e4a7a; font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; }
+    svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+    .caption { margin-top: 0.85rem; text-align: center; font-size: 0.85rem; color: #495057; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <h1>Security / Authorization Flow</h1>
+    <!--
+      Clean geometry (no overlaps):
+        Main spine x=280
+        Auth boxes right edge = 405
+        Error trunk x=422 → 401 at x=440 (same row as Load User)
+        Admin lane cx=200 | Business lane cx=390
+        Success merge bus y=520 → Attach
+    -->
+    <svg xmlns="http://www.w3.org/2000/svg" width="620" height="720" viewBox="0 0 620 720" role="img">
+      <defs>
+        <marker id="sa" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <polygon points="0,0 8,4 0,8" fill="#212529"/>
+        </marker>
+        <style>
+          .bg{fill:#fff;stroke:#212529;stroke-width:2}
+          .act{fill:#fff;stroke:#212529;stroke-width:2}
+          .at{font:600 11.5px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .dia{fill:#fff;stroke:#212529;stroke-width:2}
+          .dt{font:600 10px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .err{fill:#fff5f5;stroke:#212529;stroke-width:2}
+          .et{font:600 11px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .sol{stroke:#212529;stroke-width:2;fill:none;marker-end:url(#sa)}
+          .conn{stroke:#212529;stroke-width:2;fill:none}
+          .yn{font:italic 9.5px "Segoe UI",Arial,sans-serif;fill:#495057}
+        </style>
+      </defs>
+
+      <rect x="10" y="10" width="600" height="700" class="bg"/>
+
+      <!-- ========== CONNECTORS (behind nodes) ========== -->
+      <g id="connectors">
+        <!-- Main spine: HTTP → Extract → Load User → SYSTEM_ADMIN -->
+        <line x1="280" y1="58" x2="280" y2="78" class="sol"/>
+        <line x1="280" y1="118" x2="280" y2="142" class="sol"/>
+        <line x1="280" y1="192" x2="280" y2="206" class="sol"/>
+
+        <!-- 401 error trunk (x=422), clear of auth boxes -->
+        <!-- Extract → trunk → 401 -->
+        <path d="M 405 98 L 422 98 L 422 172" class="conn"/>
+        <line x1="422" y1="172" x2="440" y2="172" class="sol"/>
+        <!-- Load User → trunk (merge) -->
+        <path d="M 405 172 L 422 172" class="conn"/>
+
+        <!-- SYSTEM_ADMIN → Check (left) / Resolve (right) -->
+        <path d="M 220 246 L 200 246 L 200 310" class="sol"/>
+        <path d="M 340 246 L 390 246 L 390 310" class="sol"/>
+
+        <!-- Check system_role → merge bus (y=520) -->
+        <line x1="200" y1="350" x2="200" y2="520" class="conn"/>
+        <path d="M 200 520 L 280 520" class="conn"/>
+
+        <!-- Resolve → role permits -->
+        <line x1="390" y1="350" x2="390" y2="376" class="sol"/>
+
+        <!-- role permits? yes → spine → merge bus → Attach -->
+        <path d="M 335 414 L 280 414 L 280 520" class="conn"/>
+        <line x1="280" y1="520" x2="280" y2="540" class="sol"/>
+
+        <!-- role permits? no → 403 -->
+        <line x1="390" y1="452" x2="390" y2="476" class="sol"/>
+
+        <!-- Attach → end -->
+        <line x1="280" y1="620" x2="280" y2="655" class="sol"/>
+      </g>
+
+      <!-- ========== NODES ========== -->
+      <g id="nodes">
+        <rect x="200" y="28" width="160" height="30" rx="8" class="act"/>
+        <text x="280" y="48" class="at">HTTP Request</text>
+
+        <rect x="155" y="78" width="250" height="40" rx="10" class="act"/>
+        <text x="280" y="103" class="at">Extract Bearer JWT</text>
+
+        <rect x="155" y="142" width="250" height="40" rx="10" class="act"/>
+        <text x="280" y="167" class="at">Load User</text>
+
+        <!-- 401: same row as Load User, far right — no overlap with spine -->
+        <rect x="440" y="152" width="140" height="40" rx="8" class="err"/>
+        <text x="510" y="176" class="et">401 Unauthorized</text>
+
+        <!-- SYSTEM_ADMIN diamond: cy=246, hw=60, hh=40 -->
+        <polygon points="280,206 340,246 280,286 220,246" class="dia"/>
+        <text x="280" y="243" class="dt">SYSTEM_ADMIN</text>
+        <text x="280" y="257" class="dt">route?</text>
+
+        <rect x="115" y="310" width="170" height="40" rx="10" class="act"/>
+        <text x="200" y="335" class="at">Check system_role</text>
+
+        <rect x="305" y="310" width="170" height="40" rx="10" class="act"/>
+        <text x="390" y="328" class="at">Resolve business_id</text>
+        <text x="390" y="342" class="at">via business_users</text>
+
+        <!-- role permits diamond: cy=414, hw=55, hh=38 -->
+        <polygon points="390,376 445,414 390,452 335,414" class="dia"/>
+        <text x="390" y="418" class="dt">role permits?</text>
+
+        <!-- 403: centered under role permits -->
+        <rect x="325" y="476" width="130" height="32" rx="8" class="err"/>
+        <text x="390" y="496" class="et">403 Forbidden</text>
+
+        <rect x="95" y="540" width="370" height="80" rx="10" class="act"/>
+        <text x="280" y="564" class="at">Attach req.user + tenant context</text>
+        <text x="280" y="580" class="at">Execute controller / service</text>
+        <text x="280" y="596" class="at">Repositories filter by business_id</text>
+
+        <circle cx="280" cy="675" r="11" fill="#fff" stroke="#212529" stroke-width="3"/>
+        <circle cx="280" cy="675" r="5" fill="#212529"/>
+      </g>
+
+      <!-- ========== BRANCH LABELS ========== -->
+      <g id="branch-labels">
+        <text x="408" y="92" class="yn">missing/invalid</text>
+        <text x="288" y="134" class="yn">valid sig + exp</text>
+        <text x="408" y="166" class="yn">deleted/missing</text>
+        <text x="208" y="236" class="yn">yes</text>
+        <text x="348" y="236" class="yn">no</text>
+        <text x="292" y="406" class="yn">yes</text>
+        <text x="398" y="468" class="yn">no</text>
+      </g>
+    </svg>
+    <p class="caption">Figure 18. Security / Authorization Flow Diagram</p>
+  </div>
+</body>
+</html>

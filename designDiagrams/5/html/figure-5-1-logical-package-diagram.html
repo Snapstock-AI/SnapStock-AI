@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>5.1 Logical Package Diagram — SnapStock-AI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+      background: #f0f2f5;
+      padding: 2rem;
+      display: flex;
+      justify-content: center;
+    }
+    .frame {
+      background: #fff;
+      border: 2px solid #212529;
+      padding: 1.25rem 1rem 1.5rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,.08);
+      max-width: 960px;
+      width: 100%;
+    }
+    svg { display: block; width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <!--
+      UML package: tab + body, horizontal divider at y=th.
+      w=210 h=168 th=32 slant=14
+      Path: M 0 h → tab (0,0)-(tw,0)-slant → body top (w,th) → close
+    -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 680" role="img" aria-label="Overall Logical Package Diagram">
+      <defs>
+        <marker id="sf" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+          <polygon points="0,0 7,3.5 0,7" fill="#212529"/>
+        </marker>
+        <marker id="sr" markerWidth="7" markerHeight="7" refX="1" refY="3.5" orient="auto">
+          <polygon points="7,0 0,3.5 7,7" fill="#212529"/>
+        </marker>
+        <marker id="df" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+          <polygon points="0,0 7,3.5 0,7" fill="#212529"/>
+        </marker>
+        <style>
+          .title { font:700 17px "Segoe UI",Arial,sans-serif; fill:#1e4a7a; }
+          .pkg-tab { font:700 11px "Segoe UI",Arial,sans-serif; fill:#212529; }
+          .pkg-body { font:500 10px "Segoe UI",Arial,sans-serif; fill:#212529; }
+          .pkg-note { font:italic 9px "Segoe UI",Arial,sans-serif; fill:#212529; }
+          .lbl { font:500 9px "Segoe UI",Arial,sans-serif; fill:#212529; }
+          .leg { font:500 10px "Segoe UI",Arial,sans-serif; fill:#212529; }
+          .pkg { fill:#fff; stroke:#212529; stroke-width:1.25; }
+          .pkg-div { stroke:#212529; stroke-width:1.25; }
+          .sol { stroke:#212529; stroke-width:1.75; fill:none; }
+          .das { stroke:#212529; stroke-width:1.5; fill:none; stroke-dasharray:6 4; }
+        </style>
+      </defs>
+
+      <rect x="8" y="8" width="904" height="664" fill="#fff" stroke="#212529" stroke-width="2"/>
+      <text x="460" y="38" class="title" text-anchor="middle">5.1 Overview — Overall Logical Package Diagram (Implemented System)</text>
+
+      <g id="connectors">
+        <line x1="260" y1="138" x2="350" y2="138" class="sol" marker-end="url(#sf)"/>
+        <text x="305" y="130" class="lbl" text-anchor="middle">uses</text>
+        <line x1="560" y1="138" x2="650" y2="138" class="sol" marker-start="url(#sr)" marker-end="url(#sf)"/>
+        <text x="605" y="128" class="lbl" text-anchor="middle">HTTPS REST API</text>
+        <line x1="260" y1="378" x2="350" y2="378" class="sol" marker-start="url(#sr)" marker-end="url(#sf)"/>
+        <text x="305" y="370" class="lbl" text-anchor="middle">data flow</text>
+        <line x1="560" y1="378" x2="650" y2="378" class="sol" marker-start="url(#sr)" marker-end="url(#sf)"/>
+        <text x="605" y="370" class="lbl" text-anchor="middle">uses</text>
+        <line x1="155" y1="228" x2="155" y2="300" class="das" marker-end="url(#df)"/>
+        <text x="163" y="268" class="lbl">uses</text>
+        <line x1="455" y1="228" x2="455" y2="300" class="das" marker-end="url(#df)"/>
+        <text x="463" y="268" class="lbl">uses</text>
+        <line x1="755" y1="228" x2="755" y2="300" class="das" marker-end="url(#df)"/>
+        <text x="763" y="268" class="lbl">uses</text>
+      </g>
+
+      <!-- ========== PACKAGES ========== -->
+
+      <!-- 1 Presentation -->
+      <g transform="translate(50,60)">
+        <path d="M 0 168 L 0 32 L 0 0 L 88 0 L 102 32 L 210 32 L 210 168 Z" class="pkg"/>
+        <line x1="0" y1="32" x2="210" y2="32" class="pkg-div"/>
+        <text x="10" y="22" class="pkg-tab">Presentation</text>
+        <text x="10" y="50" class="pkg-note">(React Web Client)</text>
+        <text x="10" y="66" class="pkg-body">- pages</text>
+        <text x="10" y="80" class="pkg-body">- components</text>
+        <text x="10" y="94" class="pkg-body">- sections</text>
+        <text x="10" y="108" class="pkg-body">- assets</text>
+      </g>
+
+      <!-- 2 Client Support -->
+      <g transform="translate(350,60)">
+        <path d="M 0 168 L 0 32 L 0 0 L 98 0 L 112 32 L 210 32 L 210 168 Z" class="pkg"/>
+        <line x1="0" y1="32" x2="210" y2="32" class="pkg-div"/>
+        <text x="10" y="22" class="pkg-tab">Client Support</text>
+        <text x="10" y="50" class="pkg-body">- context</text>
+        <text x="10" y="64" class="pkg-body">- hooks</text>
+        <text x="10" y="78" class="pkg-body">- lib (api, utils)</text>
+        <text x="10" y="92" class="pkg-body">- types</text>
+      </g>
+
+      <!-- 3 Backend Application -->
+      <g transform="translate(650,60)">
+        <path d="M 0 168 L 0 32 L 0 0 L 128 0 L 142 32 L 210 32 L 210 168 Z" class="pkg"/>
+        <line x1="0" y1="32" x2="210" y2="32" class="pkg-div"/>
+        <text x="10" y="22" class="pkg-tab">Backend Application</text>
+        <text x="10" y="50" class="pkg-note">(Node.js + Express)</text>
+        <text x="10" y="66" class="pkg-body">- modules/auth</text>
+        <text x="10" y="80" class="pkg-body">- modules/detection</text>
+      </g>
+
+      <!-- 4 Persistence Layer -->
+      <g transform="translate(50,300)">
+        <path d="M 0 168 L 0 32 L 0 0 L 108 0 L 122 32 L 210 32 L 210 168 Z" class="pkg"/>
+        <line x1="0" y1="32" x2="210" y2="32" class="pkg-div"/>
+        <text x="10" y="22" class="pkg-tab">Persistence Layer</text>
+        <text x="10" y="50" class="pkg-note">(PostgreSQL)</text>
+        <text x="10" y="66" class="pkg-body">- User</text>
+        <text x="10" y="80" class="pkg-body">- EmailVerificationToken</text>
+        <text x="10" y="94" class="pkg-body">- PasswordResetToken</text>
+      </g>
+
+      <!-- 5 AI Inference Service -->
+      <g transform="translate(350,300)">
+        <path d="M 0 168 L 0 32 L 0 0 L 118 0 L 132 32 L 210 32 L 210 168 Z" class="pkg"/>
+        <line x1="0" y1="32" x2="210" y2="32" class="pkg-div"/>
+        <text x="10" y="22" class="pkg-tab">AI Inference Service</text>
+        <text x="10" y="50" class="pkg-note">(Python + FastAPI)</text>
+        <text x="10" y="66" class="pkg-body">- analysis</text>
+        <text x="10" y="80" class="pkg-body">- detection</text>
+        <text x="10" y="94" class="pkg-body">- freshness</text>
+        <text x="10" y="108" class="pkg-body">- common</text>
+      </g>
+
+      <!-- 6 Shared / Infrastructure -->
+      <g transform="translate(650,300)">
+        <path d="M 0 168 L 0 32 L 0 0 L 128 0 L 142 32 L 210 32 L 210 168 Z" class="pkg"/>
+        <line x1="0" y1="32" x2="210" y2="32" class="pkg-div"/>
+        <text x="10" y="22" class="pkg-tab">Shared / Infrastructure</text>
+        <text x="10" y="50" class="pkg-body">- middleware (auth)</text>
+        <text x="10" y="64" class="pkg-body">- e-mail (SMTP)</text>
+        <text x="10" y="78" class="pkg-body">- config</text>
+        <text x="10" y="92" class="pkg-body">- logging</text>
+        <text x="10" y="106" class="pkg-body">- utilities</text>
+      </g>
+
+      <!-- Legend -->
+      <rect x="140" y="500" width="640" height="58" fill="#fff" stroke="#212529" stroke-width="1.25" rx="3"/>
+      <line x1="165" y1="528" x2="215" y2="528" class="das" marker-end="url(#df)"/>
+      <text x="228" y="532" class="leg">Dependency</text>
+      <line x1="340" y1="528" x2="390" y2="528" class="sol" marker-end="url(#sf)"/>
+      <text x="403" y="532" class="leg">Data Flow / Communication</text>
+      <g transform="translate(600,512)">
+        <path d="M 0 36 L 0 12 L 0 0 L 36 0 L 42 12 L 68 12 L 68 36 Z" class="pkg"/>
+        <line x1="0" y1="12" x2="68" y2="12" class="pkg-div"/>
+        <text x="5" y="9" font-size="7" font-weight="700" fill="#212529">Package</text>
+      </g>
+      <text x="678" y="532" class="leg">Package</text>
+
+      <text x="460" y="600" font-size="11" fill="#495057" text-anchor="middle" font-style="italic">
+        Figure 5.1. Overall Logical Package Diagram — SnapStock-AI Implemented System
+      </text>
+    </svg>
+  </div>
+</body>
+</html>

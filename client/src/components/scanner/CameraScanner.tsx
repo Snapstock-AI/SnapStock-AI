@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 type CameraScannerProps = {
   onCapture: (file: File) => void;
@@ -127,7 +128,7 @@ export default function CameraScanner({
         autoPlay
         playsInline
         muted
-        className="aspect-video w-full rounded-2xl border border-border object-cover"
+        className="aspect-video w-full rounded-xl border border-border object-cover"
       />
 
       <canvas
@@ -137,20 +138,23 @@ export default function CameraScanner({
 
       <div className="flex justify-center gap-4">
 
-        <button
+        <Button
+          type="button"
           onClick={captureImage}
           disabled={loading}
-          className="rounded-full bg-brand-500 px-8 py-3 font-semibold text-white hover:bg-brand-600 disabled:opacity-50"
+          size="lg"
         >
-          📸 Capture
-        </button>
+          Capture
+        </Button>
 
-        <button
+        <Button
+          type="button"
+          variant="destructive"
           onClick={closeCamera}
-          className="rounded-full bg-red-500 px-8 py-3 font-semibold text-white hover:bg-red-600"
+          size="lg"
         >
           Close
-        </button>
+        </Button>
 
       </div>
 

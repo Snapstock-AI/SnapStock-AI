@@ -4,6 +4,19 @@ import { useNavigate } from 'react-router'
 import { useAuth, type Business } from '@/context/AuthContext'
 import { apiRequest } from '@/lib/api'
 import { useTheme } from '@/hooks/use-theme'
+import { PageHeader } from '@/components/PageHeader'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export default function SettingsPage() {
   const navigate = useNavigate()
@@ -108,173 +121,289 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-serif text-2xl font-semibold md:text-3xl">Settings</h1>
-        <p className="mt-1 text-sm text-muted">Manage your storefront and preferences</p>
-      </div>
+      <PageHeader
+        title="Settings"
+        description="Manage your storefront and preferences"
+      />
 
       <div className="space-y-4">
-        <section className="rounded-2xl border border-border bg-surface-elevated p-5">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300">
-              <UserRound className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="font-medium">Profile details</h2>
-              <div className="mt-1 flex items-center justify-between gap-3">
-                <p className="text-sm text-muted">Your account information</p>
-                <button type="button" onClick={() => setEditingProfile(true)} className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-semibold hover:bg-surface-muted"><Pencil className="h-3.5 w-3.5" /> Edit</button>
+        <Card>
+          <CardHeader>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                <UserRound className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <CardTitle className="text-base">Profile details</CardTitle>
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <CardDescription>Your account information</CardDescription>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setEditingProfile(true)}>
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="mb-1.5 text-sm text-muted">Full name</p>
-              <p className="rounded-xl border border-border bg-surface px-4 py-2.5 text-sm">{user?.full_name || 'Not available'}</p>
-            </div>
-            <div>
-              <p className="mb-1.5 text-sm text-muted">Email</p>
-              <p className="rounded-xl border border-border bg-surface px-4 py-2.5 text-sm">{user?.email || 'Not available'}</p>
-            </div>
-            <div>
-              <p className="mb-1.5 text-sm text-muted">Account role</p>
-              <p className="rounded-xl border border-border bg-surface px-4 py-2.5 text-sm">{user?.system_role || 'Not available'}</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-border bg-surface-elevated p-5">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300">
-              <Building2 className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="font-medium">Business details</h2>
-              <div className="mt-1 flex items-center justify-between gap-3">
-                <p className="text-sm text-muted">Information for your current business</p>
-                {business?.role === 'OWNER' && <button type="button" onClick={handleBusinessDelete} disabled={deletingBusiness} className="inline-flex items-center gap-2 rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"><Trash2 className="h-3.5 w-3.5" /> {deletingBusiness ? 'Deleting...' : 'Delete business'}</button>}
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Full name</Label>
+                <p className="rounded-md border border-border bg-background px-3 py-2.5 text-sm">
+                  {user?.full_name || 'Not available'}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <p className="rounded-md border border-border bg-background px-3 py-2.5 text-sm">
+                  {user?.email || 'Not available'}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Account role</Label>
+                <p className="rounded-md border border-border bg-background px-3 py-2.5 text-sm">
+                  {user?.system_role || 'Not available'}
+                </p>
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {businessError && <p className="mt-4 text-sm text-red-700 dark:text-red-300">{businessError}</p>}
-          {!businessError && !business && user?.businessId && <p className="mt-4 text-sm text-muted">Loading business details...</p>}
-          {!user?.businessId && <p className="mt-4 text-sm text-muted">No business is connected to this account.</p>}
-
-          {business && (
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="mb-1.5 text-sm text-muted">Business name</p>
-                <input value={businessForm.business_name} readOnly onChange={(event) => setBusinessForm({ ...businessForm, business_name: event.target.value })} required maxLength={150} className="w-full cursor-default rounded-xl border border-border bg-surface-muted px-4 py-2.5 text-sm outline-none" />
+        <Card>
+          <CardHeader>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                <Building2 className="h-5 w-5" />
               </div>
-              <div>
-                <p className="mb-1.5 text-sm text-muted">Business email</p>
-                <div className="relative"><Mail className="pointer-events-none absolute left-4 top-3 h-4 w-4 text-muted" /><input type="email" value={businessForm.business_email} readOnly className="w-full cursor-default rounded-xl border border-border bg-surface-muted py-2.5 pl-11 pr-4 text-sm outline-none" /></div>
-              </div>
-              <div>
-                <p className="mb-1.5 text-sm text-muted">Contact number</p>
-                <div className="relative"><Phone className="pointer-events-none absolute left-4 top-3 h-4 w-4 text-muted" /><input value={businessForm.contact_number} readOnly className="w-full cursor-default rounded-xl border border-border bg-surface-muted py-2.5 pl-11 pr-4 text-sm outline-none" /></div>
-              </div>
-              <div>
-                <p className="mb-1.5 text-sm text-muted">Role</p>
-                <p className="rounded-xl border border-border bg-surface px-4 py-2.5 text-sm">{business.role}</p>
-              </div>
-              <div className="sm:col-span-2">
-                <p className="mb-1.5 text-sm text-muted">Address</p>
-                <div className="relative"><MapPin className="pointer-events-none absolute left-4 top-3 h-4 w-4 shrink-0 text-muted" /><input value={businessForm.address} readOnly className="w-full cursor-default rounded-xl border border-border bg-surface-muted py-2.5 pl-11 pr-4 text-sm outline-none" /></div>
-              </div>
-              <div className="flex flex-wrap gap-3 sm:col-span-2">
+              <div className="flex-1">
+                <CardTitle className="text-base">Business details</CardTitle>
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <CardDescription>Information for your current business</CardDescription>
+                  {business?.role === 'OWNER' && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBusinessDelete}
+                      disabled={deletingBusiness}
+                      className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {deletingBusiness ? 'Deleting...' : 'Delete business'}
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
-          )}
-        </section>
+          </CardHeader>
+          <CardContent>
+            {businessError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{businessError}</AlertDescription>
+              </Alert>
+            )}
+            {!businessError && !business && user?.businessId && (
+              <p className="text-sm text-muted-foreground">Loading business details...</p>
+            )}
+            {!user?.businessId && (
+              <p className="text-sm text-muted-foreground">No business is connected to this account.</p>
+            )}
 
-        {(message || error) && <p className={`text-sm ${error ? 'text-red-700 dark:text-red-300' : 'text-brand-700 dark:text-brand-300'}`}>{error || message}</p>}
+            {business && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Business name</Label>
+                  <Input
+                    value={businessForm.business_name}
+                    readOnly
+                    onChange={(event) => setBusinessForm({ ...businessForm, business_name: event.target.value })}
+                    required
+                    maxLength={150}
+                    className="cursor-default bg-muted"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Business email</Label>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="email"
+                      value={businessForm.business_email}
+                      readOnly
+                      className="cursor-default bg-muted pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Contact number</Label>
+                  <div className="relative">
+                    <Phone className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={businessForm.contact_number}
+                      readOnly
+                      className="cursor-default bg-muted pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Role</Label>
+                  <p className="rounded-md border border-border bg-background px-3 py-2.5 text-sm">
+                    {business.role}
+                  </p>
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label>Address</Label>
+                  <div className="relative">
+                    <MapPin className="pointer-events-none absolute left-3 top-3 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <Input
+                      value={businessForm.address}
+                      readOnly
+                      className="cursor-default bg-muted pl-10"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      
+        {(message || error) && (
+          <Alert variant={error ? 'destructive' : 'success'}>
+            <AlertDescription>{error || message}</AlertDescription>
+          </Alert>
+        )}
 
-        <section className="rounded-2xl border border-border bg-surface-elevated p-5">
-          <h2 className="font-medium">Appearance</h2>
-          <div className="mt-4 flex gap-3">
-            {(['light', 'dark'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTheme(t)}
-                className={`rounded-xl border px-4 py-2 text-sm font-medium capitalize transition ${
-                  theme === t
-                    ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300'
-                    : 'border-border hover:bg-surface-muted'
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-border bg-surface-elevated p-5">
-          <h2 className="font-medium">Alert thresholds</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-sm text-muted">Low stock threshold</label>
-              <input
-                type="number"
-                defaultValue={25}
-                className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
-              />
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Appearance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-3">
+              {(['light', 'dark'] as const).map((t) => (
+                <Button
+                  key={t}
+                  type="button"
+                  variant={theme === t ? 'default' : 'outline'}
+                  onClick={() => setTheme(t)}
+                  className="capitalize"
+                >
+                  {t}
+                </Button>
+              ))}
             </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-muted">Freshness alert below</label>
-              <input
-                type="number"
-                defaultValue={65}
-                className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
-              />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Alert thresholds</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="low-stock">Low stock threshold</Label>
+                <Input id="low-stock" type="number" defaultValue={25} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="freshness-alert">Freshness alert below</Label>
+                <Input id="freshness-alert" type="number" defaultValue={65} />
+              </div>
             </div>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       </div>
 
-      {editingProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title">
-          <div className="w-full max-w-lg rounded-2xl bg-surface-elevated p-6 shadow-xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted">Account</p>
-                <h2 id="edit-profile-title" className="mt-1 font-serif text-2xl font-semibold">Edit profile</h2>
-              </div>
-              <button type="button" onClick={cancelProfileEdit} className="rounded-full p-2 text-muted hover:bg-surface-muted hover:text-foreground" aria-label="Close edit profile">
-                <X className="h-5 w-5" />
-              </button>
+      <Dialog
+        open={editingProfile}
+        onOpenChange={(open) => { if (!open) cancelProfileEdit(); }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Account
+            </p>
+            <DialogTitle className="text-2xl">Edit profile</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleProfileSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-name">Full name</Label>
+              <Input
+                id="profile-name"
+                value={profileName}
+                onChange={(event) => setProfileName(event.target.value)}
+                required
+                maxLength={100}
+              />
             </div>
-            <form onSubmit={handleProfileSubmit} className="mt-6 space-y-4">
-              <label className="block text-sm">
-                <span className="mb-1.5 block text-muted">Full name</span>
-                <input value={profileName} onChange={(event) => setProfileName(event.target.value)} required maxLength={100} className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 outline-none focus:ring-2 focus:ring-brand-500/30" />
-              </label>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div><p className="mb-1.5 text-sm text-muted">Email</p><p className="rounded-xl border border-border bg-surface-muted px-4 py-2.5 text-sm">{user?.email || 'Not available'}</p></div>
-                <div><p className="mb-1.5 text-sm text-muted">Account role</p><p className="rounded-xl border border-border bg-surface-muted px-4 py-2.5 text-sm">{user?.system_role || 'Not available'}</p></div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <p className="rounded-md border border-border bg-muted px-3 py-2.5 text-sm">
+                  {user?.email || 'Not available'}
+                </p>
               </div>
-              {business?.role === 'OWNER' && (
-                <div className="space-y-4 border-t border-border pt-4">
-                  <h3 className="font-medium">Business details</h3>
-                  <label className="block text-sm"><span className="mb-1.5 block text-muted">Business name</span><input value={businessForm.business_name} onChange={(event) => setBusinessForm({ ...businessForm, business_name: event.target.value })} required maxLength={150} className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 outline-none focus:ring-2 focus:ring-brand-500/30" /></label>
-                  <label className="block text-sm"><span className="mb-1.5 block text-muted">Business email</span><input type="email" value={businessForm.business_email} onChange={(event) => setBusinessForm({ ...businessForm, business_email: event.target.value })} required maxLength={255} className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 outline-none focus:ring-2 focus:ring-brand-500/30" /></label>
-                  <label className="block text-sm"><span className="mb-1.5 block text-muted">Contact number</span><input value={businessForm.contact_number} onChange={(event) => setBusinessForm({ ...businessForm, contact_number: event.target.value })} required maxLength={20} className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 outline-none focus:ring-2 focus:ring-brand-500/30" /></label>
-                  <label className="block text-sm"><span className="mb-1.5 block text-muted">Address</span><input value={businessForm.address} onChange={(event) => setBusinessForm({ ...businessForm, address: event.target.value })} required className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 outline-none focus:ring-2 focus:ring-brand-500/30" /></label>
+              <div className="space-y-1.5">
+                <Label>Account role</Label>
+                <p className="rounded-md border border-border bg-muted px-3 py-2.5 text-sm">
+                  {user?.system_role || 'Not available'}
+                </p>
+              </div>
+            </div>
+            {business?.role === 'OWNER' && (
+              <div className="space-y-4 border-t border-border pt-4">
+                <h3 className="font-medium">Business details</h3>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-business-name">Business name</Label>
+                  <Input
+                    id="edit-business-name"
+                    value={businessForm.business_name}
+                    onChange={(event) => setBusinessForm({ ...businessForm, business_name: event.target.value })}
+                    required
+                    maxLength={150}
+                  />
                 </div>
-              )}
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={cancelProfileEdit} disabled={savingProfile} className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold hover:bg-surface-muted disabled:opacity-60"><X className="h-4 w-4" /> Cancel</button>
-                <button type="submit" disabled={savingProfile} className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"><Save className="h-4 w-4" /> {savingProfile ? 'Saving...' : 'Save profile'}</button>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-business-email">Business email</Label>
+                  <Input
+                    id="edit-business-email"
+                    type="email"
+                    value={businessForm.business_email}
+                    onChange={(event) => setBusinessForm({ ...businessForm, business_email: event.target.value })}
+                    required
+                    maxLength={255}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-contact">Contact number</Label>
+                  <Input
+                    id="edit-contact"
+                    value={businessForm.contact_number}
+                    onChange={(event) => setBusinessForm({ ...businessForm, contact_number: event.target.value })}
+                    required
+                    maxLength={20}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-address">Address</Label>
+                  <Input
+                    id="edit-address"
+                    value={businessForm.address}
+                    onChange={(event) => setBusinessForm({ ...businessForm, address: event.target.value })}
+                    required
+                  />
+                </div>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={cancelProfileEdit} disabled={savingProfile}>
+                <X className="h-4 w-4" /> Cancel
+              </Button>
+              <Button type="submit" disabled={savingProfile}>
+                <Save className="h-4 w-4" /> {savingProfile ? 'Saving...' : 'Save profile'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
