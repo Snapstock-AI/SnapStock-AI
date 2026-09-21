@@ -14,6 +14,8 @@ import {
 } from "../../lib/shelf";
 
 import { useAuth } from "@/context/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 export default function ShelvesPage() {
 
@@ -159,124 +161,78 @@ useEffect(() => {
 
   return (
     <div className="space-y-6">
-
-
       <div className="flex items-center justify-between">
-
         <div>
           <Link
             to="/dashboard/scans"
-            className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" /> Back to scans
           </Link>
-          <h1 className="font-serif text-3xl font-semibold">
+          <h1 className="text-3xl font-semibold tracking-tight">
             Shelves
           </h1>
 
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage shelves used for produce scanning.
           </p>
         </div>
 
-
-        <button
-          onClick={()=>{
+        <Button
+          type="button"
+          onClick={() => {
             setSelectedShelf(undefined);
             setShowShelfModal(true);
           }}
-          className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-5 py-2 text-white hover:bg-brand-600"
         >
-
           <Plus className="h-4 w-4" />
-
           Add Shelf
-
-        </button>
-
-
+        </Button>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-
-
       <div className="grid gap-4">
-
-
-        {shelves.map((shelf)=>(
-
+        {shelves.map((shelf) => (
           <ShelfCard
-
             key={shelf.id}
-
             shelf={shelf}
-
-
-            onRename={(shelf)=>{
-
+            onRename={(shelf) => {
               setSelectedShelf(shelf);
-
               setShowShelfModal(true);
-
             }}
-
-
             onDelete={(shelf) => {
               setShelfToDelete(shelf);
               setShowDeleteModal(true);
             }}
-
           />
-
         ))}
 
-
-
         <ShelfModal
-
           open={showShelfModal}
-
-          mode={
-            selectedShelf
-              ? "edit"
-              : "add"
-          }
-
+          mode={selectedShelf ? "edit" : "add"}
           shelf={selectedShelf}
-
-
-          onClose={()=>{
-
+          onClose={() => {
             setShowShelfModal(false);
-
             setSelectedShelf(undefined);
-
           }}
-
-
           onSubmit={handleShelfSubmit}
-
         />
 
         <DeleteShelfModal
-  open={showDeleteModal}
-  shelf={shelfToDelete}
-  onClose={() => {
-    setShowDeleteModal(false);
-    setShelfToDelete(undefined);
-  }}
-  onConfirm={handleDeleteShelf}
-/>
-
-
+          open={showDeleteModal}
+          shelf={shelfToDelete}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setShelfToDelete(undefined);
+          }}
+          onConfirm={handleDeleteShelf}
+        />
       </div>
-
-
     </div>
   );
 }

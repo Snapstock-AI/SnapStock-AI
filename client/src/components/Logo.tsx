@@ -14,7 +14,7 @@ export default function Logo({ className, showText = true, variant = 'default' }
       <span
         className={cn(
           'flex h-8 w-8 items-center justify-center rounded-full',
-          variant === 'light' ? 'bg-white/20 text-white' : 'bg-brand-500 text-white'
+          variant === 'light' ? 'bg-white/20 text-white' : 'bg-primary text-primary-foreground',
         )}
       >
         <Leaf className="h-4 w-4" />
@@ -22,8 +22,8 @@ export default function Logo({ className, showText = true, variant = 'default' }
       {showText && (
         <span
           className={cn(
-            'font-serif text-xl font-semibold tracking-tight',
-            variant === 'light' ? 'text-white' : 'text-foreground'
+            'text-xl font-semibold tracking-tight',
+            variant === 'light' ? 'text-white' : 'text-foreground',
           )}
         >
           SnapStock-AI
