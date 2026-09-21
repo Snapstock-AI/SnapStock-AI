@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
   BarChart3,
@@ -28,9 +28,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/lib/api'
+import { getAlertsCount } from '@/lib/dashboard'
+import { usePollingData } from '@/hooks/usePollingData'
 import { cn } from '@/lib/utils'
-
-/** Shell layout mirrored from client/UI-theme FreeDash skin6 */
 
 type BusinessMembership = {
   id: string
@@ -98,6 +98,15 @@ export default function DashboardLayout() {
   const { logout, user } = useAuth()
   const [isOwner, setIsOwner] = useState(false)
   const [query, setQuery] = useState('')
+  const businessId = user?.businessId
+
+  const loadAlertCount = useCallback(async () => {
+    if (!businessId) return 0
+    const res = await getAlertsCount(businessId)
+    return res.data?.count ?? 0
+  }, [businessId])
+
+  const { data: alertCount } = usePollingData<number>(loadAlertCount, Boolean(businessId))
 
   useEffect(() => {
     if (!user?.businessId) {
@@ -146,9 +155,10 @@ export default function DashboardLayout() {
     )
   }, [location.pathname])
 
+  const badge = alertCount ?? 0
+
   return (
     <div className="min-h-dvh bg-background">
-      {/* Topbar — logo in left 260px (UI-theme) */}
       <header className="fixed inset-x-0 top-0 z-40 hidden h-20 bg-background md:block">
         <div className="flex h-full items-stretch border-b border-border">
           <div className="flex w-[260px] shrink-0 items-center bg-white px-[30px] dark:bg-sidebar">
@@ -160,9 +170,11 @@ export default function DashboardLayout() {
               <Button variant="ghost" size="icon" className="relative h-10 w-10 text-[#b8c3d5]" asChild>
                 <NavLink to="/dashboard/alerts" aria-label="Notifications">
                   <Bell className="h-5 w-5" />
-                  <span className="absolute right-1 top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-white">
-                    4
-                  </span>
+                  {badge > 0 ? (
+                    <span className="absolute right-1 top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-white">
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  ) : null}
                 </NavLink>
               </Button>
               <Button variant="ghost" size="icon" className="h-10 w-10 text-[#b8c3d5]" asChild>
@@ -230,7 +242,6 @@ export default function DashboardLayout() {
         </div>
       </header>
 
-      {/* Left sidebar */}
       <aside className="fixed bottom-0 left-0 top-20 z-30 hidden w-[260px] bg-white fd-shadow dark:bg-sidebar md:block">
         <nav className="h-full overflow-y-auto pb-8 pt-[30px]">
           <ul>
@@ -261,7 +272,19 @@ export default function DashboardLayout() {
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-white px-4 dark:bg-sidebar safe-top md:hidden">
         <Logo showText={false} />
         <span className="text-sm font-medium text-fd-ink">{pageTitle}</span>
-        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="relative h-9 w-9" asChild>
+            <NavLink to="/dashboard/alerts" aria-label="Notifications">
+              <Bell className="h-4 w-4" />
+              {badge > 0 ? (
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-0.5 text-[9px] font-medium text-white">
+                  {badge > 99 ? '99+' : badge}
+                </span>
+              ) : null}
+            </NavLink>
+          </Button>
+          <ThemeToggle />
+        </div>
       </header>
 
       <div className="md:ml-[260px] md:pt-20">

@@ -1,79 +1,122 @@
+import { Link } from 'react-router'
+import { useCallback } from 'react'
+import { useAuth } from '@/context/AuthContext'
+import { getInventory, type InventoryData } from '@/lib/dashboard'
+import { usePollingData } from '@/hooks/usePollingData'
 import { PageHeader } from '@/components/PageHeader'
+import { EmptyState } from '@/components/EmptyState'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
-const inventory = [
-  { name: 'Tomatoes', category: 'Vegetables', stock: 56, freshness: 84, status: 'Fresh' },
-  { name: 'Bananas', category: 'Fruits', stock: 41, freshness: 71, status: 'Ripe' },
-  { name: 'Apples', category: 'Fruits', stock: 31, freshness: 62, status: 'Alert' },
-  { name: 'Bell Peppers', category: 'Vegetables', stock: 28, freshness: 88, status: 'Fresh' },
-  { name: 'Strawberries', category: 'Fruits', stock: 18, freshness: 55, status: 'Alert' },
-  { name: 'Carrots', category: 'Vegetables', stock: 44, freshness: 91, status: 'Fresh' },
-]
-
-const statusVariant: Record<string, 'success' | 'ripe' | 'destructive'> = {
+const statusVariant: Record<string, 'success' | 'ripe' | 'destructive' | 'secondary'> = {
   Fresh: 'success',
   Ripe: 'ripe',
-  Alert: 'destructive',
+  Spoiled: 'destructive',
+  Unknown: 'secondary',
 }
 
 export default function InventoryPage() {
+  const { user } = useAuth()
+  const businessId = user?.businessId
+
+  const loader = useCallback(async () => {
+    if (!businessId) throw new Error('No business')
+    const res = await getInventory(businessId, 7)
+    if (!res.data) throw new Error(res.message || 'Unable to load inventory')
+    return res.data
+  }, [businessId])
+
+  const { data, loading, error } = usePollingData<InventoryData>(loader, Boolean(businessId))
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Inventory"
-        description="Real-time stock levels and freshness scores"
+        description="Counts and freshness from detections in the last 7 days"
       />
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="hidden md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Freshness</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inventory.map((item) => (
-                  <TableRow key={item.name}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.category}</TableCell>
-                    <TableCell>{item.stock} units</TableCell>
-                    <TableCell>{item.freshness}%</TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant[item.status]}>{item.status}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-          <div className="divide-y divide-border md:hidden">
-            {inventory.map((item) => (
-              <div key={item.name} className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.category}</p>
+      {loading && !data ? (
+        <p className="text-sm text-muted-foreground">Loading inventory...</p>
+      ) : !data?.hasData ? (
+        <EmptyState
+          title="No inventory yet"
+          description="Scan shelves to build a live product inventory from AI detections."
+          action={
+            <Button asChild>
+              <Link to="/dashboard/scans">Scan shelves</Link>
+            </Button>
+          }
+        />
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Count</TableHead>
+                    <TableHead>Fresh / Ripe / Spoiled</TableHead>
+                    <TableHead>Freshness</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.items.map((item) => (
+                    <TableRow key={item.product}>
+                      <TableCell className="font-medium">
+                        {item.product}
+                        {item.lowStock ? (
+                          <span className="ml-2 text-xs text-amber-600">Low</span>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>{item.stock}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {item.fresh} / {item.ripe} / {item.spoiled}
+                      </TableCell>
+                      <TableCell>{item.freshnessPct}%</TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant[item.status] ?? 'secondary'}>
+                          {item.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="divide-y divide-border md:hidden">
+              {data.items.map((item) => (
+                <div key={item.product} className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-medium">{item.product}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Fresh {item.fresh} · Ripe {item.ripe} · Spoiled {item.spoiled}
+                      </p>
+                    </div>
+                    <Badge variant={statusVariant[item.status] ?? 'secondary'}>{item.status}</Badge>
                   </div>
-                  <Badge variant={statusVariant[item.status]}>{item.status}</Badge>
+                  <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
+                    <span>{item.stock} counted</span>
+                    <span>{item.freshnessPct}% score</span>
+                  </div>
                 </div>
-                <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
-                  <span>{item.stock} units</span>
-                  <span>{item.freshness}% fresh</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
