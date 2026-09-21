@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Figure 16 — Alert Check Sequence</title>
+
+  <style>
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f0f2f5; padding: 2rem; display: flex; justify-content: center; }
+
+    .frame { background: #fff; border: 2px solid #212529; padding: 1.5rem 1rem 1.75rem; box-shadow: 0 4px 16px rgba(0,0,0,.08); max-width: 100%; overflow-x: auto; }
+
+    h1 { text-align: center; color: #1e4a7a; font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; }
+
+    svg { display: block; min-width: 1100px; }
+
+    .caption { margin-top: 0.85rem; text-align: center; font-size: 0.85rem; color: #495057; font-style: italic; }
+
+    .note { margin-top: 0.5rem; text-align: center; font-size: 0.78rem; color: #6c757d; }
+
+  </style>
+
+</head>
+
+<body>
+
+  <div class="frame">
+
+    <h1>Alert Check Sequence</h1>
+
+    <!-- lifelines x=85..1010 step 185 | msgs y=108 step 28 | section labels above arrows -->
+
+    <svg xmlns="http://www.w3.org/2000/svg" width="1100" height="580" viewBox="0 0 1100 580" role="img">
+
+      <defs>
+
+        <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#212529"/></marker>
+
+        <marker id="ret" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#212529"/></marker>
+
+        <style>
+
+          .box{fill:#e9ecef;stroke:#212529;stroke-width:1.5}.nm{font:600 10px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+
+          .life{stroke:#adb5bd;stroke-width:1.5;stroke-dasharray:6 4;fill:none}
+
+          .msg{stroke:#212529;stroke-width:1.75;fill:none;marker-end:url(#arr)}
+
+          .ret{stroke:#212529;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ret)}
+
+          .lbl{font:500 10px "Segoe UI",Arial,sans-serif;fill:#212529}
+
+          .lbl-mid{text-anchor:middle}
+
+          .sec{font:600 9.5px "Segoe UI",Arial,sans-serif;fill:#495057}
+
+          .sep{stroke:#dee2e6;stroke-width:1;stroke-dasharray:4 4}
+
+          .act{fill:#dee2e6;stroke:#212529;stroke-width:1}
+
+        </style>
+
+      </defs>
+
+      <rect x="10" y="10" width="1080" height="560" fill="#fff" stroke="#212529" stroke-width="2"/>
+
+
+
+      <rect x="41" y="28" width="88" height="36" rx="4" class="box"/><text x="85" y="50" class="nm">ScanService</text>
+
+      <rect x="226" y="28" width="88" height="36" rx="4" class="box"/><text x="270" y="50" class="nm">InventoryRepo</text>
+
+      <rect x="411" y="28" width="88" height="36" rx="4" class="box"/><text x="455" y="50" class="nm">AlertService</text>
+
+      <rect x="588" y="28" width="72" height="36" rx="4" class="box"/><text x="624" y="50" class="nm">AlertRepo</text>
+
+      <rect x="749" y="28" width="88" height="36" rx="4" class="box"/><text x="793" y="50" class="nm">ProductRepo</text>
+
+      <rect x="944" y="28" width="72" height="36" rx="4" class="box"/><text x="980" y="50" class="nm">Alerts UI</text>
+
+
+
+      <line x1="85" y1="64" x2="85" y2="540" class="life"/>
+
+      <line x1="270" y1="64" x2="270" y2="540" class="life"/>
+
+      <line x1="455" y1="64" x2="455" y2="540" class="life"/>
+
+      <line x1="624" y1="64" x2="624" y2="540" class="life"/>
+
+      <line x1="793" y1="64" x2="793" y2="540" class="life"/>
+
+      <line x1="980" y1="64" x2="980" y2="540" class="life"/>
+
+
+
+      <text x="30" y="76" class="sec">Post-scan (synchronous)</text>
+
+
+
+      <rect x="263" y="108" width="14" height="28" class="act"/>
+
+      <rect x="448" y="164" width="14" height="112" class="act"/>
+
+      <rect x="617" y="220" width="14" height="56" class="act"/>
+
+      <rect x="786" y="192" width="14" height="28" class="act"/>
+
+
+
+      <line x1="85" y1="108" x2="270" y2="108" class="msg"/><text x="177" y="102" class="lbl lbl-mid">getTouchedProducts()</text>
+
+      <line x1="270" y1="136" x2="85" y2="136" class="ret"/><text x="89" y="130" class="lbl">products</text>
+
+      <line x1="85" y1="164" x2="455" y2="164" class="msg"/><text x="270" y="158" class="lbl lbl-mid">evaluate(products)</text>
+
+      <line x1="455" y1="192" x2="793" y2="192" class="msg"/><text x="624" y="186" class="lbl lbl-mid">read thresholds</text>
+
+      <line x1="455" y1="220" x2="624" y2="220" class="msg"/><text x="539" y="214" class="lbl lbl-mid">insert LOW_STOCK</text>
+
+      <line x1="455" y1="248" x2="624" y2="248" class="msg"/><text x="539" y="242" class="lbl lbl-mid">insert SPOILAGE</text>
+
+      <line x1="455" y1="276" x2="85" y2="276" class="ret"/><text x="270" y="270" class="lbl lbl-mid">alertIds</text>
+
+
+
+      <line x1="20" y1="312" x2="1080" y2="312" class="sep"/>
+
+      <text x="30" y="336" class="sec">Later — user opens Alerts page</text>
+
+
+
+      <rect x="448" y="364" width="14" height="84" class="act"/>
+
+      <rect x="617" y="392" width="14" height="28" class="act"/>
+
+
+
+      <line x1="980" y1="364" x2="455" y2="364" class="msg"/><text x="717" y="358" class="lbl lbl-mid">GET /alerts</text>
+
+      <line x1="455" y1="392" x2="624" y2="392" class="msg"/><text x="539" y="386" class="lbl lbl-mid">list(tenant)</text>
+
+      <line x1="624" y1="420" x2="455" y2="420" class="ret"/><text x="539" y="414" class="lbl lbl-mid">rows</text>
+
+      <line x1="455" y1="448" x2="980" y2="448" class="ret"/><text x="717" y="442" class="lbl lbl-mid">JSON</text>
+
+    </svg>
+
+    <p class="caption">Figure 16. Sequence Diagram — Alert Check (generation vs consumption)</p>
+
+    <p class="note">Alerts are persistent facts; UI fetch happens separately from post-scan generation.</p>
+
+  </div>
+
+</body>
+
+</html>
+
+

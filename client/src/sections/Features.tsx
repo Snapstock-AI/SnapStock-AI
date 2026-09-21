@@ -1,4 +1,5 @@
 import { BarChart3, Bell, Camera, Leaf, Shield, Store } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 
 const features = [
   {
@@ -41,25 +42,24 @@ const features = [
 
 export default function Features() {
   return (
-    <section id="features" className="border-t border-border bg-surface-muted/50 py-16 md:py-24">
+    <section id="features" className="border-t border-border bg-muted/35 py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <p className="text-sm font-semibold uppercase tracking-widest text-brand-500">Features</p>
-        <h2 className="mt-3 max-w-2xl font-serif text-3xl font-semibold md:text-4xl">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Features</p>
+        <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">
           Enterprise-grade produce intelligence, sized for the corner shop.
         </h2>
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map(({ icon: Icon, title, description }) => (
-            <div
-              key={title}
-              className="rounded-2xl border border-border bg-surface-elevated p-6 transition hover:shadow-md"
-            >
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300">
-                <Icon className="h-5 w-5" />
-              </div>
-              <h3 className="font-semibold">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{description}</p>
-            </div>
+            <Card key={title} className="hover:shadow-md">
+              <CardContent className="p-6">
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/12 text-primary">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h3 className="font-semibold tracking-tight">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>

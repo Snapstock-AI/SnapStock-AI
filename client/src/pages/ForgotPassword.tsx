@@ -1,6 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import AuthLayout from '@/components/AuthLayout'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { apiRequest } from '@/lib/api'
 
 export default function ForgotPassword() {
@@ -30,51 +34,44 @@ export default function ForgotPassword() {
   return (
     <AuthLayout>
       <div className="w-full max-w-md">
-        <p className="text-xs font-semibold uppercase tracking-widest text-brand-500">Account recovery</p>
-        <h1 className="mt-3 font-serif text-3xl font-semibold md:text-4xl">Forgot password</h1>
-        <p className="mt-3 text-sm text-muted">
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary">Account recovery</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Forgot password</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
           Enter your email and we&apos;ll send a reset link if an account exists.
         </p>
 
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
-              Email
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
               id="email"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@shop.com"
-              className="w-full rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm outline-none ring-brand-500/30 transition focus:ring-2"
             />
           </div>
 
           {error && (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-              {error}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
           {message && (
-            <p className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300">
-              {message}
-            </p>
+            <Alert variant="success">
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center rounded-full bg-brand-500 py-3.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
-          >
+          <Button type="submit" disabled={loading} className="w-full">
             {loading ? 'Sending...' : 'Send reset link'}
-          </button>
+          </Button>
         </form>
 
-        <p className="mt-8 text-center text-sm text-muted">
+        <p className="mt-8 text-center text-sm text-muted-foreground">
           Remembered your password?{' '}
-          <Link to="/login" className="font-medium text-brand-500 hover:underline">
+          <Link to="/login" className="font-medium text-primary hover:underline">
             Sign in
           </Link>
         </p>

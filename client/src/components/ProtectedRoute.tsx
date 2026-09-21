@@ -34,7 +34,7 @@ export default function ProtectedRoute() {
   }
 
   if (!membershipChecked) {
-    return <div className="min-h-dvh bg-surface" />
+    return <div className="min-h-dvh bg-background" />
   }
 
   const isBusinessOnboarding = location.pathname === '/onboarding/business'
