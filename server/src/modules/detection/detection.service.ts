@@ -3,7 +3,11 @@ import FormData from "form-data";
 import path from "path";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { SendMessageCommand } from "@aws-sdk/client-sqs";
+import {
+  DeleteMessageCommand,
+  ReceiveMessageCommand,
+  SendMessageCommand,
+} from "@aws-sdk/client-sqs";
 
 import type {
   AnalyzeRequest,
@@ -16,6 +20,7 @@ import type {
 import { DetectionRepository } from "./detection.repository";
 import {
   analysisRequestQueueUrl,
+  analysisResultQueueUrl,
   awsResourceNames,
   s3Client,
   sqsClient,
@@ -102,6 +107,95 @@ export class DetectionService {
         },
       })
     );
+  }
+
+  static async consumeAnalysisResults(): Promise<AnalysisJob[]> {
+    if (!analysisResultQueueUrl) {
+      throw new Error("SQS_ANALYSIS_RESULT_QUEUE_URL is required.");
+    }
+
+    const response = await sqsClient.send(
+      new ReceiveMessageCommand({
+        QueueUrl: analysisResultQueueUrl,
+        MaxNumberOfMessages: 10,
+        WaitTimeSeconds: 20,
+        MessageAttributeNames: ["All"],
+        AttributeNames: ["All"],
+      })
+    );
+
+    const messages = response.Messages ?? [];
+    const processed: AnalysisJob[] = [];
+
+    for (const message of messages) {
+      if (!message.Body) {
+        continue;
+      }
+
+      try {
+        const payload = JSON.parse(message.Body) as {
+          eventType?: string;
+          scanId?: string;
+          businessId?: string;
+          shelfId?: string;
+          userId?: string;
+          data?: AIAnalysisResponse;
+        };
+
+        if (payload.eventType !== "ANALYSIS_COMPLETED" || !payload.scanId) {
+          continue;
+        }
+
+        const aiResult = payload.data ?? {
+          image_width: 0,
+          image_height: 0,
+          total_count: 0,
+          counts: {},
+          detections: [],
+        };
+
+        for (const detection of aiResult.detections) {
+          const product = await DetectionRepository.findProductByName(
+            payload.businessId ?? "",
+            detection.class_name
+          );
+
+          await DetectionRepository.createDetection(
+            payload.scanId,
+            detection.class_name,
+            product ? product.id : null,
+            detection.confidence,
+            detection.bounding_box,
+            mapFreshness(detection.freshness),
+            detection.freshness_confidence
+          );
+        }
+
+        await DetectionRepository.updateScanStatus(payload.scanId, "COMPLETED");
+        processed.push(payload as AnalysisJob);
+      } catch (error: any) {
+        console.error("Failed to process analysis result message:", error.message);
+      } finally {
+        if (message.ReceiptHandle) {
+          await sqsClient.send(
+            new DeleteMessageCommand({
+              QueueUrl: analysisResultQueueUrl,
+              ReceiptHandle: message.ReceiptHandle,
+            })
+          );
+        }
+      }
+    }
+
+    return processed;
+  }
+
+  static startResultQueueConsumer(intervalMs = 5000): NodeJS.Timeout {
+    return setInterval(() => {
+      void DetectionService.consumeAnalysisResults().catch((error) => {
+        console.error("Result queue polling failed:", error);
+      });
+    }, intervalMs);
   }
 
   static async createUploadUrl(
