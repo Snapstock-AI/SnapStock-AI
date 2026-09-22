@@ -41,3 +41,6 @@ export const awsResourceNames = {
 
 export const analysisRequestQueueUrl =
   process.env.SQS_ANALYSIS_JOB_QUEUE_URL || undefined;
+
+export const analysisResultQueueUrl =
+  process.env.SQS_ANALYSIS_RESULT_QUEUE_URL || undefined;
