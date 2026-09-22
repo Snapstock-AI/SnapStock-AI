@@ -49,6 +49,22 @@ export class AuthController {
     }
   }
 
+  static async googleLogin(req: Request, res: Response) {
+    try {
+      const result = await AuthService.loginWithGoogle(req.body);
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
   static async logout(req: AuthRequest, res: Response) {
     try {
       const result = await AuthService.logout(req.user?.sessionId);
