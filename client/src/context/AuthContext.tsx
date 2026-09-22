@@ -20,6 +20,7 @@ type AuthContextValue = {
   token: string | null
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
+  loginWithGoogle: (credential: string) => Promise<void>
   register: (full_name: string, email: string, password: string) => Promise<string>
   createBusiness: (data: CreateBusinessInput) => Promise<Business>
   acceptInvitation: (token: string) => Promise<void>
@@ -61,6 +62,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!result.data?.token || !result.data.user) {
       throw new Error('Login failed')
+    }
+
+    setAuth(result.data.token, result.data.user, result.data.refreshToken)
+    setToken(result.data.token)
+    setUser(result.data.user)
+  }, [])
+
+  const loginWithGoogle = useCallback(async (credential: string) => {
+    const result = await apiRequest<{
+      message: string
+      token: string
+      refreshToken: string
+      user: AuthUser
+    }>('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential }),
+    })
+
+    if (!result.data?.token || !result.data.user) {
+      throw new Error('Google sign-in failed')
     }
 
     setAuth(result.data.token, result.data.user, result.data.refreshToken)
@@ -167,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token,
       isAuthenticated: Boolean(token),
       login,
+      loginWithGoogle,
       register,
       createBusiness,
       acceptInvitation,
@@ -174,7 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       syncBusinessMembership,
       logout,
     }),
-    [user, token, login, register, createBusiness, acceptInvitation, updateProfile, syncBusinessMembership, logout]
+    [user, token, login, loginWithGoogle, register, createBusiness, acceptInvitation, updateProfile, syncBusinessMembership, logout]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
