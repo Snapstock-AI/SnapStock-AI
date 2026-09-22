@@ -8,6 +8,7 @@ import boto3
 from botocore.config import Config
 
 from app.analysis.service import analyze_image
+from app.logger import logger
 
 
 def _client_kwargs(service_name: str) -> dict[str, Any]:
@@ -170,6 +171,7 @@ def run_worker_loop(
                 freshness_model=freshness_model,
             )
         except Exception:
+            logger.exception("Analysis worker iteration failed")
             time.sleep(poll_interval_seconds)
             continue
 

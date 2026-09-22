@@ -84,6 +84,69 @@ function mapFreshness(
 
 export class DetectionService {
 
+  static async getScanStatus(scanId: string) {
+    const scan = await DetectionRepository.getScanById(scanId);
+
+    if (!scan) {
+      throw new Error("Scan not found.");
+    }
+
+    if (scan.status !== "COMPLETED") {
+      return {
+        scanId,
+        status: scan.status,
+        data: null,
+        errorMessage: scan.error_message ?? undefined,
+      };
+    }
+
+    const detections = await DetectionRepository.getDetectionsForScan(scanId);
+
+    const counts: Record<string, { fresh: number; rotten: number; total: number }> = {};
+
+    for (const detection of detections) {
+      const label = detection.product_label;
+      const freshness = detection.freshness ?? "UNKNOWN";
+      const freshCount = freshness === "Fresh" ? 1 : 0;
+      const rottenCount = freshness === "Spoiled" ? 1 : 0;
+
+      if (!counts[label]) {
+        counts[label] = {
+          fresh: 0,
+          rotten: 0,
+          total: 0,
+        };
+      }
+
+      counts[label].total += 1;
+      counts[label].fresh += freshCount;
+      counts[label].rotten += rottenCount;
+    }
+
+    const mappedDetections = detections.map((detection) => ({
+      id: detection.id,
+      class_name: detection.product_label,
+      confidence: Number(detection.confidence),
+      bounding_box: detection.bbox_json ?? { x1: 0, y1: 0, x2: 0, y2: 0 },
+      freshness: detection.freshness ?? "UNKNOWN",
+      freshness_confidence: Number(detection.freshness_confidence ?? 0),
+      freshness_confidence_percent: Number(detection.freshness_confidence ?? 0) * 100,
+    }));
+
+    return {
+      scanId,
+      status: "COMPLETED",
+      data: {
+        scanId,
+        image_width: 0,
+        image_height: 0,
+        total_count: mappedDetections.length,
+        counts,
+        detections: mappedDetections,
+      },
+    };
+  }
+
   static async queueUploadedScan(
     scan: AnalysisJob
   ): Promise<void> {

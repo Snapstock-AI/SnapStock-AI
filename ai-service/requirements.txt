@@ -5,6 +5,7 @@ pillow
 tensorflow
 ultralytics
 huggingface_hub
+python-dotenv
 pytest
 pytest-cov
 pytest-mock

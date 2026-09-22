@@ -4,6 +4,40 @@ import { AuthRequest } from "../../shared/middleware/auth.middleware";
 
 export class DetectionController {
 
+  static async getScanStatus(
+    req: AuthRequest,
+    res: Response
+  ) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const { scanId } = req.params;
+      if (typeof scanId !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Scan ID is required",
+        });
+      }
+
+      const result = await DetectionService.getScanStatus(scanId);
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
   static async queueUploadedScan(
     req: AuthRequest,
     res: Response

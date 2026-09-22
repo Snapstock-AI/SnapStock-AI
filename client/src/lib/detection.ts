@@ -5,7 +5,7 @@ const API_URL =
 
 
 export type DetectionResult = {
-  shelf: Shelf;
+  shelf?: Shelf;
 
   scanId: string;
 
@@ -13,12 +13,11 @@ export type DetectionResult = {
   image_height: number;
   total_count: number;
 
-  counts: Record< string,{
+  counts: Record<string, {
       fresh: number;
       rotten: number;
       total: number;
-    }
-    >;
+    }>;
 
   detections: {
     id?: string;
@@ -40,6 +39,13 @@ export type DetectionResult = {
 
     freshness_confidence_percent: number;
   }[];
+};
+
+export type ScanStatusResponse = {
+  scanId: string;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  data?: DetectionResult | null;
+  errorMessage?: string;
 };
 
 export type ScanUploadResponse = {
@@ -115,6 +121,26 @@ export async function uploadScanImage(
 
   if (!uploadResponse.ok) {
     throw new Error("Image upload failed");
+  }
+
+  return body.data;
+}
+
+export async function fetchScanStatus(
+  scanId: string,
+  token: string
+): Promise<ScanStatusResponse> {
+  const response = await fetch(`${API_URL}/detection/status/${scanId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const body = await response.json();
+
+  if (!response.ok || body.success === false) {
+    throw new Error(body.message || "Could not fetch scan status");
   }
 
   return body.data;
