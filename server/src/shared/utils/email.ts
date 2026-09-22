@@ -113,7 +113,7 @@ const clientUrl = () =>
   "http://localhost:5173";
 
 const clientPath = () =>
-  process.env.CLIENT_BASE_PATH || "/snapstock-frontend-http";
+  process.env.CLIENT_BASE_PATH ?? "";
 
 const emailTemplate = (
   eyebrow: string,
