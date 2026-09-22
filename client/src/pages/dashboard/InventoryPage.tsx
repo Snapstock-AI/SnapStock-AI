@@ -29,7 +29,11 @@ export default function InventoryPage() {
     return res.data
   }, [businessId])
 
-  const { data, loading, error } = usePollingData<InventoryData>(loader, Boolean(businessId))
+  const { data, loading, error } = usePollingData<InventoryData>(
+    loader,
+    Boolean(businessId),
+    businessId ? `inventory:${businessId}` : undefined,
+  )
 
   return (
     <div className="space-y-6">

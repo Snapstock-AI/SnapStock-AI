@@ -23,6 +23,7 @@ export default function AnalyticsPage() {
   const { data, loading, error } = usePollingData<AnalyticsData>(
     loader,
     Boolean(businessId),
+    businessId ? `analytics:${businessId}` : undefined,
   )
 
   return (
