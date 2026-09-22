@@ -111,6 +111,7 @@ export default function DashboardHome() {
   const { data, loading, error } = usePollingData<DashboardData>(
     loadDashboard,
     Boolean(token && businessId),
+    businessId ? `dashboard:${businessId}` : undefined,
   )
 
   useEffect(() => {
@@ -171,9 +172,16 @@ export default function DashboardHome() {
     )
   }
 
-  if (!business || (loading && !data)) {
+  if (loading && !data) {
     return <div className="text-sm text-fd-muted">Loading your dashboard...</div>
   }
+
+  // Prefer live dashboard payload; business profile can catch up without blanking the page.
+  if (!data) {
+    return <div className="text-sm text-fd-muted">Loading your dashboard...</div>
+  }
+
+  const displayName = business?.business_name || 'Your business'
 
   const firstName = user.full_name.split(' ')[0]
   const today = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
@@ -209,7 +217,7 @@ export default function DashboardHome() {
             Good Morning {firstName}!
           </h1>
           <p className="mt-1 text-sm text-fd-cap">
-            Dashboard <span className="mx-1">/</span> {business.business_name}
+            Dashboard <span className="mx-1">/</span> {displayName}
           </p>
         </div>
         <div className="flex items-center gap-2">

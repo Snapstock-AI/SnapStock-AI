@@ -43,7 +43,11 @@ export default function AlertsPage() {
     return res.data
   }, [businessId])
 
-  const { data, loading, error } = usePollingData<AlertsData>(loader, Boolean(businessId))
+  const { data, loading, error } = usePollingData<AlertsData>(
+    loader,
+    Boolean(businessId),
+    businessId ? `alerts:${businessId}` : undefined,
+  )
 
   return (
     <div className="space-y-6">

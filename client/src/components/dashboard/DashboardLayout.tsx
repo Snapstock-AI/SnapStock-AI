@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { NavLink, useLocation, useNavigate } from 'react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
@@ -30,6 +30,7 @@ import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/lib/api'
 import { getAlertsCount } from '@/lib/dashboard'
 import { usePollingData } from '@/hooks/usePollingData'
+import PageTransition from '@/components/dashboard/PageTransition'
 import { cn } from '@/lib/utils'
 
 type BusinessMembership = {
@@ -74,6 +75,7 @@ function SidebarLink({
       <NavLink
         to={to}
         end={end}
+        viewTransition
         className={({ isActive }) =>
           cn(
             'mr-[17px] flex items-center gap-2 py-3 pl-[30px] pr-[30px] text-base leading-[27px] text-sidebar-foreground transition-all duration-200',
@@ -106,7 +108,11 @@ export default function DashboardLayout() {
     return res.data?.count ?? 0
   }, [businessId])
 
-  const { data: alertCount } = usePollingData<number>(loadAlertCount, Boolean(businessId))
+  const { data: alertCount } = usePollingData<number>(
+    loadAlertCount,
+    Boolean(businessId),
+    businessId ? `alerts-count:${businessId}` : undefined,
+  )
 
   useEffect(() => {
     if (!user?.businessId) {
@@ -168,7 +174,7 @@ export default function DashboardLayout() {
           <div className="flex flex-1 items-center justify-between gap-4 px-4 lg:px-6">
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="icon" className="relative h-10 w-10 text-[#b8c3d5]" asChild>
-                <NavLink to="/dashboard/alerts" aria-label="Notifications">
+                <NavLink to="/dashboard/alerts" viewTransition aria-label="Notifications">
                   <Bell className="h-5 w-5" />
                   {badge > 0 ? (
                     <span className="absolute right-1 top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-white">
@@ -178,7 +184,7 @@ export default function DashboardLayout() {
                 </NavLink>
               </Button>
               <Button variant="ghost" size="icon" className="h-10 w-10 text-[#b8c3d5]" asChild>
-                <NavLink to="/dashboard/settings" aria-label="Settings">
+                <NavLink to="/dashboard/settings" viewTransition aria-label="Settings">
                   <Settings className="h-5 w-5" />
                 </NavLink>
               </Button>
@@ -274,7 +280,7 @@ export default function DashboardLayout() {
         <span className="text-sm font-medium text-fd-ink">{pageTitle}</span>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="relative h-9 w-9" asChild>
-            <NavLink to="/dashboard/alerts" aria-label="Notifications">
+            <NavLink to="/dashboard/alerts" viewTransition aria-label="Notifications">
               <Bell className="h-4 w-4" />
               {badge > 0 ? (
                 <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-0.5 text-[9px] font-medium text-white">
@@ -301,7 +307,7 @@ export default function DashboardLayout() {
           {!user?.businessId && workspacePromptPaths.includes(location.pathname) ? (
             <NoBusinessWorkspace />
           ) : (
-            <Outlet />
+            <PageTransition />
           )}
         </div>
       </div>
@@ -319,9 +325,10 @@ export default function DashboardLayout() {
             key={to}
             to={to}
             end={end}
+            viewTransition
             className={({ isActive }) =>
               cn(
-                'flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium',
+                'flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors duration-200',
                 isActive ? 'text-primary' : 'text-fd-muted',
               )
             }
