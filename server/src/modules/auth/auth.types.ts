@@ -28,6 +28,10 @@ export interface RefreshTokenDTO {
   refreshToken: string;
 }
 
+export interface GoogleLoginDTO {
+  credential: string;
+}
+
 export interface EmailVerificationToken {
   user_id: string;
   token: string;

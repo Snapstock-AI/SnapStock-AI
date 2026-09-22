@@ -9,15 +9,19 @@ import {
   ResetPasswordDTO,
   ResendVerificationDTO,
   RefreshTokenDTO,
+  GoogleLoginDTO,
 } from "./auth.types";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
 } from "../../shared/utils/email";
 import { BusinessRepository } from "../business/business.repository";
+import { OAuth2Client } from "google-auth-library";
 
 const ACCESS_TOKEN_TTL = "1d";
 const REFRESH_TOKEN_DAYS = 7;
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export class AuthService {
   static async updateProfile(userId: string, full_name: string) {
@@ -130,6 +134,12 @@ export class AuthService {
       throw new Error("Invalid credentials");
     }
 
+    if (!user.password_hash) {
+      throw new Error(
+        "This account uses Google Sign-In. Please continue with Google.",
+      );
+    }
+
     const isMatch = await bcrypt.compare(data.password, user.password_hash);
 
     if (!isMatch) {
@@ -138,6 +148,79 @@ export class AuthService {
 
     if (!user.email_verified) {
       throw new Error("Please verify your email first");
+    }
+
+    const session = await AuthService.createSessionTokens(user);
+
+    return {
+      message: "Login successful",
+      ...session,
+    };
+  }
+
+  static async loginWithGoogle(data: GoogleLoginDTO) {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      throw new Error("Google Sign-In is not configured");
+    }
+
+    if (!data.credential?.trim()) {
+      throw new Error("Google credential is required");
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: data.credential,
+      audience: clientId,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload?.sub || !payload.email) {
+      throw new Error("Invalid Google credential");
+    }
+
+    if (payload.email_verified === false) {
+      throw new Error("Google email is not verified");
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email.toLowerCase();
+    const fullName =
+      payload.name?.trim() ||
+      [payload.given_name, payload.family_name].filter(Boolean).join(" ").trim() ||
+      email.split("@")[0];
+
+    let user = await AuthRepository.findByGoogleId(googleId);
+
+    if (!user) {
+      const existing = await AuthRepository.findByEmail(email);
+
+      if (existing) {
+        if (existing.google_id && existing.google_id !== googleId) {
+          throw new Error("This email is linked to a different Google account");
+        }
+
+        await AuthRepository.linkGoogleAccount(existing.id, googleId);
+        user = await AuthRepository.findByGoogleId(googleId);
+      } else {
+        await AuthRepository.createUser({
+          full_name: fullName.slice(0, 100),
+          email,
+          password: "",
+          password_hash: null,
+          google_id: googleId,
+          email_verified: true,
+        });
+        user = await AuthRepository.findByGoogleId(googleId);
+      }
+    }
+
+    if (!user) {
+      throw new Error("Unable to sign in with Google");
+    }
+
+    if (!user.email_verified) {
+      await AuthRepository.verifyUser(user.id);
+      user = { ...user, email_verified: true };
     }
 
     const session = await AuthService.createSessionTokens(user);
@@ -274,7 +357,7 @@ export class AuthService {
   static async forgotPassword(data: ForgotPasswordDTO) {
     const user = await AuthRepository.findByEmail(data.email);
 
-    if (!user) {
+    if (!user || !user.password_hash) {
       return {
         message: "If an account exists, a password reset email has been sent",
       };

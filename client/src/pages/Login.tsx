@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react'
+import { useCallback, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import AuthLayout from '@/components/AuthLayout'
+import GoogleContinueButton from '@/components/GoogleContinueButton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,11 +10,27 @@ import { useAuth } from '@/context/AuthContext'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, loginWithGoogle } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const handleGoogle = useCallback(
+    async (credential: string) => {
+      setError('')
+      setLoading(true)
+      try {
+        await loginWithGoogle(credential)
+        navigate('/dashboard')
+      } catch (err: any) {
+        setError(err.message || 'Google sign-in failed')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [loginWithGoogle, navigate],
+  )
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -38,7 +55,21 @@ export default function Login() {
           Continue scanning shelves and tracking freshness across your stores.
         </p>
 
-        <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+        <div className="mt-8 space-y-4">
+          <GoogleContinueButton
+            label="continue_with"
+            disabled={loading}
+            onCredential={handleGoogle}
+            onError={setError}
+          />
+
+          <div className="relative py-1 text-center text-xs uppercase tracking-widest text-muted-foreground">
+            <span className="relative z-10 bg-background px-3">or</span>
+            <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" />
+          </div>
+        </div>
+
+        <form className="mt-4 space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input

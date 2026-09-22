@@ -16,17 +16,24 @@ export class AuthRepository {
   }
 
   //CREATE USER-REGISTER
-  static async createUser(data: RegisterDTO & { password_hash: string }) {
+  static async createUser(
+    data: RegisterDTO & {
+      password_hash: string | null;
+      google_id?: string | null;
+      email_verified?: boolean;
+    },
+  ) {
     const repo = AppDataSource.getRepository(User);
 
     const user = repo.create({
       full_name: data.full_name,
       email: data.email,
       password_hash: data.password_hash,
+      google_id: data.google_id ?? null,
       nic: data.nic ?? null,
       date_of_birth: data.date_of_birth ?? null,
       system_role: "BUSINESS_USER",
-      email_verified: false,
+      email_verified: data.email_verified ?? false,
     });
 
     const saved = await repo.save(user);
@@ -41,6 +48,29 @@ export class AuthRepository {
     };
   }
 
+  static async findByGoogleId(googleId: string) {
+    return AppDataSource.getRepository(User).findOne({
+      where: { google_id: googleId },
+      select: {
+        id: true,
+        full_name: true,
+        email: true,
+        password_hash: true,
+        google_id: true,
+        system_role: true,
+        email_verified: true,
+      },
+    });
+  }
+
+  static async linkGoogleAccount(userId: string, googleId: string) {
+    await AppDataSource.getRepository(User).update(
+      { id: userId },
+      { google_id: googleId, email_verified: true },
+    );
+    return this.findById(userId);
+  }
+
   //FIND USER BY EMAIL-LOGIN
   static async findByEmail(email: string) {
     return AppDataSource.getRepository(User).findOne({
@@ -50,6 +80,7 @@ export class AuthRepository {
         full_name: true,
         email: true,
         password_hash: true,
+        google_id: true,
         system_role: true,
         email_verified: true,
       },

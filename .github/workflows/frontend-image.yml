@@ -116,6 +116,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_URL=/snapstock-backend-http
+            VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}
           tags: |
             ghcr.io/snapstock-ai/snapstock-client:dev-${{ github.sha }}
 
