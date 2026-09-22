@@ -20,8 +20,11 @@ export class User {
   @Column({ type: "varchar", length: 255, unique: true })
   email!: string;
 
-  @Column({ type: "text" })
-  password_hash!: string;
+  @Column({ type: "text", nullable: true })
+  password_hash!: string | null;
+
+  @Column({ type: "varchar", length: 255, unique: true, nullable: true })
+  google_id!: string | null;
 
   @Column({ type: "varchar", length: 15, unique: true, nullable: true })
   nic!: string | null;
