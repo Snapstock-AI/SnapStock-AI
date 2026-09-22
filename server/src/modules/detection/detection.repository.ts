@@ -2,6 +2,39 @@ import db from "../../config/db";
 
 export class DetectionRepository {
 
+  static async getScanById(scanId: string) {
+    const result = await db.query(
+      `
+      SELECT id, business_id, shelf_id, user_id, status, error_message
+      FROM scans
+      WHERE id = $1;
+      `,
+      [scanId]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  static async getDetectionsForScan(scanId: string) {
+    const result = await db.query(
+      `
+      SELECT
+        id,
+        product_label,
+        confidence,
+        bbox_json,
+        freshness,
+        freshness_confidence
+      FROM detections
+      WHERE scan_id = $1
+      ORDER BY created_at ASC;
+      `,
+      [scanId]
+    );
+
+    return result.rows;
+  }
+
   static async createScan(
     businessId: string,
     shelfId: string,

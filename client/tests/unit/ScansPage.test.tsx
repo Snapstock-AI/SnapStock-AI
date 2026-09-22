@@ -11,12 +11,14 @@ import ScansPage from "../../src/pages/dashboard/ScansPage";
 import {
   queueUploadedScan,
   uploadScanImage,
+  fetchScanStatus,
 } from "../../src/lib/detection";
 
 
 vi.mock("../../src/lib/detection", () => ({
   queueUploadedScan: vi.fn(),
   uploadScanImage: vi.fn(),
+  fetchScanStatus: vi.fn(),
 }));
 
 
@@ -453,6 +455,12 @@ describe("ScansPage", () => {
       expiresInSeconds: 900,
     });
 
+    vi.mocked(fetchScanStatus).mockResolvedValue({
+      scanId: "scan-123",
+      status: "COMPLETED",
+      data: mockResult,
+    });
+
     render(<ScansPage />);
 
     const select = screen.getByRole("combobox");
@@ -491,12 +499,16 @@ describe("ScansPage", () => {
       expect(uploadScanImage).toHaveBeenCalledTimes(1);
     });
 
+    await waitFor(() => {
+      expect(fetchScanStatus).toHaveBeenCalledWith("scan-123", "test-token");
+    });
+
     expect(
-      await screen.findByText("Scan queued")
+      await screen.findByText("Scan Result")
     ).toBeInTheDocument();
 
-    expect(screen.getByText("PENDING")).toBeInTheDocument();
-    expect(screen.getByText("scan-123")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("Apple")).toBeInTheDocument();
   });
 
 

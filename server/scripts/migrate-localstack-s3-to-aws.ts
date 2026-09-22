@@ -15,7 +15,7 @@ import { fromIni } from "@aws-sdk/credential-providers";
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const region = "ap-south-1";
-const sourceBucket = process.env.S3_UPLOAD_BUCKET || "snapstock-uploads";
+const sourceBucket = process.env.LOCALSTACK_S3_UPLOAD_BUCKET || "snapstock-uploads";
 const targetBucket = process.env.AWS_TARGET_BUCKET;
 const profile = process.env.AWS_PROFILE || "snapstock";
 
@@ -27,7 +27,7 @@ if (!targetBucket) {
 
 const localstackClient = new S3Client({
   region,
-  endpoint: process.env.AWS_ENDPOINT_URL || "http://localhost:4566",
+  endpoint: process.env.LOCALSTACK_ENDPOINT_URL || "http://localhost:4566",
   forcePathStyle: true,
   credentials: {
     accessKeyId: "test",

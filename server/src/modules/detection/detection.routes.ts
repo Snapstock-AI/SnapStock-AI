@@ -15,6 +15,12 @@ router.post(
   DetectionController.createUploadUrl
 );
 
+router.get(
+  "/status/:scanId",
+  authMiddleware,
+  DetectionController.getScanStatus
+);
+
 router.post(
   "/queue",
   authMiddleware,

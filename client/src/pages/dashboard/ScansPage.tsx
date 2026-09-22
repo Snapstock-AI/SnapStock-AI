@@ -1,6 +1,7 @@
-import { useState} from "react";
+import { useEffect, useState } from "react";
 import { Camera, Upload } from "lucide-react";
 import {
+  fetchScanStatus,
   queueUploadedScan,
   uploadScanImage,
 } from "../../lib/detection";
@@ -57,6 +58,56 @@ export default function ScansPage() {
   const [selectedShelf, setSelectedShelf] = useState<Shelf | null>(null);
 
   const { token } = useAuth();
+
+  useEffect(() => {
+    if (!queuedScan || !token) {
+      return undefined;
+    }
+
+    let isCancelled = false;
+    let timer: number | undefined;
+
+    const pollScanStatus = async () => {
+      try {
+        const statusResponse = await fetchScanStatus(queuedScan.scanId, token);
+
+        if (isCancelled) {
+          return;
+        }
+
+        if (statusResponse.status === "COMPLETED" && statusResponse.data) {
+          setResult({
+            ...statusResponse.data,
+            shelf: selectedShelf ?? undefined,
+          });
+          setQueuedScan(null);
+          return;
+        }
+
+        if (statusResponse.status === "FAILED") {
+          setError(statusResponse.errorMessage || "Scan analysis failed.");
+          setQueuedScan(null);
+          return;
+        }
+
+        timer = window.setTimeout(pollScanStatus, 3000);
+      } catch (pollError: any) {
+        if (!isCancelled) {
+          setError(pollError.message || "Unable to fetch scan status.");
+          setQueuedScan(null);
+        }
+      }
+    };
+
+    void pollScanStatus();
+
+    return () => {
+      isCancelled = true;
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [queuedScan, selectedShelf, token]);
 
   const TEST_BUSINESS_ID =
   "550e8400-e29b-41d4-a716-446655440000";
@@ -491,15 +542,21 @@ export default function ScansPage() {
       <div className="space-y-4">
 
         {Object.entries(result.counts).map(
-          ([productName, product]) => (
+          ([productName, product]) => {
+            const displayProductName = productName
+              .toLowerCase()
+              .split(" ")
+              .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+              .join(" ");
 
+            return (
             <div
               key={productName}
               className="rounded-2xl border border-border bg-surface-muted p-5"
             >
 
-              <h4 className="text-lg font-semibold capitalize">
-                {productName}
+              <h4 className="text-lg font-semibold">
+                {displayProductName}
               </h4>
 
               <div className="mt-4 grid grid-cols-3 gap-3">
@@ -537,8 +594,8 @@ export default function ScansPage() {
               </div>
 
             </div>
-
-          )
+            );
+          }
         )}
 
       </div>
