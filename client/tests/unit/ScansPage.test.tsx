@@ -434,7 +434,8 @@ describe("ScansPage", () => {
       file,
       mockShelf,
       businessId,
-      "test-token"
+      "test-token",
+      "STOCK_IN"
     );
   });
 
