@@ -7,19 +7,27 @@ const router = Router();
 router.post(
   "/upload-url",
   authMiddleware,
-  DetectionController.createUploadUrl
+  DetectionController.createUploadUrl,
 );
 
 router.get(
   "/status/:scanId",
   authMiddleware,
-  DetectionController.getScanStatus
+  DetectionController.getScanStatus,
 );
 
 router.post(
   "/queue",
   authMiddleware,
-  DetectionController.queueUploadedScan
+  DetectionController.queueUploadedScan,
+);
+
+router.get("/history", authMiddleware, DetectionController.history);
+
+router.patch(
+  "/:detectionId/freshness",
+  authMiddleware,
+  DetectionController.correctFreshness,
 );
 
 export default router;

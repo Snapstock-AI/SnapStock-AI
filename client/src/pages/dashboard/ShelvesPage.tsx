@@ -1,5 +1,6 @@
 import { useState,useEffect } from "react";
-import { Plus } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
+import { Link } from "react-router";
 
 import ShelfCard from "../../components/shelf/ShelfCard";
 import type { Shelf } from "../../types/shelf";
@@ -13,6 +14,8 @@ import {
 } from "../../lib/shelf";
 
 import { useAuth } from "@/context/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 export default function ShelvesPage() {
 
@@ -30,8 +33,9 @@ export default function ShelvesPage() {
 
 const [shelfToDelete, setShelfToDelete] =
     useState<Shelf | undefined>(undefined);
+  const [error, setError] = useState("");
   
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
 useEffect(() => {
 
@@ -41,7 +45,9 @@ useEffect(() => {
 
     try {
 
-      const data = await getShelves(token);
+      if (!user?.businessId) return;
+
+      const data = await getShelves(token, user.businessId);
 
       setShelves(data);
 
@@ -58,16 +64,21 @@ useEffect(() => {
 
   loadShelves();
 
-}, [token]);
+}, [token, user?.businessId]);
 
 
 
-  const handleShelfSubmit = async (shelf: Shelf) => {
+  const handleShelfSubmit = async (shelf: Shelf): Promise<void> => {
 
   if (!token) {
-    console.error("User is not authenticated");
-    return;
+    throw new Error("You are not authenticated.");
   }
+
+  if (!user?.businessId) {
+    throw new Error("Your account is not connected to a business.");
+  }
+
+  setError("");
 
   try {
 
@@ -89,11 +100,11 @@ useEffect(() => {
       );
 
     } else {
-
       const newShelf = await createShelf(
         shelf.name,
         shelf.category,
-        token
+        token,
+        user.businessId,
       );
 
       setShelves((prev) => [
@@ -106,13 +117,10 @@ useEffect(() => {
     setShowShelfModal(false);
     setSelectedShelf(undefined);
 
-  } catch (error: any) {
-
-    console.error(
-      "Failed to save shelf:",
-      error
-    );
-
+  } catch (saveError: unknown) {
+    const message = saveError instanceof Error ? saveError.message : "Failed to save shelf.";
+    setError(message);
+    throw saveError;
   }
 };
 
@@ -153,112 +161,78 @@ useEffect(() => {
 
   return (
     <div className="space-y-6">
-
-
       <div className="flex items-center justify-between">
-
         <div>
-          <h1 className="font-serif text-3xl font-semibold">
+          <Link
+            to="/dashboard/scans"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to scans
+          </Link>
+          <h1 className="text-3xl font-semibold tracking-tight">
             Shelves
           </h1>
 
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage shelves used for produce scanning.
           </p>
         </div>
 
-
-        <button
-          onClick={()=>{
+        <Button
+          type="button"
+          onClick={() => {
             setSelectedShelf(undefined);
             setShowShelfModal(true);
           }}
-          className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-5 py-2 text-white hover:bg-brand-600"
         >
-
           <Plus className="h-4 w-4" />
-
           Add Shelf
-
-        </button>
-
-
+        </Button>
       </div>
 
-
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-4">
-
-
-        {shelves.map((shelf)=>(
-
+        {shelves.map((shelf) => (
           <ShelfCard
-
             key={shelf.id}
-
             shelf={shelf}
-
-
-            onRename={(shelf)=>{
-
+            onRename={(shelf) => {
               setSelectedShelf(shelf);
-
               setShowShelfModal(true);
-
             }}
-
-
             onDelete={(shelf) => {
               setShelfToDelete(shelf);
               setShowDeleteModal(true);
             }}
-
           />
-
         ))}
 
-
-
         <ShelfModal
-
           open={showShelfModal}
-
-          mode={
-            selectedShelf
-              ? "edit"
-              : "add"
-          }
-
+          mode={selectedShelf ? "edit" : "add"}
           shelf={selectedShelf}
-
-
-          onClose={()=>{
-
+          onClose={() => {
             setShowShelfModal(false);
-
             setSelectedShelf(undefined);
-
           }}
-
-
           onSubmit={handleShelfSubmit}
-
         />
 
         <DeleteShelfModal
-  open={showDeleteModal}
-  shelf={shelfToDelete}
-  onClose={() => {
-    setShowDeleteModal(false);
-    setShelfToDelete(undefined);
-  }}
-  onConfirm={handleDeleteShelf}
-/>
-
-
+          open={showDeleteModal}
+          shelf={shelfToDelete}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setShelfToDelete(undefined);
+          }}
+          onConfirm={handleDeleteShelf}
+        />
       </div>
-
-
     </div>
   );
 }
