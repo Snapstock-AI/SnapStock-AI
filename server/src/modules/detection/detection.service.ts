@@ -10,6 +10,7 @@ import {
 import type { AIAnalysisResponse, DetectionResult } from "./detection.types";
 
 import { DetectionRepository } from "./detection.repository";
+import { BusinessService } from "../business/business.service";
 import {
   analysisRequestQueueUrl,
   analysisResultQueueUrl,
@@ -17,6 +18,8 @@ import {
   s3Client,
   sqsClient,
 } from "../../config/aws";
+
+const CORRECTABLE_FRESHNESS = ["Fresh", "Medium", "Spoiled"] as const;
 
 const allowedImageTypes = new Set([
   "image/jpeg",
@@ -75,6 +78,48 @@ function mapFreshness(
 }
 
 export class DetectionService {
+  static async history(
+    userId: string,
+    businessId: string,
+    startDate: Date,
+    endDate: Date,
+  ) {
+    await BusinessService.assertMember(userId, businessId);
+    return DetectionRepository.findScanHistory(businessId, startDate, endDate);
+  }
+
+  static async correctFreshness(
+    userId: string,
+    detectionId: string,
+    freshness: string,
+  ) {
+    if (
+      !CORRECTABLE_FRESHNESS.includes(
+        freshness as (typeof CORRECTABLE_FRESHNESS)[number],
+      )
+    ) {
+      throw new Error("Freshness must be Fresh, Medium, or Spoiled.");
+    }
+
+    const row = await DetectionRepository.findForCorrection(detectionId);
+    if (!row?.scan_business_id) {
+      throw new Error("Detection not found.");
+    }
+
+    const isMember = await BusinessService.isMember(
+      userId,
+      row.scan_business_id,
+    );
+    if (!isMember) {
+      throw new Error("You do not belong to this business.");
+    }
+
+    return DetectionRepository.correctFreshness(
+      detectionId,
+      freshness as (typeof CORRECTABLE_FRESHNESS)[number],
+      userId,
+    );
+  }
 
   static async getScanStatus(scanId: string) {
     const scan = await DetectionRepository.getScanById(scanId);

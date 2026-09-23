@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scan Processing — Activity Diagram (Mermaid Sample)</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --title-blue: #1e4a7a;
+      --lane-header: #e9ecef;
+      --lane-border: #212529;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+      background: #f5f6f8;
+      padding: 2rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-frame {
+      background: #fff;
+      border: 2px solid var(--lane-border);
+      max-width: 1200px;
+      width: 100%;
+      padding: 1.5rem 1rem 2rem;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .diagram-title {
+      text-align: center;
+      color: var(--title-blue);
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+  /* Mermaid theme overrides to match reference image */
+    .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .caption {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: #495057;
+      text-align: center;
+      font-style: italic;
+    }
+
+    .note {
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: #6c757d;
+      text-align: center;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <div class="diagram-frame">
+    <h1 class="diagram-title">Scan Processing</h1>
+
+    <pre class="mermaid">
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#212529",
+    "primaryBorderColor": "#212529",
+    "lineColor": "#212529",
+    "secondaryColor": "#e9ecef",
+    "tertiaryColor": "#ffffff",
+    "fontFamily": "Segoe UI, Arial, Helvetica, sans-serif",
+    "fontSize": "13px"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "padding": 12,
+    "nodeSpacing": 28,
+    "rankSpacing": 38,
+    "diagramPadding": 12
+  }
+}}%%
+
+flowchart TB
+  %% ===== Vendor User swimlane =====
+  subgraph USER[" "]
+    direction TB
+    U_HEAD["<b>Vendor User</b>"]:::laneHeader
+    U_START(( )):::startNode
+    U1["Open Scan Page"]:::activity
+    U2["Capture / Upload Image"]:::activity
+    U3["Display Results to User"]:::activity
+    U_END((( ))):::endNode
+    U_HEAD ~~~ U_START
+    U_START --> U1 --> U2
+    U2 -.-> U3
+    U3 --> U_END
+  end
+
+  %% ===== System Backend swimlane =====
+  subgraph BACKEND[" "]
+    direction TB
+    B_HEAD["<b>System (Backend)</b>"]:::laneHeader
+    B1["Validate Image"]:::activity
+    B2["Store Image (Temp)"]:::activity
+    B3["Send Image for Analysis"]:::activity
+    B4["Save Results to Database"]:::activity
+    B5["Return Analysis Results"]:::activity
+    B_HEAD ~~~ B1
+    B1 --> B2 --> B3
+    B4 --> B5
+  end
+
+  %% ===== AI Service swimlane =====
+  subgraph AI[" "]
+    direction TB
+    A_HEAD["<b>AI Service</b>"]:::laneHeader
+    A1["Receive Image"]:::activity
+    A2["Detect Objects (YOLOv8)"]:::activity
+    A3["Classify Freshness (MobileNet)"]:::activity
+    A4["Return Analysis Results"]:::activity
+    A_HEAD ~~~ A1
+    A1 --> A2 --> A3 --> A4
+  end
+
+  %% ===== Database / Storage swimlane =====
+  subgraph DB[" "]
+    direction TB
+    D_HEAD["<b>Database / Storage</b>"]:::laneHeader
+    D1[("Image Storage")]:::cylinder
+    D2[("PostgreSQL Database")]:::cylinder
+    D_HEAD ~~~ D1
+    D1 ~~~ D2
+  end
+
+  %% Cross-lane dashed communication (matches reference image)
+  U2 -. "image upload" .-> B1
+  B2 -. "forward" .-> A1
+  A2 -. "persist" .-> D1
+  A4 -. "write" .-> D2
+  A4 -. "results" .-> B4
+  B5 -. "JSON response" .-> U3
+
+  %% Styling
+  classDef laneHeader fill:#e9ecef,stroke:#212529,stroke-width:2px,color:#212529,font-weight:bold
+  classDef activity fill:#ffffff,stroke:#212529,stroke-width:2px,color:#212529,rx:10,ry:10
+  classDef cylinder fill:#ffffff,stroke:#212529,stroke-width:2px,color:#212529
+  classDef startNode fill:#212529,stroke:#212529,color:#212529
+  classDef endNode fill:#ffffff,stroke:#212529,stroke-width:3px,color:#212529
+
+  style USER fill:#ffffff,stroke:#212529,stroke-width:2px
+  style BACKEND fill:#ffffff,stroke:#212529,stroke-width:2px
+  style AI fill:#ffffff,stroke:#212529,stroke-width:2px
+  style DB fill:#ffffff,stroke:#212529,stroke-width:2px
+    </pre>
+
+    <p class="caption">Figure 11. Activity Diagram — Scan Pipeline (Mermaid sample with swimlanes)</p>
+    <p class="note">
+      Mermaid renders swimlanes as subgraphs. Dashed links show cross-component calls.
+      For print-ready, pixel-perfect alignment (grey headers, cylinders, bullseye end node),
+      the HTML sample is closer to the reference image.
+    </p>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: "loose",
+      flowchart: { useMaxWidth: true }
+    });
+  </script>
+</body>
+</html>

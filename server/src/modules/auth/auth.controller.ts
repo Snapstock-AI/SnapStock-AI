@@ -3,6 +3,17 @@ import { AuthService } from "./auth.service";
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
 
 export class AuthController {
+  static async updateProfile(req: AuthRequest, res: Response) {
+    try {
+      const user = await AuthService.updateProfile(
+        req.user!.userId,
+        String(req.body.full_name || ""),
+      );
+      return res.status(200).json({ success: true, data: user });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
 
   //REGISTER
   static async register(req: Request, res: Response) {
@@ -11,17 +22,15 @@ export class AuthController {
 
       return res.status(201).json({
         success: true,
-        data: result
+        data: result,
       });
-
     } catch (error: any) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
       });
     }
   }
-
 
   //LOGIN
   static async login(req: Request, res: Response) {
@@ -30,13 +39,28 @@ export class AuthController {
 
       return res.status(200).json({
         success: true,
-        data: result
+        data: result,
       });
-
     } catch (error: any) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
+      });
+    }
+  }
+
+  static async googleLogin(req: Request, res: Response) {
+    try {
+      const result = await AuthService.loginWithGoogle(req.body);
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
       });
     }
   }
@@ -47,13 +71,12 @@ export class AuthController {
 
       return res.status(200).json({
         success: true,
-        data: result
+        data: result,
       });
-
     } catch (error: any) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -64,13 +87,12 @@ export class AuthController {
 
       return res.status(200).json({
         success: true,
-        data: result
+        data: result,
       });
-
     } catch (error: any) {
       return res.status(401).json({
         success: false,
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -83,13 +105,12 @@ export class AuthController {
 
       return res.status(200).json({
         success: true,
-        data: result
+        data: result,
       });
-
     } catch (error: any) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -100,13 +121,12 @@ export class AuthController {
 
       return res.status(200).json({
         success: true,
-        data: result
+        data: result,
       });
-
     } catch (error: any) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -117,13 +137,12 @@ export class AuthController {
 
       return res.status(200).json({
         success: true,
-        data: result
+        data: result,
       });
-
     } catch (error: any) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
       });
     }
   }
@@ -134,13 +153,12 @@ export class AuthController {
 
       return res.status(200).json({
         success: true,
-        data: result
+        data: result,
       });
-
     } catch (error: any) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
       });
     }
   }

@@ -1,17 +1,39 @@
-import { useState, type FormEvent } from 'react'
+import { useCallback, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import AuthLayout from '@/components/AuthLayout'
+import GoogleContinueButton from '@/components/GoogleContinueButton'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useAuth } from '@/context/AuthContext'
 
 export default function Signup() {
   const navigate = useNavigate()
-  const { register } = useAuth()
+  const { register, loginWithGoogle } = useAuth()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const handleGoogle = useCallback(
+    async (credential: string) => {
+      setError('')
+      setMessage('')
+      setLoading(true)
+      try {
+        await loginWithGoogle(credential)
+        navigate('/dashboard')
+      } catch (err: any) {
+        setError(err.message || 'Google sign-in failed')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [loginWithGoogle, navigate],
+  )
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -32,48 +54,54 @@ export default function Signup() {
   return (
     <AuthLayout>
       <div className="w-full max-w-md">
-        <p className="text-xs font-semibold uppercase tracking-widest text-brand-500">Get started</p>
-        <h1 className="mt-3 font-serif text-3xl font-semibold md:text-4xl">Create your account</h1>
-        <p className="mt-3 text-sm text-muted">
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary">Get started</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Create your account</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
           Start monitoring inventory and freshness for your storefront in minutes.
         </p>
 
-        <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="full_name" className="mb-1.5 block text-sm font-medium">
-              Full name
-            </label>
-            <input
+        <div className="mt-8 space-y-4">
+          <GoogleContinueButton
+            label="signup_with"
+            disabled={loading}
+            onCredential={handleGoogle}
+            onError={setError}
+          />
+
+          <div className="relative py-1 text-center text-xs uppercase tracking-widest text-muted-foreground">
+            <span className="relative z-10 bg-background px-3">or</span>
+            <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" />
+          </div>
+        </div>
+
+        <form className="mt-4 space-y-5" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="full_name">Full name</Label>
+            <Input
               id="full_name"
               type="text"
               required
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Priya Rajan"
-              className="w-full rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm outline-none ring-brand-500/30 transition focus:ring-2"
             />
           </div>
 
-          <div>
-            <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
-              Email
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
               id="email"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@shop.com"
-              className="w-full rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm outline-none ring-brand-500/30 transition focus:ring-2"
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="mb-1.5 block text-sm font-medium">
-              Password
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
               id="password"
               type="password"
               required
@@ -81,33 +109,28 @@ export default function Signup() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm outline-none ring-brand-500/30 transition focus:ring-2"
             />
           </div>
 
           {error && (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-              {error}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
           {message && (
-            <p className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300">
-              {message}
-            </p>
+            <Alert variant="success">
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center rounded-full bg-brand-500 py-3.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
-          >
+          <Button type="submit" disabled={loading} className="w-full">
             {loading ? 'Creating account...' : 'Create free account'}
-          </button>
+          </Button>
         </form>
 
-        <p className="mt-8 text-center text-sm text-muted">
+        <p className="mt-8 text-center text-sm text-muted-foreground">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-brand-500 hover:underline">
+          <Link to="/login" className="font-medium text-primary hover:underline">
             Sign in
           </Link>
         </p>

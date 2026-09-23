@@ -7,19 +7,33 @@ import { Session } from "../../entities/Session";
 import { RegisterDTO } from "./auth.types";
 
 export class AuthRepository {
+  static async updateFullName(userId: string, full_name: string) {
+    await AppDataSource.getRepository(User).update(
+      { id: userId },
+      { full_name },
+    );
+    return this.findById(userId);
+  }
 
   //CREATE USER-REGISTER
-  static async createUser(data: RegisterDTO & { password_hash: string }) {
+  static async createUser(
+    data: RegisterDTO & {
+      password_hash: string | null;
+      google_id?: string | null;
+      email_verified?: boolean;
+    },
+  ) {
     const repo = AppDataSource.getRepository(User);
 
     const user = repo.create({
       full_name: data.full_name,
       email: data.email,
       password_hash: data.password_hash,
+      google_id: data.google_id ?? null,
       nic: data.nic ?? null,
       date_of_birth: data.date_of_birth ?? null,
       system_role: "BUSINESS_USER",
-      email_verified: false,
+      email_verified: data.email_verified ?? false,
     });
 
     const saved = await repo.save(user);
@@ -34,6 +48,29 @@ export class AuthRepository {
     };
   }
 
+  static async findByGoogleId(googleId: string) {
+    return AppDataSource.getRepository(User).findOne({
+      where: { google_id: googleId },
+      select: {
+        id: true,
+        full_name: true,
+        email: true,
+        password_hash: true,
+        google_id: true,
+        system_role: true,
+        email_verified: true,
+      },
+    });
+  }
+
+  static async linkGoogleAccount(userId: string, googleId: string) {
+    await AppDataSource.getRepository(User).update(
+      { id: userId },
+      { google_id: googleId, email_verified: true },
+    );
+    return this.findById(userId);
+  }
+
   //FIND USER BY EMAIL-LOGIN
   static async findByEmail(email: string) {
     return AppDataSource.getRepository(User).findOne({
@@ -43,6 +80,7 @@ export class AuthRepository {
         full_name: true,
         email: true,
         password_hash: true,
+        google_id: true,
         system_role: true,
         email_verified: true,
       },
@@ -70,7 +108,7 @@ export class AuthRepository {
         user_id: userId,
         token,
         expires_at: expiresAt,
-      })
+      }),
     );
   }
 
@@ -83,7 +121,7 @@ export class AuthRepository {
   static async verifyUser(userId: string) {
     await AppDataSource.getRepository(User).update(
       { id: userId },
-      { email_verified: true }
+      { email_verified: true },
     );
   }
 
@@ -100,7 +138,7 @@ export class AuthRepository {
   static async savePasswordResetToken(
     userId: string,
     token: string,
-    expiresAt: Date
+    expiresAt: Date,
   ) {
     const repo = AppDataSource.getRepository(PasswordResetToken);
     await repo.delete({ user_id: userId });
@@ -109,7 +147,7 @@ export class AuthRepository {
         user_id: userId,
         token,
         expires_at: expiresAt,
-      })
+      }),
     );
   }
 
@@ -126,14 +164,14 @@ export class AuthRepository {
   static async updatePassword(userId: string, password_hash: string) {
     await AppDataSource.getRepository(User).update(
       { id: userId },
-      { password_hash }
+      { password_hash },
     );
   }
 
   static async createSession(
     userId: string,
     refreshToken: string,
-    expiresAt: Date
+    expiresAt: Date,
   ) {
     const repo = AppDataSource.getRepository(Session);
     return repo.save(
@@ -142,7 +180,7 @@ export class AuthRepository {
         refresh_token: refreshToken,
         expires_at: expiresAt,
         revoked_at: null,
-      })
+      }),
     );
   }
 
@@ -161,14 +199,14 @@ export class AuthRepository {
   static async revokeSession(sessionId: string) {
     await AppDataSource.getRepository(Session).update(
       { id: sessionId },
-      { revoked_at: new Date() }
+      { revoked_at: new Date() },
     );
   }
 
   static async revokeSessionsForUser(userId: string) {
     await AppDataSource.getRepository(Session).update(
       { user_id: userId, revoked_at: IsNull() },
-      { revoked_at: new Date() }
+      { revoked_at: new Date() },
     );
   }
 }

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Figure 32 — Performance Budget Scan Path</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f0f2f5; padding: 2rem; display: flex; justify-content: center; }
+    .frame { background: #fff; border: 2px solid #212529; padding: 1.5rem 1rem 1.75rem; box-shadow: 0 4px 16px rgba(0,0,0,0.08); max-width: 1240px; width: 100%; overflow-x: auto; }
+    h1 { text-align: center; color: #1e4a7a; font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; }
+    svg { display: block; min-width: 1200px; }
+    .caption { margin-top: 0.85rem; text-align: center; font-size: 0.85rem; color: #495057; font-style: italic; }
+    .note { margin-top: 0.5rem; text-align: center; font-size: 0.78rem; color: #6c757d; max-width: 880px; margin-left: auto; margin-right: auto; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <h1>Performance Budget — Scan Path</h1>
+    <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="880" viewBox="0 0 1200 880" role="img">
+      <defs>
+        <marker id="open" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10" fill="none" stroke="#212529" stroke-width="1.5"/>
+        </marker>
+        <style>
+          .perf-frame{fill:#fff;stroke:#212529;stroke-width:1.75}
+          .cube-top{fill:#ececec;stroke:#212529;stroke-width:1.25}
+          .cube-right{fill:#d4d4d4;stroke:#212529;stroke-width:1.25}
+          .cube-front{fill:#fff;stroke:#212529;stroke-width:1.5}
+          .stage{fill:#fff;stroke:#212529;stroke-width:1.5}
+          .perf-tab{font:600 11px "Segoe UI",Arial,sans-serif;fill:#212529}
+          .nm{font:700 12px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .dt{font:500 10.5px "Segoe UI",Arial,sans-serif;fill:#343a40;text-anchor:middle}
+          .lane{font:700 11px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .axis{font:500 10px "Segoe UI",Arial,sans-serif;fill:#495057;text-anchor:middle}
+          .comm-dir{stroke:#212529;stroke-width:1.5;fill:none;marker-end:url(#open)}
+          .limit{stroke:#212529;stroke-width:1.25;fill:none;stroke-dasharray:6 4}
+          .lbl{font:500 10.5px "Segoe UI",Arial,sans-serif;fill:#212529}
+          .lbl-bg{fill:#fff;stroke:none}
+          .rule{font:500 11px "Segoe UI",Arial,sans-serif;fill:#495057}
+          .sum{font:500 11px "Segoe UI",Arial,sans-serif;fill:#495057;text-anchor:middle}
+        </style>
+      </defs>
+
+      <path d="M 24 28 L 108 28 L 120 40 L 1176 40 L 1176 840 L 24 840 Z" class="perf-frame"/>
+      <text x="128" y="36" class="perf-tab">Performance Budget — Scan Path</text>
+      <text x="600" y="68" class="nm">Total budget p95 ≈ 15 s (hard) · goal 5 s</text>
+      <text x="600" y="86" class="dt">Sequential scan-path stages (grid ≈ 64 px/s; short stages use minimum bar width)</text>
+
+      <!-- timeline grid: 64 px/s from x=200 -->
+      <g id="grid" stroke="#dee2e6" stroke-width="1">
+        <line x1="200" y1="108" x2="200" y2="688" stroke="#212529" stroke-width="1.25"/>
+        <line x1="264" y1="108" x2="264" y2="688"/>
+        <line x1="328" y1="108" x2="328" y2="688"/>
+        <line x1="392" y1="108" x2="392" y2="688"/>
+        <line x1="456" y1="108" x2="456" y2="688"/>
+        <line x1="520" y1="108" x2="520" y2="688" class="limit"/>
+        <line x1="584" y1="108" x2="584" y2="688"/>
+        <line x1="648" y1="108" x2="648" y2="688"/>
+        <line x1="712" y1="108" x2="712" y2="688"/>
+        <line x1="776" y1="108" x2="776" y2="688"/>
+        <line x1="840" y1="108" x2="840" y2="688"/>
+        <line x1="904" y1="108" x2="904" y2="688"/>
+        <line x1="968" y1="108" x2="968" y2="688"/>
+        <line x1="1032" y1="108" x2="1032" y2="688"/>
+        <line x1="1096" y1="108" x2="1096" y2="688"/>
+        <line x1="1160" y1="108" x2="1160" y2="688" class="limit"/>
+      </g>
+
+      <line x1="200" y1="688" x2="1160" y2="688" stroke="#212529" stroke-width="1.25"/>
+      <text x="188" y="692" class="axis" text-anchor="end">0 s</text>
+      <text x="520" y="706" class="axis">5 s goal</text>
+      <text x="1160" y="706" class="axis">15 s p95</text>
+      <text x="528" y="120" class="dt" text-anchor="start">goal 5 s</text>
+      <text x="1132" y="120" class="dt" text-anchor="end">p95 15 s</text>
+
+      <!-- swimlanes -->
+      <g id="lane-client">
+        <path d="M 52 128 L 62 118 L 162 118 L 152 128 Z" class="cube-top"/>
+        <path d="M 152 128 L 162 118 L 162 208 L 152 218 Z" class="cube-right"/>
+        <rect x="52" y="128" width="100" height="90" class="cube-front"/>
+        <text x="102" y="158" class="lane">Client</text>
+        <text x="102" y="176" class="dt">browser</text>
+      </g>
+      <g id="lane-server">
+        <path d="M 52 278 L 62 268 L 162 268 L 152 278 Z" class="cube-top"/>
+        <path d="M 152 278 L 162 268 L 162 358 L 152 368 Z" class="cube-right"/>
+        <rect x="52" y="278" width="100" height="90" class="cube-front"/>
+        <text x="102" y="308" class="lane">Server</text>
+        <text x="102" y="326" class="dt">Express</text>
+      </g>
+      <g id="lane-ai">
+        <path d="M 52 428 L 62 418 L 162 418 L 152 428 Z" class="cube-top"/>
+        <path d="M 152 428 L 162 418 L 162 508 L 152 518 Z" class="cube-right"/>
+        <rect x="52" y="428" width="100" height="90" class="cube-front"/>
+        <text x="102" y="458" class="lane">AI</text>
+        <text x="102" y="476" class="dt">FastAPI</text>
+      </g>
+      <g id="lane-db">
+        <path d="M 52 578 L 62 568 L 162 568 L 152 578 Z" class="cube-top"/>
+        <path d="M 152 578 L 162 568 L 162 658 L 152 668 Z" class="cube-right"/>
+        <rect x="52" y="578" width="100" height="90" class="cube-front"/>
+        <text x="102" y="608" class="lane">Data</text>
+        <text x="102" y="626" class="dt">PostgreSQL</text>
+      </g>
+
+      <!-- stages (bar y + h = 36+36; labels above with clear gaps) -->
+      <g id="stages">
+        <rect x="200" y="182" width="40" height="36" class="stage"/>
+        <rect x="162" y="158" width="76" height="16" class="lbl-bg"/>
+        <text x="200" y="170" class="lbl" text-anchor="middle">compress 200ms</text>
+
+        <rect x="252" y="182" width="64" height="36" class="stage"/>
+        <rect x="244" y="158" width="52" height="16" class="lbl-bg"/>
+        <text x="270" y="170" class="lbl" text-anchor="middle">upload 1.0s</text>
+
+        <rect x="320" y="332" width="40" height="36" class="stage"/>
+        <rect x="284" y="308" width="92" height="16" class="lbl-bg"/>
+        <text x="330" y="320" class="lbl" text-anchor="middle">server I/O 200ms</text>
+
+        <rect x="752" y="332" width="40" height="36" class="stage"/>
+        <rect x="732" y="308" width="80" height="16" class="lbl-bg"/>
+        <text x="772" y="300" class="lbl" text-anchor="middle">JSON render 50ms</text>
+
+        <rect x="368" y="482" width="40" height="36" class="stage"/>
+        <rect x="332" y="458" width="80" height="16" class="lbl-bg"/>
+        <text x="310" y="450" class="lbl" text-anchor="middle">preprocess 200ms</text>
+
+        <rect x="416" y="482" width="128" height="36" class="stage"/>
+        <rect x="454" y="458" width="52" height="16" class="lbl-bg"/>
+        <text x="480" y="470" class="lbl" text-anchor="middle">YOLO 2.0s</text>
+
+        <rect x="552" y="482" width="96" height="36" class="stage"/>
+        <rect x="560" y="458" width="80" height="16" class="lbl-bg"/>
+        <text x="600" y="470" class="lbl" text-anchor="middle">CNN crops 1.5s</text>
+
+        <rect x="656" y="482" width="40" height="36" class="stage"/>
+        <rect x="648" y="458" width="56" height="16" class="lbl-bg"/>
+        <text x="676" y="470" class="lbl" text-anchor="middle">agg 50ms</text>
+
+        <rect x="704" y="632" width="40" height="36" class="stage"/>
+        <rect x="686" y="608" width="72" height="16" class="lbl-bg"/>
+        <text x="690" y="600" class="lbl" text-anchor="middle">DB TX 150ms</text>
+
+        <line x1="542" y1="108" x2="542" y2="688" stroke="#212529" stroke-width="1" stroke-dasharray="3 3"/>
+        <rect x="550" y="664" width="112" height="16" class="lbl-bg"/>
+        <text x="606" y="676" class="lbl" text-anchor="middle">≈ 5.35 s typical path</text>
+      </g>
+
+      <g id="connectors">
+        <path d="M 240 200 L 252 200" class="comm-dir"/>
+        <path d="M 270 218 L 270 332 L 320 350" class="comm-dir"/>
+        <path d="M 360 368 L 368 482" class="comm-dir"/>
+        <path d="M 408 500 L 416 500" class="comm-dir"/>
+        <path d="M 544 500 L 552 500" class="comm-dir"/>
+        <path d="M 648 500 L 656 500" class="comm-dir"/>
+        <path d="M 696 518 L 724 518 L 724 632" class="comm-dir"/>
+        <path d="M 724 668 L 724 662 L 830 662 L 830 318 L 772 318 L 772 332" class="comm-dir"/>
+      </g>
+
+      <text x="52" y="730" class="lane" text-anchor="start">Degradation policy</text>
+      <text x="60" y="754" class="rule">• If AI exceeds budget: mark scan FAILED and show retry to the user.</text>
+      <text x="60" y="776" class="rule">• Long inferences must not block unrelated CRUD API workers (AI runs in a separate process).</text>
+      <text x="60" y="798" class="rule">• Node awaits the HTTP call to ai-service only; the event loop stays free for other requests.</text>
+
+      <text x="600" y="828" class="sum">Architectural tactic: separate AI process + model preload + client compression + indexed DB queries</text>
+    </svg>
+    <p class="caption">Figure 32. Performance Budget — Scan Path</p>
+    <p class="note">Allocates the scan latency budget across client, server, AI, and data tiers; p95 hard cap 15 s with a 5 s design goal.</p>
+  </div>
+</body>
+</html>

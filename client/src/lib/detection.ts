@@ -145,3 +145,84 @@ export async function fetchScanStatus(
 
   return body.data;
 }
+
+export type FreshnessStatus = "Fresh" | "Medium" | "Spoiled";
+
+export type ScanHistoryItem = {
+  id: string;
+  shelf_id: string;
+  shelf_name: string;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  created_at: string;
+  completed_at: string | null;
+  item_count: number;
+  fresh_count: number;
+  medium_count: number;
+  spoiled_count: number;
+  items: {
+    id?: string;
+    type: string;
+    freshness: string;
+  }[];
+};
+
+export function countHistoryItems(items: ScanHistoryItem["items"]) {
+  return items.reduce<Record<string, number>>((counts, item) => {
+    counts[item.type] = (counts[item.type] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+export function formatHistoryDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+export async function getScanHistory(
+  businessId: string,
+  token: string,
+  startDate?: string,
+  endDate?: string,
+): Promise<ScanHistoryItem[]> {
+  const params = new URLSearchParams({ businessId });
+  if (startDate) params.set("startDate", startDate);
+  if (endDate) params.set("endDate", endDate);
+
+  const response = await fetch(`${API_URL}/detection/history?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const body = await response.json();
+
+  if (!response.ok || body.success === false) {
+    throw new Error(body.message || "Unable to load scan history.");
+  }
+
+  return body.data || [];
+}
+
+export async function updateDetectionFreshness(
+  detectionId: string,
+  freshness: FreshnessStatus,
+  token: string,
+) {
+  const response = await fetch(
+    `${API_URL}/detection/${detectionId}/freshness`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ freshness }),
+    },
+  );
+
+  const body = await response.json();
+  if (!response.ok || body.success === false) {
+    throw new Error(body.message || "Unable to update freshness.");
+  }
+
+  return body.data as { id: string; freshness: FreshnessStatus };
+}

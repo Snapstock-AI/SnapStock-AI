@@ -1,0 +1,85 @@
+---
+title: Scan Processing
+---
+%% Mermaid source — open scan-pipeline-activity-mermaid.html to preview
+%% Or paste into https://mermaid.live
+
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#212529",
+    "primaryBorderColor": "#212529",
+    "lineColor": "#212529",
+    "secondaryColor": "#e9ecef",
+    "fontFamily": "Segoe UI, Arial, sans-serif",
+    "fontSize": "13px"
+  },
+  "flowchart": { "curve": "linear", "htmlLabels": true }
+}}%%
+
+flowchart TB
+  subgraph USER[" "]
+    direction TB
+    U_HEAD["<b>Vendor User</b>"]:::laneHeader
+    U_START(( )):::startNode
+    U1["Open Scan Page"]:::activity
+    U2["Capture / Upload Image"]:::activity
+    U3["Display Results to User"]:::activity
+    U_END((( ))):::endNode
+    U_HEAD ~~~ U_START
+    U_START --> U1 --> U2
+    U2 -.-> U3
+    U3 --> U_END
+  end
+
+  subgraph BACKEND[" "]
+    direction TB
+    B_HEAD["<b>System (Backend)</b>"]:::laneHeader
+    B1["Validate Image"]:::activity
+    B2["Store Image (Temp)"]:::activity
+    B3["Send Image for Analysis"]:::activity
+    B4["Save Results to Database"]:::activity
+    B5["Return Analysis Results"]:::activity
+    B_HEAD ~~~ B1
+    B1 --> B2 --> B3
+    B4 --> B5
+  end
+
+  subgraph AI[" "]
+    direction TB
+    A_HEAD["<b>AI Service</b>"]:::laneHeader
+    A1["Receive Image"]:::activity
+    A2["Detect Objects (YOLOv8)"]:::activity
+    A3["Classify Freshness (MobileNet)"]:::activity
+    A4["Return Analysis Results"]:::activity
+    A_HEAD ~~~ A1
+    A1 --> A2 --> A3 --> A4
+  end
+
+  subgraph DB[" "]
+    direction TB
+    D_HEAD["<b>Database / Storage</b>"]:::laneHeader
+    D1[("Image Storage")]:::cylinder
+    D2[("PostgreSQL Database")]:::cylinder
+    D_HEAD ~~~ D1
+    D1 ~~~ D2
+  end
+
+  U2 -.-> B1
+  B2 -.-> A1
+  A2 -.-> D1
+  A4 -.-> D2
+  A4 -.-> B4
+  B5 -.-> U3
+
+  classDef laneHeader fill:#e9ecef,stroke:#212529,stroke-width:2px,color:#212529,font-weight:bold
+  classDef activity fill:#ffffff,stroke:#212529,stroke-width:2px,color:#212529
+  classDef cylinder fill:#ffffff,stroke:#212529,stroke-width:2px,color:#212529
+  classDef startNode fill:#212529,stroke:#212529
+  classDef endNode fill:#ffffff,stroke:#212529,stroke-width:3px
+
+  style USER fill:#fff,stroke:#212529,stroke-width:2px
+  style BACKEND fill:#fff,stroke:#212529,stroke-width:2px
+  style AI fill:#fff,stroke:#212529,stroke-width:2px
+  style DB fill:#fff,stroke:#212529,stroke-width:2px
