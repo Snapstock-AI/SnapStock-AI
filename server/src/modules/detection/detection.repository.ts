@@ -124,7 +124,12 @@ export class DetectionRepository {
           );
         }
       }
-      return changes;
+      return changes.map(({ product, detected, quantity }) => ({
+        productId: product.id,
+        product: product.name,
+        detected,
+        quantity,
+      }));
     });
   }
 

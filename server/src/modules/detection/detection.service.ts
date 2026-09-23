@@ -104,6 +104,7 @@ export class DetectionService {
       businessId,
       shelfId,
       userId,
+      scanMode,
     };
 
     const scan = scanMode === "STOCK_IN"
@@ -188,7 +189,11 @@ export class DetectionService {
         });
       }
 
-      await DetectionRepository.applyInventoryChange(scanId, businessId, scanMode);
+      const inventoryChanges = await DetectionRepository.applyInventoryChange(
+        scanId,
+        businessId,
+        scanMode,
+      );
       await DetectionRepository.updateScanStatus(scanId, "COMPLETED");
 
       const result: DetectionResult = {
@@ -203,6 +208,8 @@ export class DetectionService {
         counts: aiResult.counts,
 
         detections: savedDetections,
+
+        inventoryChanges: inventoryChanges ?? [],
       };
 
       console.log("========== BACKEND RESPONSE ==========");
