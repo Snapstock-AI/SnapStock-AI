@@ -7,6 +7,7 @@ import type {
   DetectionResult,
   FreshnessStatus,
   ScanHistoryItem,
+  ScanMode,
 } from "../../lib/detection";
 import { getShelves } from "../../lib/shelf";
 import CameraScanner from "../../components/scanner/CameraScanner";
@@ -56,6 +57,7 @@ export default function ScansPage() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState("");
   const [selectedHistoryScan, setSelectedHistoryScan] = useState<ScanHistoryItem | null>(null);
+  const [scanMode, setScanMode] = useState<ScanMode>("STOCK_IN");
 
   const { token, user } = useAuth();
   const businessId = user?.businessId;
@@ -178,7 +180,8 @@ export default function ScansPage() {
       file,
       shelf,
       businessId!,
-      token
+      token,
+      scanMode,
     );
 
     setResult(data);
@@ -259,6 +262,25 @@ export default function ScansPage() {
                 No shelves found. Create a shelf before starting a scan.
               </p>
             )}
+          </div>
+
+          <div className="mb-6 flex justify-center gap-3" role="group" aria-label="Inventory scan mode">
+            <Button
+              type="button"
+              variant={scanMode === "STOCK_IN" ? "default" : "outline"}
+              aria-pressed={scanMode === "STOCK_IN"}
+              onClick={() => setScanMode("STOCK_IN")}
+            >
+              Add Stock
+            </Button>
+            <Button
+              type="button"
+              variant={scanMode === "STOCK_OUT" ? "destructive" : "outline"}
+              aria-pressed={scanMode === "STOCK_OUT"}
+              onClick={() => setScanMode("STOCK_OUT")}
+            >
+              Remove Stock
+            </Button>
           </div>
 
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/15">
@@ -415,6 +437,23 @@ export default function ScansPage() {
             )}
           </CardHeader>
           <CardContent className="space-y-6">
+            {result.inventoryChanges.length > 0 && (
+              <div className="rounded-xl border border-border bg-muted p-5">
+                <p className="text-sm font-semibold">
+                  {scanMode === "STOCK_OUT" ? "Stock removed" : "Stock added"}
+                </p>
+                <div className="mt-3 space-y-2 text-sm">
+                  {result.inventoryChanges.map((change) => (
+                    <div key={change.productId} className="flex items-center justify-between gap-4">
+                      <span className="capitalize">{change.product}</span>
+                      <span>
+                        Detected {change.detected} · New stock {change.quantity}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="rounded-xl border border-border bg-muted p-5">
               <p className="text-sm text-muted-foreground">Total Detected Items</p>
               <p className="mt-2 text-3xl font-semibold tracking-tight">
@@ -534,7 +573,7 @@ export default function ScansPage() {
                   <div>
                     <p className="text-sm font-medium">{scan.shelf_name}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {scan.item_count} item{scan.item_count === 1 ? "" : "s"} · Fresh {scan.fresh_count} · Medium {scan.medium_count} · Spoiled {scan.spoiled_count}
+                      {scan.scan_mode === "STOCK_OUT" ? "Stock Out" : "Stock In"} · {scan.item_count} item{scan.item_count === 1 ? "" : "s"} · Fresh {scan.fresh_count} · Medium {scan.medium_count} · Spoiled {scan.spoiled_count}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">

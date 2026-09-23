@@ -38,7 +38,15 @@ export type DetectionResult = {
 
     freshness_confidence_percent: number;
   }[];
+  inventoryChanges: {
+    productId: string;
+    product: string;
+    detected: number;
+    quantity: number;
+  }[];
 };
+
+export type ScanMode = "STOCK_IN" | "STOCK_OUT";
 
 export type FreshnessStatus = "Fresh" | "Medium" | "Spoiled";
 
@@ -53,6 +61,7 @@ export type ScanHistoryItem = {
   fresh_count: number;
   medium_count: number;
   spoiled_count: number;
+  scan_mode: ScanMode;
   items: {
     type: string;
     freshness: string;
@@ -125,12 +134,14 @@ export async function analyzeImage(
   shelf: Shelf,
   businessId: string,
   token: string,
+  scanMode: ScanMode = "STOCK_IN",
 ): Promise<DetectionResult> {
   const formData = new FormData();
 
   formData.append("file", file);
   formData.append("shelfId", shelf.id);
   formData.append("businessId", businessId);
+  formData.append("scanMode", scanMode);
 
   const response = await fetch(`${API_URL}/detection/analyze`, {
     method: "POST",
