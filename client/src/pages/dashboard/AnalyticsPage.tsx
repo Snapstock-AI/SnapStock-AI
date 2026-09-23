@@ -1,53 +1,120 @@
-const wasteData = [
-  { product: 'Bananas', waste: '12%', trend: '↓ 3%' },
-  { product: 'Tomatoes', waste: '8%', trend: '↓ 1%' },
-  { product: 'Strawberries', waste: '18%', trend: '↑ 2%' },
-  { product: 'Apples', waste: '15%', trend: '→ 0%' },
-]
+import { Link } from 'react-router'
+import { useCallback } from 'react'
+import { useAuth } from '@/context/AuthContext'
+import { getAnalytics, type AnalyticsData } from '@/lib/dashboard'
+import { usePollingData } from '@/hooks/usePollingData'
+import { PageHeader } from '@/components/PageHeader'
+import { EmptyState } from '@/components/EmptyState'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function AnalyticsPage() {
+  const { user } = useAuth()
+  const businessId = user?.businessId
+
+  const loader = useCallback(async () => {
+    if (!businessId) throw new Error('No business')
+    const res = await getAnalytics(businessId, 7)
+    if (!res.data) throw new Error(res.message || 'Unable to load analytics')
+    return res.data
+  }, [businessId])
+
+  const { data, loading, error } = usePollingData<AnalyticsData>(
+    loader,
+    Boolean(businessId),
+    businessId ? `analytics:${businessId}` : undefined,
+  )
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-serif text-2xl font-semibold md:text-3xl">Analytics</h1>
-        <p className="mt-1 text-sm text-muted">Waste patterns and inventory trends</p>
-      </div>
+      <PageHeader
+        title="Analytics"
+        description="Waste patterns and inventory trends from the last 7 days of scans"
+      />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {[
-          { label: 'Weekly waste', value: '11.2%', sub: '↓ 2.1% vs last week' },
-          { label: 'Items saved', value: '34', sub: 'Through early alerts' },
-          { label: 'Scan accuracy', value: '94%', sub: 'vs manual counts' },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-2xl border border-border bg-surface-elevated p-5">
-            <p className="text-sm text-muted">{stat.label}</p>
-            <p className="mt-2 font-serif text-3xl font-semibold">{stat.value}</p>
-            <p className="mt-1 text-xs text-brand-500">{stat.sub}</p>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {loading && !data ? (
+        <p className="text-sm text-muted-foreground">Loading analytics...</p>
+      ) : !data?.hasData ? (
+        <EmptyState
+          title="No analytics yet"
+          description="Complete shelf scans to see waste rates and product trends."
+          action={
+            <Button asChild>
+              <Link to="/dashboard/scans">Run a scan</Link>
+            </Button>
+          }
+        />
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[
+              {
+                label: 'Weekly waste',
+                value: `${data.wastePct}%`,
+                sub: 'Spoiled share of detections',
+              },
+              {
+                label: 'Items graded fresh',
+                value: String(data.itemsSaved),
+                sub: 'Fresh detections this week',
+              },
+              {
+                label: 'Avg confidence',
+                value: data.avgConfidence != null ? `${data.avgConfidence}%` : '—',
+                sub: `${data.scanCount} completed scan(s)`,
+              },
+            ].map((stat) => (
+              <Card key={stat.label}>
+                <CardContent className="p-5">
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <p className="mt-2 text-3xl font-semibold tracking-tight">{stat.value}</p>
+                  <p className="mt-1 text-xs text-primary">{stat.sub}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <div className="rounded-2xl border border-border bg-surface-elevated p-5">
-        <h2 className="font-serif text-lg font-semibold">Waste by product</h2>
-        <div className="mt-4 space-y-4">
-          {wasteData.map((item) => (
-            <div key={item.product}>
-              <div className="mb-1.5 flex justify-between text-sm">
-                <span>{item.product}</span>
-                <span className="text-muted">
-                  {item.waste} <span className="text-brand-500">{item.trend}</span>
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
-                <div
-                  className="h-full rounded-full bg-brand-500"
-                  style={{ width: item.waste }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Waste by product</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.wasteByProduct.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No product detections yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {data.wasteByProduct.map((item) => (
+                    <div key={item.product}>
+                      <div className="mb-1.5 flex justify-between text-sm">
+                        <span>{item.product}</span>
+                        <span className="text-muted-foreground">
+                          {item.wastePct}%{' '}
+                          <span className="text-primary">
+                            ({item.spoiled}/{item.total})
+                          </span>
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary"
+                          style={{ width: `${Math.min(100, item.wastePct)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   )
 }

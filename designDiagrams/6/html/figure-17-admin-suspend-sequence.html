@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Figure 17 — Admin Suspend Vendor</title>
+
+  <style>
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f0f2f5; padding: 2rem; display: flex; justify-content: center; }
+
+    .frame { background: #fff; border: 2px solid #212529; padding: 1.5rem 1rem 1.75rem; box-shadow: 0 4px 16px rgba(0,0,0,.08); max-width: 1280px; width: 100%; overflow-x: auto; }
+
+    h1 { text-align: center; color: #1e4a7a; font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; }
+
+    svg { display: block; min-width: 1200px; }
+
+    .caption { margin-top: 0.85rem; text-align: center; font-size: 0.85rem; color: #495057; font-style: italic; }
+
+    .note { margin-top: 0.5rem; text-align: center; font-size: 0.78rem; color: #6c757d; }
+
+  </style>
+
+</head>
+
+<body>
+
+  <div class="frame">
+
+    <h1>Admin Suspend Vendor</h1>
+
+    <!-- lifelines x=90..1110 step 146 | self-call gap 38px before next msg | lbl-mid on cross-lane -->
+
+    <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img">
+
+      <defs>
+
+        <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#212529"/></marker>
+
+        <marker id="ret" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#212529"/></marker>
+
+        <style>
+
+          .box{fill:#e9ecef;stroke:#212529;stroke-width:1.5}.nm{font:600 10px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+
+          .life{stroke:#adb5bd;stroke-width:1.5;stroke-dasharray:6 4;fill:none}
+
+          .msg{stroke:#212529;stroke-width:1.75;fill:none;marker-end:url(#arr)}
+
+          .ret{stroke:#212529;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ret)}
+
+          .self{stroke:#212529;stroke-width:1.75;fill:none;marker-end:url(#arr)}
+
+          .lbl{font:500 10px "Segoe UI",Arial,sans-serif;fill:#212529}
+
+          .lbl-mid{text-anchor:middle}
+
+          .lbl-self{fill:#212529}
+
+          .act{fill:#dee2e6;stroke:#212529;stroke-width:1}
+
+        </style>
+
+      </defs>
+
+      <rect x="10" y="10" width="1180" height="600" fill="#fff" stroke="#212529" stroke-width="2"/>
+
+
+
+      <rect x="64" y="28" width="52" height="36" rx="4" class="box"/><text x="90" y="50" class="nm">Admin</text>
+
+      <rect x="202" y="28" width="68" height="36" rx="4" class="box"/><text x="236" y="50" class="nm">AdminUI</text>
+
+      <rect x="355" y="28" width="52" height="36" rx="4" class="box"/><text x="381" y="50" class="nm">api.ts</text>
+
+      <rect x="498" y="28" width="58" height="36" rx="4" class="box"/><text x="527" y="50" class="nm">authMw</text>
+
+      <rect x="639" y="28" width="68" height="36" rx="4" class="box"/><text x="673" y="50" class="nm">AdminCtrl</text>
+
+      <rect x="776" y="28" width="85" height="36" rx="4" class="box"/><text x="818" y="50" class="nm">AdminService</text>
+
+      <rect x="924" y="28" width="80" height="36" rx="4" class="box"/><text x="964" y="50" class="nm">UserRepo</text>
+
+      <rect x="1085" y="28" width="50" height="36" rx="4" class="box"/><text x="1110" y="50" class="nm">DB</text>
+
+
+
+      <line x1="90" y1="64" x2="90" y2="580" class="life"/>
+
+      <line x1="236" y1="64" x2="236" y2="580" class="life"/>
+
+      <line x1="381" y1="64" x2="381" y2="580" class="life"/>
+
+      <line x1="527" y1="64" x2="527" y2="580" class="life"/>
+
+      <line x1="673" y1="64" x2="673" y2="580" class="life"/>
+
+      <line x1="818" y1="64" x2="818" y2="580" class="life"/>
+
+      <line x1="964" y1="64" x2="964" y2="580" class="life"/>
+
+      <line x1="1110" y1="64" x2="1110" y2="580" class="life"/>
+
+
+
+      <rect x="374" y="152" width="14" height="340" class="act"/>
+
+      <rect x="520" y="152" width="14" height="88" class="act"/>
+
+      <rect x="666" y="240" width="14" height="252" class="act"/>
+
+      <rect x="811" y="268" width="14" height="140" class="act"/>
+
+      <rect x="957" y="296" width="14" height="84" class="act"/>
+
+
+
+      <line x1="90" y1="96" x2="236" y2="96" class="msg"/><text x="148" y="90" class="lbl lbl-mid">suspend</text>
+
+      <line x1="236" y1="124" x2="381" y2="124" class="msg"/><text x="308" y="118" class="lbl lbl-mid">POST /admin/vendors/:id/suspend</text>
+
+      <line x1="381" y1="152" x2="527" y2="152" class="msg"/><text x="454" y="146" class="lbl lbl-mid">+ JWT</text>
+
+      <path d="M 527 180 L 563 180 L 563 202 L 535 202" class="self"/><text x="567" y="174" class="lbl lbl-self">verify SYSTEM_ADMIN</text>
+
+      <line x1="527" y1="240" x2="673" y2="240" class="msg"/><text x="600" y="234" class="lbl lbl-mid">authorized</text>
+
+      <line x1="673" y1="268" x2="818" y2="268" class="msg"/><text x="745" y="262" class="lbl lbl-mid">suspend()</text>
+
+      <line x1="818" y1="296" x2="964" y2="296" class="msg"/><text x="891" y="290" class="lbl lbl-mid">load business/user</text>
+
+      <line x1="964" y1="324" x2="1110" y2="324" class="msg"/><text x="1037" y="318" class="lbl lbl-mid">UPDATE status=SUSPENDED</text>
+
+      <line x1="1110" y1="352" x2="964" y2="352" class="ret"/><text x="1037" y="346" class="lbl lbl-mid">ok</text>
+
+      <line x1="964" y1="380" x2="818" y2="380" class="ret"/><text x="891" y="374" class="lbl lbl-mid">ok</text>
+
+      <line x1="818" y1="408" x2="673" y2="408" class="ret"/><text x="745" y="402" class="lbl lbl-mid">ok</text>
+
+      <line x1="673" y1="436" x2="381" y2="436" class="ret"/><text x="527" y="430" class="lbl lbl-mid">200</text>
+
+      <line x1="381" y1="464" x2="236" y2="464" class="ret"/><text x="308" y="458" class="lbl lbl-mid">ok</text>
+
+      <line x1="236" y1="492" x2="90" y2="492" class="ret"/><text x="148" y="486" class="lbl lbl-mid">refresh list</text>
+
+    </svg>
+
+    <p class="caption">Figure 17. Sequence Diagram — Admin Suspend Vendor (8 lifelines)</p>
+
+    <p class="note">Later vendor login: AuthService checks status → 403 Forbidden.</p>
+
+  </div>
+
+</body>
+
+</html>
+
+

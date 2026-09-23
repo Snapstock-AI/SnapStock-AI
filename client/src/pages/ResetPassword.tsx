@@ -1,6 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import AuthLayout from '@/components/AuthLayout'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { apiRequest } from '@/lib/api'
 
 export default function ResetPassword() {
@@ -34,25 +38,25 @@ export default function ResetPassword() {
   return (
     <AuthLayout>
       <div className="w-full max-w-md">
-        <p className="text-xs font-semibold uppercase tracking-widest text-brand-500">Account recovery</p>
-        <h1 className="mt-3 font-serif text-3xl font-semibold md:text-4xl">Reset password</h1>
-        <p className="mt-3 text-sm text-muted">Choose a new password for your account.</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary">Account recovery</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Reset password</h1>
+        <p className="mt-3 text-sm text-muted-foreground">Choose a new password for your account.</p>
 
         {!token ? (
-          <p className="mt-8 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            Missing reset token. Request a new link from{' '}
-            <Link to="/forgot-password" className="underline">
-              forgot password
-            </Link>
-            .
-          </p>
+          <Alert variant="destructive" className="mt-8">
+            <AlertDescription>
+              Missing reset token. Request a new link from{' '}
+              <Link to="/forgot-password" className="underline">
+                forgot password
+              </Link>
+              .
+            </AlertDescription>
+          </Alert>
         ) : (
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm font-medium">
-                New password
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="password">New password</Label>
+              <Input
                 id="password"
                 type="password"
                 required
@@ -60,28 +64,23 @@ export default function ResetPassword() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm outline-none ring-brand-500/30 transition focus:ring-2"
               />
             </div>
 
             {error && (
-              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-                {error}
-              </p>
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
             {message && (
-              <p className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300">
-                {message}
-              </p>
+              <Alert variant="success">
+                <AlertDescription>{message}</AlertDescription>
+              </Alert>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full items-center justify-center rounded-full bg-brand-500 py-3.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
-            >
+            <Button type="submit" disabled={loading} className="w-full">
               {loading ? 'Saving...' : 'Reset password'}
-            </button>
+            </Button>
           </form>
         )}
       </div>

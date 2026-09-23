@@ -1,0 +1,236 @@
+PROJECT MANAGEMENT
+AI-Powered Automated Inventory and Freshness Monitoring System for Small-Scale Retailers
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+1.   Executive Summary
+This proposal defines the management plan for delivering the AI-powered inventory and freshness monitoring system within the period 01 July to 03 October 2026. The project will be divided into nine sprints. Early sprints focus on proposal, feasibility, requirements and architecture. Middle sprints focus on prototype and core implementation. Final sprints focus on integration, testing, demo preparation and final submission. The system will support small-scale retailers by allowing produce images to be captured through a mobile device, processed by an AI model and displayed in a dashboard with inventory and freshness status.
+2.   Project Scope
+In scope: mobile image capture, web administration dashboard, backend REST APIs, secure login, database, cloud/image storage, inventory alerts, freshness scores, analytics reports and AI classification service.
+Out of scope: physical IoT sensors, smart scales, automatic procurement, supply-chain integration, financial accounting and tax filing modules.
+ 
+Module
+Main functions
+Mobile Application
+Camera interface, image upload, inventory view, freshness score view and user alerts.
+Web Application
+Admin panel, product catalog, vendor profile, analytics reports and management dashboard.
+Backend Services
+REST APIs, authentication, database, file/image storage, business logic and deployment.
+Deep Learning Module
+Dataset preparation, model training, freshness classification, evaluation metrics and inference service.
+Testing and Documentation
+Test cases, test evidence, final report, technical appendix, demo video and user guide.
+
+ 
+3.   Official Deadlines and Milestone Mapping
+ 
+The following table converts the provided academic deadlines into project management milestones.
+ 
+Milestone / Deliverable
+Due date
+Evidence to submit/show
+Planned sprint
+Project Proposal Submission
+05 July 2026
+Initial project idea, objectives, scope, team roles
+Sprint 1
+Project Feasibility Document
+12 July 2026
+Technical, operational, schedule and risk feasibility
+Sprint 2
+Project Schedule
+12 July 2026
+Sprint plan, milestones and member allocation
+Sprint 2
+System Requirement Specification
+09 August 2026
+Functional and non-functional requirements
+Sprint 4
+System Architecture and Design
+09 August 2026
+Architecture, database, API, UI and AI design
+Sprint 4
+Progress Review 1 - physically at the department
+10-14 August 2026
+Design confirmation and early prototype progress
+Sprint 5
+Mid Evaluation
+15-30 August 2026
+Working prototype, baseline AI model and partial integration
+Sprint 5-6
+Testing Document
+27 September 2026
+Test plan, test cases, results, defects and fixes
+Sprint 8
+Progress Review 2 - physically at the department
+28 September-02 October 2026
+Release candidate and final improvements
+Sprint 9
+Complete implementation, testing, fine tuning and system demo video
+02 October 2026
+Final software solution and 10-15 minute YouTube demo video
+Sprint 9
+Final Product Resources
+03 October 2026
+Source code, trained model, deployment files and user guide
+Sprint 9
+Final Report
+03 October 2026
+Complete final report and evaluation evidence
+Sprint 9
+Final Evaluation
+03-11 October 2026
+Presentation and assessment period
+After final submission
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4.   Sprints
+Sprint
+Dates
+Sprint focus
+Main deliverables
+Sprint 1
+01-05 Jul
+Initiation and proposal submission
+Project proposal, initial scope, objectives, success criteria
+Sprint 2
+06-12 Jul
+Feasibility analysis and schedule finalization
+Feasibility document, project schedule, risk register v1
+Sprint 3
+13-26 Jul
+Requirements discovery and prototype planning
+SRS draft, product backlog, wireframes, database draft
+Sprint 4
+27 Jul-09 Aug
+SRS and architecture/design completion
+Final SRS, architecture/design document, API and DB design
+Sprint 5
+10-23 Aug
+Prototype build 1, progress review 1 and mid-evaluation preparation
+Working skeleton app, baseline model, review evidence
+Sprint 6
+24 Aug-06 Sep
+Core implementation and AI integration
+Integrated image upload, prediction service and dashboard updates
+Sprint 7
+07-20 Sep
+Full integration, analytics and QA build
+Feature-complete MVP, analytics reports, test cases draft
+Sprint 8
+21-27 Sep
+Testing documentation and release candidate
+Testing document, defect log, release candidate build
+Sprint 9
+28 Sep-03 Oct
+Final review, demo video, report and resource submission
+Demo video, final report, final resources, final product package
+
+ 
+
+ 
+
+5.   Work Breakdown Structure
+Work package
+Tasks included
+Owner
+Completion evidence
+WP1: Project Management
+Sprint planning, schedule tracking, meeting minutes, issue log, review preparation.
+ 
+Updated sprint board, minutes, progress slides.
+WP2: Requirements and Design
+SRS, use cases, architecture, database, API, UI and AI design.
+ 
+SRS + design document submitted on 09 August.
+WP3: Backend and Database
+Authentication, inventory CRUD, vendor/product APIs, image storage, alert logic.
+ 
+Backend repository, API documentation and integration test results.
+WP4: Mobile/Web Application
+Camera capture, upload, dashboard, admin panel, analytics reports.
+ 
+Working UI, screenshots, user guide and demo script.
+WP5: AI Model and Service
+Dataset preparation, training, evaluation, prediction API, model file packaging.
+ 
+Model metrics, trained model, notebook/code and inference service.
+WP6: Testing and Quality
+Test plan, test cases, defect log, regression testing, release candidate checks.
+ 
+Testing document due on 27 September.
+WP7: Final Delivery
+Video, final report, resources, deployment package and presentation.
+ 
+Final report/resources submitted on 03 October.
+
+
+
+6.   Deliverable Acceptance Criteria
+Deliverable
+Minimum acceptable content
+Review method
+Project Proposal
+Clear problem, objectives, scope, expected outcomes, team roles and plan.
+Team review before 05 July.
+Feasibility Document
+Technical, operational, economic, schedule and risk feasibility with selected technologies.
+Peer review and supervisor feedback.
+SRS
+Functional requirements, non-functional requirements, use cases, assumptions and constraints.
+Checklist review against system scope.
+Architecture and Design
+Architecture diagram, database design, API design, UI design, AI model design and deployment plan.
+Walkthrough during progress review.
+Testing Document
+Test cases, actual results, screenshots/logs, defect status and model evaluation metrics.
+Run tests against release candidate.
+Demo Video
+10-15 minute product pitch with all members presenting their modules and core technical details.
+Dry run before uploading to YouTube.
+Final Report + Resources
+Final report, source code, trained model, deployment files, screenshots, video link and appendices.
+Final submission checklist.
+
+
+ 
+

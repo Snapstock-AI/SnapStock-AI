@@ -9,6 +9,7 @@ export interface AuthRequest extends Request {
     email: string;
     system_role: string;
     sessionId: string;
+    businessId?: string | null;
   };
 }
 
@@ -43,6 +44,7 @@ export const authMiddleware = async (
       email: string;
       system_role: string;
       sessionId: string;
+      businessId?: string | null;
     };
 
     if (!decoded.sessionId) {
@@ -67,6 +69,7 @@ export const authMiddleware = async (
       email: decoded.email,
       system_role: decoded.system_role,
       sessionId: decoded.sessionId,
+      businessId: decoded.businessId ?? null,
     };
 
     next();

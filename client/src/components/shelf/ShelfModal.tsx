@@ -1,17 +1,34 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
 import type { Shelf } from "../../types/shelf";
 import {
   SHELF_CATEGORIES,
   type ShelfCategory,
 } from "../../types/shelf";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ShelfModalProps {
   open: boolean;
   mode: "add" | "edit";
   shelf?: Shelf;
   onClose: () => void;
-  onSubmit: (shelf: Shelf) => void;
+  onSubmit: (shelf: Shelf) => Promise<void>;
 }
 
 export default function ShelfModal({
@@ -27,6 +44,8 @@ export default function ShelfModal({
   const [category, setCategory] = useState("Fruit");
     
   const [customCategory, setCustomCategory] = useState("");  
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
 
   useEffect(() => {
@@ -43,182 +62,114 @@ export default function ShelfModal({
 
     }
 
+    setCustomCategory("");
+    setError("");
+    setSaving(false);
+
   }, [mode, shelf, open]);
 
 
-  if (!open) return null;
+  const handleSubmit = async () => {
 
-
-  const handleSubmit = () => {
-
-      if (!name.trim()) return;
+      if (!name.trim()) {
+        setError("Shelf name is required.");
+        return;
+      }
       if (category === "Other" && !customCategory.trim()) {
-            
+            setError("Enter a category for this shelf.");
             return;
       }
 
+    setSaving(true);
+    setError("");
 
-    onSubmit({
-
-      id: shelf?.id ?? crypto.randomUUID(),
-
-      name: name.trim(),
-      
-    category:
-        category === "Other"
-            ? customCategory.trim()
-            : category,
-        });
-
-
-
-    setName("");
-
-    setCategory("Fruit");
-
-    onClose();
+    try {
+      await onSubmit({
+        id: shelf?.id ?? crypto.randomUUID(),
+        name: name.trim(),
+        category: category === "Other" ? customCategory.trim() : category,
+      });
+    } catch (submitError: unknown) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Unable to save shelf.",
+      );
+    } finally {
+      setSaving(false);
+    }
 
   };
 
 
   return (
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>
+            {mode === "add" ? "Add Shelf" : "Rename Shelf"}
+          </DialogTitle>
+        </DialogHeader>
 
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="shelf-name">Shelf name</Label>
+            <Input
+              id="shelf-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Shelf name"
+            />
+          </div>
 
+          <div className="space-y-2">
+            <Label>Category</Label>
+            <Select
+              value={category}
+              onValueChange={(value) => setCategory(value as ShelfCategory)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {SHELF_CATEGORIES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div className="w-[400px] rounded-xl bg-white p-6 dark:bg-gray-900">
+          {category === "Other" && (
+            <div className="space-y-2">
+              <Label htmlFor="custom-category">Custom category</Label>
+              <Input
+                id="custom-category"
+                type="text"
+                placeholder="Enter category"
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+              />
+            </div>
+          )}
 
-
-        <div className="mb-5 flex items-center justify-between">
-
-          <h2 className="text-xl font-semibold">
-
-            {mode === "add"
-              ? "Add Shelf"
-              : "Rename Shelf"}
-
-          </h2>
-
-
-          <button onClick={onClose}>
-
-            <X />
-
-          </button>
-
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
         </div>
 
-
-
-        <input
-
-          value={name}
-
-          onChange={(e)=>setName(e.target.value)}
-
-          placeholder="Shelf name"
-
-          className="
-            mb-4
-            w-full
-            rounded-lg
-            border
-            px-3
-            py-2
-            dark:bg-gray-800
-          "
-
-        />
-
-
-
-        <select
-
-          value={category}
-
-          onChange={(e)=>
-            setCategory(
-              e.target.value as
-              ShelfCategory
-            )
-          }
-
-          className="
-            mb-6
-            w-full
-            rounded-lg
-            border
-            px-3
-            py-2
-            dark:bg-gray-800
-          "
-
-        >
-
-            {SHELF_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                {category}
-                </option>
-            ))}
-
-              </select>
-              
-        {category === "Other" && (
-        <input
-            type="text"
-            placeholder="Enter category"
-            value={customCategory}
-            onChange={(e) => setCustomCategory(e.target.value)}
-            className="mb-3 w-full rounded-lg border px-3 py-2 dark:bg-gray-800"
-        />
-        )}      
-
-
-
-        <div className="flex justify-end gap-3">
-
-
-          <button
-
-            onClick={onClose}
-
-            className="rounded-lg border px-4 py-2"
-
-          >
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
             Cancel
-
-          </button>
-
-
-
-          <button
-
-            onClick={handleSubmit}
-
-            className="
-              rounded-lg
-              bg-blue-600
-              px-4
-              py-2
-              text-white
-            "
-
-          >
-
-            {mode === "add"
-              ? "Create"
-              : "Save"}
-
-          </button>
-
-
-        </div>
-
-
-      </div>
-
-
-    </div>
-
+          </Button>
+          <Button type="button" onClick={handleSubmit} disabled={saving}>
+            {saving ? "Saving..." : mode === "add" ? "Create" : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

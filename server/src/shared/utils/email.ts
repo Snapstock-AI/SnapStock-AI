@@ -7,12 +7,12 @@ dotenv.config({
   path: path.resolve(__dirname, "../../../../.env"),
 });
 
-type EmailType = "verification" | "password-reset";
+type EmailType = "verification" | "password-reset" | "employee-invitation";
 
 const smtpLog = (
   level: "info" | "warn" | "error",
   message: string,
-  meta?: Record<string, unknown>
+  meta?: Record<string, unknown>,
 ) => {
   const payload = meta ? ` ${JSON.stringify(meta)}` : "";
 
@@ -50,7 +50,7 @@ const getTransporter = () =>
 const sendEmail = async (
   type: EmailType,
   to: string,
-  mailOptions: SendMailOptions
+  mailOptions: SendMailOptions,
 ) => {
   smtpLog("info", "Preparing to send email", {
     type,
@@ -59,7 +59,11 @@ const sendEmail = async (
     ...getSmtpConfigMeta(),
   });
 
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  if (
+    !process.env.SMTP_HOST ||
+    !process.env.SMTP_USER ||
+    !process.env.SMTP_PASS
+  ) {
     const error = new Error("SMTP configuration is incomplete");
     smtpLog("error", "SMTP config validation failed", {
       type,
@@ -104,7 +108,12 @@ const sendEmail = async (
 };
 
 const clientUrl = () =>
-  process.env.CLIENT_URL || process.env.VITE_API_URL?.replace(":5000", ":5173") || "http://localhost:5173";
+  process.env.CLIENT_URL ||
+  process.env.VITE_API_URL?.replace(":5000", ":5173") ||
+  "http://localhost:5173";
+
+const clientPath = () =>
+  process.env.CLIENT_BASE_PATH ?? "";
 
 const emailTemplate = (
   eyebrow: string,
@@ -112,7 +121,7 @@ const emailTemplate = (
   message: string,
   buttonText: string,
   link: string,
-  footer: string
+  footer: string,
 ) => `
   <!doctype html>
   <html lang="en">
@@ -167,7 +176,7 @@ export const sendVerificationEmail = async (email: string, token: string) => {
       "Thanks for joining SnapStock AI! Please verify your email address to activate your account and start managing inventory with confidence.",
       "Verify my email",
       link,
-      "For your security, this verification link expires in 1 hour. If you did not create this account, you can safely ignore this email."
+      "For your security, this verification link expires in 1 hour. If you did not create this account, you can safely ignore this email.",
     ),
   });
 };
@@ -186,7 +195,30 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
       "We received a request to reset your SnapStock AI password. Use the secure button below to choose a new password.",
       "Reset my password",
       link,
-      "This reset link expires in 1 hour and can only be used once. If you did not request a password reset, no action is needed and your account remains secure."
+      "This reset link expires in 1 hour and can only be used once. If you did not request a password reset, no action is needed and your account remains secure.",
+    ),
+  });
+};
+
+export const sendEmployeeInvitationEmail = async (
+  email: string,
+  token: string,
+  businessName: string,
+) => {
+  const link = `${clientUrl().replace(/\/$/, "")}${clientPath()}/accept-invitation?token=${token}`;
+
+  await sendEmail("employee-invitation", email, {
+    from: `"SnapStock AI" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: `You have been invited to join ${businessName} on SnapStock AI`,
+    text: `You have been invited to join ${businessName} as an employee on SnapStock AI. Accept the invitation here: ${link}. This link expires in 7 days.`,
+    html: emailTemplate(
+      "Team invitation",
+      `Join ${businessName} on SnapStock AI`,
+      `You have been invited to join ${businessName} as an employee. Accept the invitation to access the business workspace and help manage inventory.`,
+      "Accept invitation",
+      link,
+      "This invitation expires in 7 days. If you were not expecting it, you can safely ignore this email.",
     ),
   });
 };

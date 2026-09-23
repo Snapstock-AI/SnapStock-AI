@@ -20,8 +20,27 @@ type AuthContextValue = {
   token: string | null
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
+  loginWithGoogle: (credential: string) => Promise<void>
   register: (full_name: string, email: string, password: string) => Promise<string>
+  createBusiness: (data: CreateBusinessInput) => Promise<Business>
+  acceptInvitation: (token: string) => Promise<void>
+  updateProfile: (full_name: string) => Promise<void>
+  syncBusinessMembership: () => Promise<boolean>
   logout: () => Promise<void>
+}
+
+export type CreateBusinessInput = {
+  business_name: string
+  business_email: string
+  address: string
+  contact_number: string
+}
+
+export type Business = CreateBusinessInput & {
+  id: string
+  role: 'OWNER' | 'EMPLOYEE'
+  freshness_alert_threshold?: number
+  low_stock_threshold?: number
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -50,6 +69,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.data.user)
   }, [])
 
+  const loginWithGoogle = useCallback(async (credential: string) => {
+    const result = await apiRequest<{
+      message: string
+      token: string
+      refreshToken: string
+      user: AuthUser
+    }>('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential }),
+    })
+
+    if (!result.data?.token || !result.data.user) {
+      throw new Error('Google sign-in failed')
+    }
+
+    setAuth(result.data.token, result.data.user, result.data.refreshToken)
+    setToken(result.data.token)
+    setUser(result.data.user)
+  }, [])
+
   const register = useCallback(
     async (full_name: string, email: string, password: string) => {
       const result = await apiRequest<{ message: string }>('/auth/register', {
@@ -61,6 +100,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     []
   )
+
+  const createBusiness = useCallback(async (data: CreateBusinessInput) => {
+    const result = await apiRequest<{
+      business: Business
+      token: string
+      refreshToken: string
+      user: AuthUser
+    }>('/businesses', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, true)
+
+    if (!result.data?.business || !result.data.token || !result.data.user) {
+      throw new Error('Business creation failed')
+    }
+
+    setAuth(result.data.token, result.data.user, result.data.refreshToken)
+    setToken(result.data.token)
+    setUser(result.data.user)
+
+    return result.data.business
+  }, [])
+
+  const acceptInvitation = useCallback(async (invitationToken: string) => {
+    const result = await apiRequest<{
+      token: string
+      refreshToken: string
+      user: AuthUser
+    }>('/businesses/invitations/accept', {
+      method: 'POST',
+      body: JSON.stringify({ token: invitationToken }),
+    }, true)
+
+    if (!result.data?.token || !result.data.user) {
+      throw new Error('Invitation acceptance failed')
+    }
+
+    setAuth(result.data.token, result.data.user, result.data.refreshToken)
+    setToken(result.data.token)
+    setUser(result.data.user)
+  }, [])
+
+  const updateProfile = useCallback(async (full_name: string) => {
+    const result = await apiRequest<AuthUser>('/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify({ full_name }),
+    }, true)
+
+    if (!result.data) throw new Error('Profile update failed')
+
+    const nextUser = { ...result.data, businessId: user?.businessId || null }
+    setAuth(token || '', nextUser)
+    setUser(nextUser)
+  }, [token, user?.businessId])
+
+  const syncBusinessMembership = useCallback(async () => {
+    if (!user || !token) return false
+
+    const result = await apiRequest<Business[]>('/businesses/mine', {}, true)
+    const businessId = result.data?.[0]?.id || null
+
+    if (businessId === user.businessId) {
+      return Boolean(businessId)
+    }
+
+    const nextUser = { ...user, businessId }
+    setAuth(token, nextUser)
+    setUser(nextUser)
+    return Boolean(businessId)
+  }, [token, user])
 
   const logout = useCallback(async () => {
     try {
@@ -79,10 +188,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token,
       isAuthenticated: Boolean(token),
       login,
+      loginWithGoogle,
       register,
+      createBusiness,
+      acceptInvitation,
+      updateProfile,
+      syncBusinessMembership,
       logout,
     }),
-    [user, token, login, register, logout]
+    [user, token, login, loginWithGoogle, register, createBusiness, acceptInvitation, updateProfile, syncBusinessMembership, logout]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
