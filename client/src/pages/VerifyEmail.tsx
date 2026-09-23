@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import AuthLayout from '@/components/AuthLayout'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { apiRequest } from '@/lib/api'
 
 export default function VerifyEmail() {
@@ -30,30 +32,25 @@ export default function VerifyEmail() {
   return (
     <AuthLayout>
       <div className="w-full max-w-md">
-        <p className="text-xs font-semibold uppercase tracking-widest text-brand-500">Email verification</p>
-        <h1 className="mt-3 font-serif text-3xl font-semibold md:text-4xl">Verify email</h1>
-        <p
-          className={`mt-8 rounded-xl border px-3 py-2 text-sm ${
-            status === 'success'
-              ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300'
-              : status === 'error'
-                ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300'
-                : 'border-border bg-surface-elevated text-muted'
-          }`}
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary">Email verification</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Verify email</h1>
+        <Alert
+          variant={status === 'success' ? 'success' : status === 'error' ? 'destructive' : 'default'}
+          className="mt-8"
         >
-          {message}
-        </p>
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
 
-        <div className="mt-6 space-y-3 text-sm">
+        <div className="mt-6 space-y-3">
           {status === 'success' && (
-            <Link to="/login" className="font-medium text-brand-500 hover:underline">
-              Continue to sign in
-            </Link>
+            <Button asChild>
+              <Link to="/login">Continue to sign in</Link>
+            </Button>
           )}
           {status === 'error' && (
-            <Link to="/resend-verification" className="font-medium text-brand-500 hover:underline">
-              Resend verification email
-            </Link>
+            <Button variant="outline" asChild>
+              <Link to="/resend-verification">Resend verification email</Link>
+            </Button>
           )}
         </div>
       </div>

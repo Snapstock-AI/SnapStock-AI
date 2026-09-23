@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Figure 20 — Production / Demo Deployment</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f0f2f5; padding: 2rem; display: flex; justify-content: center; }
+    .frame { background: #fff; border: 2px solid #212529; padding: 1.5rem 1rem 1.75rem; box-shadow: 0 4px 16px rgba(0,0,0,.08); max-width: 1100px; width: 100%; overflow-x: auto; }
+    h1 { text-align: center; color: #1e4a7a; font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; }
+    svg { display: block; min-width: 1060px; }
+    .caption { margin-top: 0.85rem; text-align: center; font-size: 0.85rem; color: #495057; font-style: italic; }
+    .note { margin-top: 0.5rem; text-align: center; font-size: 0.78rem; color: #6c757d; max-width: 880px; margin-left: auto; margin-right: auto; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <h1>Production / Demo Cloud Deployment Diagram</h1>
+    <svg xmlns="http://www.w3.org/2000/svg" width="1060" height="920" viewBox="0 0 1060 920" role="img">
+      <defs>
+        <marker id="open" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+          <path d="M0,0 L10,5 L0,10" fill="none" stroke="#212529" stroke-width="1.5"/>
+        </marker>
+        <style>
+          .dep-frame{fill:#fff;stroke:#212529;stroke-width:1.75}
+          .cube-top{fill:#ececec;stroke:#212529;stroke-width:1.25}
+          .cube-right{fill:#d4d4d4;stroke:#212529;stroke-width:1.25}
+          .cube-front{fill:#fff;stroke:#212529;stroke-width:1.5}
+          .art{fill:#fff;stroke:#212529;stroke-width:1.5}
+          .art-fold{fill:#f8f8f8;stroke:#212529;stroke-width:1.25}
+          .comp-tab{fill:#fff;stroke:#212529;stroke-width:1.25}
+          .comp-body{fill:#fff;stroke:#212529;stroke-width:1.5}
+          .st{font:italic 11px "Segoe UI",Arial,sans-serif;fill:#212529}
+          .nm{font:700 12px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .dt{font:500 10.5px "Segoe UI",Arial,sans-serif;fill:#343a40;text-anchor:middle}
+          .prop{font:500 10px "Segoe UI",Arial,sans-serif;fill:#343a40}
+          .dep-tab{font:600 11px "Segoe UI",Arial,sans-serif;fill:#212529}
+          .comm{stroke:#212529;stroke-width:1.5;fill:none}
+          .comm-dir{stroke:#212529;stroke-width:1.5;fill:none;marker-end:url(#open)}
+          .manifest{stroke:#212529;stroke-width:1.5;fill:none;stroke-dasharray:6 4;marker-end:url(#open)}
+          .deploy-lnk{stroke:#212529;stroke-width:1.5;fill:none;stroke-dasharray:5 4;marker-end:url(#open)}
+          .uses-lnk{stroke:#212529;stroke-width:1.5;fill:none;stroke-dasharray:5 4;marker-end:url(#open)}
+          .lbl{font:500 10.5px "Segoe UI",Arial,sans-serif;fill:#212529}
+          .lbl-bg{fill:#fff;stroke:none}
+          .sum{font:500 11px "Segoe UI",Arial,sans-serif;fill:#495057;text-anchor:middle}
+        </style>
+      </defs>
+
+      <path d="M 24 28 L 108 28 L 120 40 L 1036 40 L 1036 884 L 24 884 Z" class="dep-frame"/>
+      <text x="128" y="36" class="dep-tab">Production / Demo Target</text>
+
+      <!-- «device» Client -->
+      <g id="client">
+        <path d="M 444 56 L 454 46 L 614 46 L 604 56 Z" class="cube-top"/>
+        <path d="M 604 56 L 614 46 L 614 96 L 604 106 Z" class="cube-right"/>
+        <rect x="444" y="56" width="160" height="50" class="cube-front"/>
+        <text x="524" y="74" class="st" text-anchor="middle">&laquo;device&raquo;</text>
+        <text x="524" y="92" class="nm">Smartphone / Desktop</text>
+      </g>
+
+      <!-- «device» Edge / Load Balancer -->
+      <g id="edge">
+        <path d="M 80 124 L 90 114 L 954 114 L 944 124 Z" class="cube-top"/>
+        <path d="M 944 124 L 954 114 L 954 184 L 944 194 Z" class="cube-right"/>
+        <rect x="80" y="124" width="864" height="70" class="cube-front"/>
+        <text x="512" y="148" class="st" text-anchor="middle">&laquo;device&raquo; &laquo;application server&raquo;</text>
+        <text x="512" y="166" class="nm">Edge / Load Balancer</text>
+        <text x="512" y="182" class="dt">Nginx / Caddy — TLS termination</text>
+      </g>
+
+      <!-- «device» Production Infrastructure -->
+      <g id="infra">
+        <path d="M 52 216 L 64 204 L 996 204 L 984 216 Z" class="cube-top"/>
+        <path d="M 984 216 L 996 204 L 996 868 L 984 880 Z" class="cube-right"/>
+        <rect x="52" y="216" width="932" height="652" class="cube-front"/>
+        <text x="518" y="240" class="st" text-anchor="middle">&laquo;device&raquo;</text>
+        <text x="518" y="258" class="nm">Production Infrastructure</text>
+        <text x="518" y="274" class="dt">private VPC / cloud network</text>
+
+        <!-- «executionEnvironment» nginx:alpine -->
+        <g id="nginx">
+          <path d="M 80 296 L 90 286 L 494 286 L 484 296 Z" class="cube-top"/>
+          <path d="M 484 296 L 494 286 L 494 546 L 484 556 Z" class="cube-right"/>
+          <rect x="80" y="296" width="404" height="250" class="cube-front"/>
+          <text x="282" y="320" class="st" text-anchor="middle">&laquo;executionEnvironment&raquo;</text>
+          <text x="282" y="338" class="nm">nginx:alpine</text>
+
+          <g transform="translate(100,356)">
+            <rect x="0" y="0" width="190" height="68" class="art"/>
+            <path d="M 176 0 L 190 0 L 190 14 L 176 14 Z" class="art-fold"/>
+            <text x="95" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+            <text x="95" y="40" class="nm">client-static</text>
+            <text x="95" y="58" class="dt">built React assets</text>
+          </g>
+          <g transform="translate(110,454)">
+            <rect x="0" y="5" width="12" height="10" class="comp-tab"/>
+            <rect x="0" y="21" width="12" height="10" class="comp-tab"/>
+            <rect x="12" y="0" width="168" height="46" class="comp-body"/>
+            <text x="96" y="20" class="st" text-anchor="middle">&laquo;component&raquo;</text>
+            <text x="96" y="38" class="nm">Static SPA</text>
+          </g>
+        </g>
+
+        <!-- «executionEnvironment» App Tier -->
+        <g id="app-tier">
+          <path d="M 530 296 L 540 286 L 954 286 L 944 296 Z" class="cube-top"/>
+          <path d="M 944 296 L 954 286 L 954 546 L 944 556 Z" class="cube-right"/>
+          <rect x="530" y="296" width="414" height="250" class="cube-front"/>
+          <text x="737" y="320" class="st" text-anchor="middle">&laquo;executionEnvironment&raquo;</text>
+          <text x="737" y="338" class="nm">App Tier</text>
+
+          <g transform="translate(546,356)">
+            <rect x="0" y="0" width="180" height="68" class="art"/>
+            <path d="M 166 0 L 180 0 L 180 14 L 166 14 Z" class="art-fold"/>
+            <text x="90" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+            <text x="90" y="40" class="nm">server-image</text>
+            <text x="90" y="58" class="dt">Docker Image  :5000</text>
+          </g>
+          <g transform="translate(764,356)">
+            <rect x="0" y="0" width="180" height="68" class="art"/>
+            <path d="M 166 0 L 180 0 L 180 14 L 166 14 Z" class="art-fold"/>
+            <text x="90" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+            <text x="90" y="40" class="nm">ai-service-image</text>
+            <text x="90" y="58" class="dt">Docker Image  :8000</text>
+          </g>
+          <g transform="translate(556,454)">
+            <rect x="0" y="5" width="12" height="10" class="comp-tab"/>
+            <rect x="0" y="21" width="12" height="10" class="comp-tab"/>
+            <rect x="12" y="0" width="148" height="46" class="comp-body"/>
+            <text x="86" y="20" class="st" text-anchor="middle">&laquo;component&raquo;</text>
+            <text x="86" y="38" class="nm">Express API</text>
+          </g>
+          <g transform="translate(772,454)">
+            <rect x="0" y="5" width="12" height="10" class="comp-tab"/>
+            <rect x="0" y="21" width="12" height="10" class="comp-tab"/>
+            <rect x="12" y="0" width="148" height="46" class="comp-body"/>
+            <text x="86" y="20" class="st" text-anchor="middle">&laquo;component&raquo;</text>
+            <text x="86" y="38" class="nm">FastAPI AI</text>
+          </g>
+        </g>
+
+        <!-- model-weights artifact (mounted by FastAPI AI) -->
+        <g transform="translate(100,572)">
+          <rect x="0" y="0" width="180" height="58" class="art"/>
+          <path d="M 166 0 L 180 0 L 180 14 L 166 14 Z" class="art-fold"/>
+          <text x="90" y="18" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+          <text x="90" y="34" class="nm">model-weights</text>
+          <text x="10" y="50" class="prop">volume mount / object store</text>
+        </g>
+
+        <!-- «executionEnvironment» Data Tier -->
+        <g id="data-tier">
+          <path d="M 80 648 L 90 638 L 954 638 L 944 648 Z" class="cube-top"/>
+          <path d="M 944 648 L 954 638 L 954 848 L 944 858 Z" class="cube-right"/>
+          <rect x="80" y="648" width="864" height="200" class="cube-front"/>
+          <text x="512" y="672" class="st" text-anchor="middle">&laquo;executionEnvironment&raquo;</text>
+          <text x="512" y="690" class="nm">Data Tier</text>
+          <text x="512" y="706" class="dt">private network — not publicly exposed</text>
+
+          <g transform="translate(140,738)">
+            <rect x="0" y="0" width="248" height="84" class="art"/>
+            <path d="M 234 0 L 248 0 L 248 14 L 234 14 Z" class="art-fold"/>
+            <text x="124" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+            <text x="124" y="40" class="nm">managed-postgres</text>
+            <text x="124" y="58" class="dt">PostgreSQL  :5432</text>
+            <text x="124" y="76" class="dt">private subnet</text>
+          </g>
+          <g transform="translate(580,738)">
+            <rect x="0" y="0" width="248" height="84" class="art"/>
+            <path d="M 234 0 L 248 0 L 248 14 L 234 14 Z" class="art-fold"/>
+            <text x="124" y="22" class="st" text-anchor="middle">&laquo;artifact&raquo;</text>
+            <text x="124" y="40" class="nm">scan-images</text>
+            <text x="124" y="58" class="dt">S3 / MinIO bucket</text>
+            <text x="124" y="76" class="dt">signed URLs</text>
+          </g>
+        </g>
+      </g>
+
+      <!-- connectors -->
+      <g id="connectors">
+        <!-- client → edge -->
+        <path d="M 524 106 L 524 124" class="comm-dir"/>
+        <rect x="532" y="108" width="88" height="16" class="lbl-bg"/>
+        <text x="576" y="120" class="lbl" text-anchor="middle">&laquo;HTTPS&raquo; :443</text>
+
+        <!-- edge → nginx (static) and app tier (/api) -->
+        <path d="M 524 194 L 524 208 L 195 208 L 195 296" class="comm-dir"/>
+        <rect x="128" y="196" width="48" height="16" class="lbl-bg"/>
+        <text x="152" y="208" class="lbl" text-anchor="middle">static /</text>
+        <path d="M 524 194 L 524 208 L 636 208 L 636 296" class="comm-dir"/>
+        <rect x="652" y="196" width="44" height="16" class="lbl-bg"/>
+        <text x="674" y="208" class="lbl" text-anchor="middle">/api/*</text>
+
+        <!-- Express API component → FastAPI AI component -->
+        <path d="M 716 477 L 772 477" class="comm-dir"/>
+        <rect x="718" y="459" width="56" height="16" class="lbl-bg"/>
+        <text x="746" y="471" class="lbl" text-anchor="middle">&laquo;HTTP&raquo; :8000</text>
+
+        <!-- «manifest»: artifact bottom → component top -->
+        <path d="M 195 424 L 195 454" class="manifest"/>
+        <path d="M 636 424 L 636 454" class="manifest"/>
+        <path d="M 854 424 L 854 454" class="manifest"/>
+        <rect x="203" y="432" width="72" height="16" class="lbl-bg"/>
+        <text x="239" y="444" class="lbl" text-anchor="middle">&laquo;manifest&raquo;</text>
+
+        <!-- model-weights artifact → FastAPI AI component -->
+        <path d="M 280 601 L 400 601 L 400 454 L 772 454" class="uses-lnk"/>
+        <rect x="300" y="536" width="56" height="16" class="lbl-bg"/>
+        <text x="328" y="548" class="lbl" text-anchor="middle">used by</text>
+
+        <!-- server-image artifact → managed-postgres artifact -->
+        <path d="M 636 424 L 340 424 L 340 738 L 264 738" class="comm-dir"/>
+        <rect x="348" y="492" width="130" height="16" class="lbl-bg"/>
+        <text x="413" y="504" class="lbl" text-anchor="middle">&laquo;TCP/IP&raquo; :5432 private</text>
+
+        <!-- server-image artifact → scan-images artifact -->
+        <path d="M 636 424 L 930 424 L 930 556 L 704 556 L 704 738" class="comm-dir"/>
+        <rect x="862" y="538" width="120" height="16" class="lbl-bg"/>
+        <text x="922" y="550" class="lbl" text-anchor="middle">object storage API</text>
+      </g>
+
+      <text x="530" y="900" class="sum">Security groups: public 443 only; internal 5000 / 8000 / 5432 not exposed publicly</text>
+    </svg>
+    <p class="caption">Figure 20. Deployment — Production / Demo Target</p>
+    <p class="note">TLS at the edge; model-weights are used by FastAPI AI; runtime DB and object-storage access originate from the server-image artifact.</p>
+  </div>
+</body>
+</html>

@@ -2,9 +2,48 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  --font-sans: "DM Sans", system-ui, sans-serif;
+/* Tokens adapted from client/UI-theme (FreeDash skin6) — primary swapped to SnapStock green */
+
+@theme inline {
+  --font-sans: "Rubik", "DM Sans", system-ui, sans-serif;
   --font-serif: "Playfair Display", Georgia, serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-ripe: var(--ripe);
+  --color-ripe-foreground: var(--ripe-foreground);
+  --color-spoiled: var(--spoiled);
+  --color-spoiled-foreground: var(--spoiled-foreground);
+  --color-fd-ink: var(--fd-ink);
+  --color-fd-body: var(--fd-body);
+  --color-fd-muted: var(--fd-muted);
+  --color-fd-cap: var(--fd-cap);
+
+  --color-surface: var(--background);
+  --color-surface-elevated: var(--card);
+  --color-surface-muted: var(--muted);
   --color-brand-50: #eef8f1;
   --color-brand-100: #d4eedc;
   --color-brand-200: #a8ddb9;
@@ -15,28 +54,98 @@
   --color-brand-700: #11442c;
   --color-brand-800: #0d3322;
   --color-brand-900: #081f15;
-  --color-accent-orange: #c17a3a;
-  --color-accent-ripe: #d4a017;
-  --color-accent-spoiled: #b54a4a;
-  --color-surface: #f7f5f0;
-  --color-surface-elevated: #ffffff;
-  --color-surface-muted: #edeae3;
-  --color-foreground: #1a1f1c;
-  --color-muted: #6b7280;
-  --color-border: #e5e2db;
+  --color-accent-orange: #fb8c00;
+  --color-accent-ripe: var(--ripe);
+  --color-accent-spoiled: var(--spoiled);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+}
+
+:root {
+  --radius: 0.25rem;
+  --background: #f9fbfd;
+  --foreground: #7c8798;
+  --card: #ffffff;
+  --card-foreground: #212529;
+  --popover: #ffffff;
+  --popover-foreground: #212529;
+  --primary: #1d6b45;
+  --primary-foreground: #ffffff;
+  --secondary: #e8eaec;
+  --secondary-foreground: #1c2d41;
+  --muted: #e8eaec;
+  --muted-foreground: #9eabc0;
+  --accent: #eef8f1;
+  --accent-foreground: #1d6b45;
+  --destructive: #ff4f70;
+  --destructive-foreground: #ffffff;
+  --border: #edf2f9;
+  --input: #edf2f9;
+  --ring: #1d6b45;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #2a3547;
+  --sidebar-border: #edf2f9;
+  --sidebar-accent: #eef8f1;
+  --sidebar-accent-foreground: #1d6b45;
+  --ripe: #fdc16a;
+  --ripe-foreground: #3d2e00;
+  --spoiled: #ff4f70;
+  --spoiled-foreground: #ffffff;
+  --fd-ink: #1c2d41;
+  --fd-body: #7c8798;
+  --fd-muted: #9eabc0;
+  --fd-cap: #8392a5;
+  --fd-shadow: 0 3px 9px 0 rgba(169, 184, 200, 0.15);
+  --fd-shadow-nav: 0 7px 12px 0 rgba(29, 107, 69, 0.21);
+  --fd-shadow-input: 0 2px 9px 0 rgba(169, 184, 200, 0.2);
+  --fd-nav-gradient: linear-gradient(to right, #5bb87a, #4aab6c, #3da866, #2d8f55, #1d6b45);
 }
 
 .dark {
-  --color-surface: #0a120e;
-  --color-surface-elevated: #111916;
-  --color-surface-muted: #1a2420;
-  --color-foreground: #e8ebe9;
-  --color-muted: #9ca3af;
-  --color-border: #243028;
+  --background: #0b1210;
+  --foreground: #9eabc0;
+  --card: #121a17;
+  --card-foreground: #e9eeeb;
+  --popover: #121a17;
+  --popover-foreground: #e9eeeb;
+  --primary: #3da866;
+  --primary-foreground: #041109;
+  --secondary: #1a2420;
+  --secondary-foreground: #d4eedc;
+  --muted: #1a2420;
+  --muted-foreground: #9eabc0;
+  --accent: #152820;
+  --accent-foreground: #a8ddb9;
+  --destructive: #ff4f70;
+  --destructive-foreground: #ffffff;
+  --border: #1e2a25;
+  --input: #1e2a25;
+  --ring: #3da866;
+  --sidebar: #0e1512;
+  --sidebar-foreground: #c5d0c9;
+  --sidebar-border: #1e2a25;
+  --sidebar-accent: #152820;
+  --sidebar-accent-foreground: #a8ddb9;
+  --ripe: #fdc16a;
+  --ripe-foreground: #1a1400;
+  --spoiled: #ff4f70;
+  --spoiled-foreground: #ffffff;
+  --fd-ink: #e9eeeb;
+  --fd-body: #9eabc0;
+  --fd-muted: #8392a5;
+  --fd-cap: #8392a5;
+  --fd-shadow: 0 3px 9px 0 rgba(0, 0, 0, 0.35);
+  --fd-shadow-nav: 0 7px 12px 0 rgba(61, 168, 102, 0.28);
+  --fd-shadow-input: 0 2px 9px 0 rgba(0, 0, 0, 0.35);
+  --fd-nav-gradient: linear-gradient(to right, #5bb87a, #4aab6c, #3da866, #2d8f55, #1d6b45);
 }
 
 * {
   box-sizing: border-box;
+  border-color: var(--border);
 }
 
 html {
@@ -46,10 +155,15 @@ html {
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background: var(--color-surface);
-  color: var(--color-foreground);
+  background: var(--background);
+  color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 28%, transparent);
+  color: var(--fd-ink);
 }
 
 #root {
@@ -60,6 +174,46 @@ body {
   font-family: var(--font-serif);
 }
 
+.fd-shadow {
+  box-shadow: var(--fd-shadow);
+}
+
+.fd-shadow-input {
+  box-shadow: var(--fd-shadow-input);
+}
+
+.fd-nav-active {
+  background: var(--fd-nav-gradient);
+  box-shadow: var(--fd-shadow-nav);
+}
+
+@keyframes dashboard-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-page-enter {
+  animation: dashboard-page-enter 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-page-enter {
+    animation: none;
+  }
+}
+
+/* Soften React Router view transitions when supported */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.18s;
+}
+
 @layer utilities {
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -67,5 +221,157 @@ body {
 
   .safe-top {
     padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .saas-mesh {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 20% -10%, color-mix(in oklab, var(--primary) 14%, transparent), transparent),
+      radial-gradient(ellipse 60% 40% at 90% 10%, color-mix(in oklab, var(--primary) 8%, transparent), transparent);
+  }
+}
+
+@keyframes brand-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes brand-scan {
+  0% {
+    top: 8%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 88%;
+    opacity: 0;
+  }
+}
+
+@keyframes brand-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes brand-device-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes brand-feed-drift {
+  0%,
+  100% {
+    transform: scale(1.06) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.1) translate(-1.5%, 1%);
+  }
+}
+
+@keyframes brand-detect {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  78% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.35;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes brand-pulse-dot {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+.brand-float {
+  animation: brand-float 5s ease-in-out infinite;
+}
+
+.brand-float-delayed {
+  animation: brand-float 6.5s ease-in-out 0.8s infinite;
+}
+
+.brand-scan-line {
+  animation: brand-scan 3.2s ease-in-out infinite;
+}
+
+.brand-scan-glow {
+  animation: brand-scan 3.2s ease-in-out infinite;
+}
+
+.brand-spin-slow {
+  animation: brand-spin 48s linear infinite;
+}
+
+.brand-device-float {
+  animation: brand-device-float 5.5s ease-in-out infinite;
+}
+
+.brand-feed-drift {
+  animation: brand-feed-drift 12s ease-in-out infinite;
+}
+
+.brand-detect {
+  animation: brand-detect 4.5s ease-in-out infinite;
+}
+
+.brand-pulse {
+  animation: brand-pulse-dot 2.4s ease-in-out infinite;
+}
+
+.brand-pulse-delayed {
+  animation: brand-pulse-dot 2.8s ease-in-out 0.6s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-float,
+  .brand-float-delayed,
+  .brand-scan-line,
+  .brand-scan-glow,
+  .brand-spin-slow,
+  .brand-device-float,
+  .brand-feed-drift,
+  .brand-detect,
+  .brand-pulse,
+  .brand-pulse-delayed {
+    animation: none;
+  }
+
+  .brand-detect {
+    opacity: 1;
   }
 }

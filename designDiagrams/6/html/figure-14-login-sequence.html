@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Figure 14 — Login Sequence</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f0f2f5; padding: 2rem; display: flex; justify-content: center; }
+    .frame { background: #fff; border: 2px solid #212529; padding: 1.5rem 1rem 1.75rem; box-shadow: 0 4px 16px rgba(0,0,0,.08); max-width: 1280px; width: 100%; overflow-x: auto; }
+    h1 { text-align: center; color: #1e4a7a; font-size: 1.35rem; font-weight: 700; margin-bottom: 1rem; }
+    svg { display: block; min-width: 1200px; }
+    .caption { margin-top: 0.85rem; text-align: center; font-size: 0.85rem; color: #495057; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <h1>Login Sequence</h1>
+    <!-- msg gap=28 | ref: figure-12 spacing -->
+    <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" role="img">
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#212529"/></marker>
+        <marker id="ret" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#212529"/></marker>
+        <style>
+          .box{fill:#e9ecef;stroke:#212529;stroke-width:1.5}.nm{font:600 10px "Segoe UI",Arial,sans-serif;fill:#212529;text-anchor:middle}
+          .life{stroke:#adb5bd;stroke-width:1.5;stroke-dasharray:6 4;fill:none}
+          .msg{stroke:#212529;stroke-width:1.75;fill:none;marker-end:url(#arr)}
+          .ret{stroke:#212529;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ret)}
+          .self{stroke:#212529;stroke-width:1.75;fill:none;marker-end:url(#arr)}
+          .lbl{font:500 10px "Segoe UI",Arial,sans-serif;fill:#212529}
+          .act{fill:#dee2e6;stroke:#212529;stroke-width:1}
+        </style>
+      </defs>
+      <rect x="10" y="10" width="1180" height="580" fill="#fff" stroke="#212529" stroke-width="2"/>
+
+      <g id="headers">
+        <rect x="55" y="28" width="70" height="36" rx="4" class="box"/><text x="90" y="50" class="nm">Vendor</text>
+        <rect x="196" y="28" width="80" height="36" rx="4" class="box"/><text x="236" y="50" class="nm">LoginPage</text>
+        <rect x="336" y="28" width="90" height="36" rx="4" class="box"/><text x="381" y="50" class="nm">AuthContext</text>
+        <rect x="497" y="28" width="60" height="36" rx="4" class="box"/><text x="527" y="50" class="nm">api.ts</text>
+        <rect x="623" y="28" width="100" height="36" rx="4" class="box"/><text x="673" y="50" class="nm">AuthController</text>
+        <rect x="776" y="28" width="85" height="36" rx="4" class="box"/><text x="818" y="50" class="nm">AuthService</text>
+        <rect x="924" y="28" width="80" height="36" rx="4" class="box"/><text x="964" y="50" class="nm">AuthRepo</text>
+        <rect x="1085" y="28" width="50" height="36" rx="4" class="box"/><text x="1110" y="50" class="nm">DB</text>
+      </g>
+
+      <line x1="90" y1="64" x2="90" y2="560" class="life"/>
+      <line x1="236" y1="64" x2="236" y2="560" class="life"/>
+      <line x1="381" y1="64" x2="381" y2="560" class="life"/>
+      <line x1="527" y1="64" x2="527" y2="560" class="life"/>
+      <line x1="673" y1="64" x2="673" y2="560" class="life"/>
+      <line x1="818" y1="64" x2="818" y2="560" class="life"/>
+      <line x1="964" y1="64" x2="964" y2="560" class="life"/>
+      <line x1="1110" y1="64" x2="1110" y2="560" class="life"/>
+
+      <rect x="374" y="148" width="14" height="340" class="act"/>
+      <rect x="520" y="176" width="14" height="284" class="act"/>
+      <rect x="666" y="204" width="14" height="228" class="act"/>
+      <rect x="811" y="232" width="14" height="172" class="act"/>
+      <rect x="957" y="260" width="14" height="116" class="act"/>
+
+      <line x1="90" y1="96" x2="236" y2="96" class="msg"/><text x="100" y="90" class="lbl">open</text>
+      <line x1="90" y1="124" x2="236" y2="124" class="msg"/><text x="100" y="118" class="lbl">submit credentials</text>
+      <line x1="236" y1="152" x2="381" y2="152" class="msg"/><text x="244" y="146" class="lbl">login()</text>
+      <line x1="381" y1="180" x2="527" y2="180" class="msg"/><text x="391" y="174" class="lbl">POST /auth/login</text>
+      <line x1="527" y1="208" x2="673" y2="208" class="msg"/><text x="535" y="202" class="lbl">login(dto)</text>
+      <line x1="673" y1="236" x2="818" y2="236" class="msg"/><text x="681" y="230" class="lbl">authenticate</text>
+      <line x1="818" y1="264" x2="964" y2="264" class="msg"/><text x="824" y="258" class="lbl">findByEmail</text>
+      <line x1="964" y1="292" x2="1110" y2="292" class="msg"/><text x="972" y="286" class="lbl">SELECT user</text>
+      <line x1="1110" y1="320" x2="964" y2="320" class="ret"/><text x="976" y="314" class="lbl">User row</text>
+      <path d="M 818 348 L 854 348 L 854 370 L 826 370" class="self"/><text x="858" y="364" class="lbl">bcrypt.compare</text>
+      <path d="M 818 384 L 854 384 L 854 406 L 826 406" class="self"/><text x="858" y="400" class="lbl">sign JWT</text>
+      <line x1="818" y1="420" x2="673" y2="420" class="ret"/><text x="681" y="414" class="lbl">{token, user}</text>
+      <line x1="673" y1="448" x2="527" y2="448" class="ret"/><text x="535" y="442" class="lbl">200 JSON</text>
+      <line x1="527" y1="476" x2="381" y2="476" class="ret"/><text x="391" y="470" class="lbl">response</text>
+      <path d="M 381 504 L 417 504 L 417 526 L 389 526" class="self"/><text x="421" y="520" class="lbl">localStorage</text>
+      <line x1="381" y1="532" x2="236" y2="532" class="ret"/><text x="244" y="526" class="lbl">setSession</text>
+      <line x1="236" y1="560" x2="90" y2="560" class="ret"/><text x="100" y="554" class="lbl">navigate dashboard</text>
+    </svg>
+    <p class="caption">Figure 14. Sequence Diagram — Login (8 lifelines)</p>
+  </div>
+</body>
+</html>
