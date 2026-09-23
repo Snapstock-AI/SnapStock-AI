@@ -24,6 +24,7 @@ const mockedRepository = DetectionRepository as jest.Mocked<
 describe("DetectionService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedRepository.applyInventoryChange.mockResolvedValue([]);
 
     process.env.AI_SERVICE_URL = "http://ai-service";
   });
@@ -379,6 +380,8 @@ describe("DetectionService", () => {
             freshness_confidence_percent: 80,
           },
         ],
+
+        inventoryChanges: [],
       });
     });
   });

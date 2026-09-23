@@ -47,4 +47,10 @@ export interface DetectionResult {
   total: number;
 }>;
   detections: SavedDetection[];
+  inventoryChanges: Array<{
+    productId: string;
+    product: string;
+    detected: number;
+    quantity: number;
+  }>;
 }
