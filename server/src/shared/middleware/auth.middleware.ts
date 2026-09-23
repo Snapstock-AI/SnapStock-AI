@@ -69,7 +69,7 @@ export const authMiddleware = async (
       email: decoded.email,
       system_role: decoded.system_role,
       sessionId: decoded.sessionId,
-      businessId: decoded.businessId ?? null,
+      ...(decoded.businessId ? { businessId: decoded.businessId } : {}),
     };
 
     next();

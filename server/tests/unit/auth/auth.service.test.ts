@@ -4,6 +4,12 @@ import jwt from "jsonwebtoken";
 import { AuthService } from "../../../src/modules/auth/auth.service";
 import { AuthRepository } from "../../../src/modules/auth/auth.repository";
 
+jest.mock("../../../src/modules/business/business.repository", () => ({
+  BusinessRepository: {
+    findBusinessIdByUserId: jest.fn().mockResolvedValue(null),
+  },
+}));
+
 jest.mock("../../../src/modules/auth/auth.repository", () => ({
   AuthRepository: {
     findByEmail: jest.fn(),
