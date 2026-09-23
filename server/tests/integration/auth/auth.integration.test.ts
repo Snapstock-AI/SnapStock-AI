@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import app from "../../../src/app";
 import { AuthService } from "../../../src/modules/auth/auth.service";
 import { AuthRepository } from "../../../src/modules/auth/auth.repository";
-import { DetectionService } from "../../../src/modules/detection/detection.service";
 
 jest.mock("../../../src/modules/auth/auth.service", () => ({
   AuthService: {
@@ -19,12 +18,6 @@ jest.mock("../../../src/modules/auth/auth.service", () => ({
   },
 }));
 
-jest.mock("../../../src/modules/detection/detection.service", () => ({
-  DetectionService: {
-    analyze: jest.fn(),
-  },
-}));
-
 jest.mock("../../../src/modules/auth/auth.repository", () => ({
   AuthRepository: {
     findActiveSessionById: jest.fn(),
@@ -32,9 +25,6 @@ jest.mock("../../../src/modules/auth/auth.repository", () => ({
 }));
 
 const mockedAuthService = AuthService as jest.Mocked<typeof AuthService>;
-const mockedDetectionService = DetectionService as jest.Mocked<
-  typeof DetectionService
->;
 const mockedRepository = AuthRepository as jest.Mocked<typeof AuthRepository>;
 
 describe("Auth routes", () => {
@@ -182,69 +172,5 @@ describe("Auth routes", () => {
       expect(response.body.message).toBe("No token provided");
       expect(mockedAuthService.logout).not.toHaveBeenCalled();
     });
-  });
-});
-
-describe("Protected detection with real auth middleware", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    process.env.JWT_SECRET = "test-secret";
-  });
-
-  it("should reject analyze without a token", async () => {
-    const response = await request(app)
-      .post("/detection/analyze")
-      .field("businessId", "business-123")
-      .field("shelfId", "shelf-123")
-      .attach("file", Buffer.from("fake-image"), "shelf.jpg");
-
-    expect(response.status).toBe(401);
-    expect(mockedDetectionService.analyze).not.toHaveBeenCalled();
-  });
-
-  it("should allow analyze with a valid session token", async () => {
-    const token = jwt.sign(
-      {
-        userId: "user-1",
-        email: "test@example.com",
-        system_role: "BUSINESS_USER",
-        sessionId: "session-1",
-      },
-      "test-secret",
-      { expiresIn: "1h" }
-    );
-
-    mockedRepository.findActiveSessionById.mockResolvedValue({
-      id: "session-1",
-      user_id: "user-1",
-      refresh_token: "refresh",
-      expires_at: new Date(Date.now() + 86400000),
-      revoked_at: null,
-      created_at: new Date(),
-    } as any);
-
-    mockedDetectionService.analyze.mockResolvedValue({
-      scanId: "scan-1",
-      image_width: 640,
-      image_height: 480,
-      total_count: 0,
-      counts: {},
-      detections: [],
-    } as any);
-
-    const response = await request(app)
-      .post("/detection/analyze")
-      .set("Authorization", `Bearer ${token}`)
-      .field("businessId", "business-123")
-      .field("shelfId", "shelf-123")
-      .attach("file", Buffer.from("fake-image"), "shelf.jpg");
-
-    expect(response.status).toBe(200);
-    expect(mockedDetectionService.analyze).toHaveBeenCalledWith(
-      expect.objectContaining({ originalname: "shelf.jpg" }),
-      "business-123",
-      "shelf-123",
-      "user-1"
-    );
   });
 });

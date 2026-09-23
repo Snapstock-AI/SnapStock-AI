@@ -3,6 +3,7 @@ import os
 from unittest.mock import Mock
 
 from app.messaging.sqs_worker import process_message
+from app.messaging.sqs_worker import consume_messages
 
 
 def test_process_message_downloads_image_and_publishes_analysis_result(monkeypatch):
@@ -70,3 +71,43 @@ def test_process_message_downloads_image_and_publishes_analysis_result(monkeypat
     payload = json.loads(fake_sqs.send_message.call_args.kwargs["MessageBody"])
     assert payload["eventType"] == "ANALYSIS_COMPLETED"
     assert payload["scanId"] == "scan-123"
+
+
+def test_consume_messages_publishes_failure_and_deletes_job(monkeypatch):
+    monkeypatch.setenv("SQS_ANALYSIS_JOB_QUEUE_URL", "https://sqs.ap-south-1.amazonaws.com/123456789012/jobs")
+    monkeypatch.setenv("SQS_ANALYSIS_RESULT_QUEUE_URL", "https://sqs.ap-south-1.amazonaws.com/123456789012/results")
+
+    fake_sqs = Mock()
+    fake_sqs.receive_message.return_value = {
+        "Messages": [
+            {
+                "ReceiptHandle": "receipt-1",
+                "Body": json.dumps({
+                    "eventType": "IMAGE_UPLOADED",
+                    "scanId": "scan-123",
+                    "businessId": "business-123",
+                    "objectKey": "business-123/scan-123/image.jpg",
+                }),
+            }
+        ]
+    }
+    monkeypatch.setattr("app.messaging.sqs_worker.get_sqs_client", lambda: fake_sqs)
+    monkeypatch.setattr(
+        "app.messaging.sqs_worker.process_message",
+        Mock(side_effect=RuntimeError("model inference failed")),
+    )
+
+    consume_messages(
+        detection_model=Mock(),
+        freshness_model=Mock(),
+    )
+
+    result_call = fake_sqs.send_message.call_args
+    failure_payload = json.loads(result_call.kwargs["MessageBody"])
+    assert failure_payload["eventType"] == "ANALYSIS_FAILED"
+    assert failure_payload["scanId"] == "scan-123"
+    assert failure_payload["errorMessage"] == "model inference failed"
+    fake_sqs.delete_message.assert_called_once_with(
+        QueueUrl="https://sqs.ap-south-1.amazonaws.com/123456789012/jobs",
+        ReceiptHandle="receipt-1",
+    )
