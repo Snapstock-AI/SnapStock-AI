@@ -6,6 +6,7 @@ import {
 } from "typeorm";
 
 export type ScanStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+export type ScanMode = "STOCK_IN" | "STOCK_OUT";
 
 @Entity("scans")
 export class Scan {
@@ -13,6 +14,8 @@ export class Scan {
   @Column({ type: "uuid" }) business_id!: string;
   @Column({ type: "uuid" }) shelf_id!: string;
   @Column({ type: "uuid" }) user_id!: string;
+  @Column({ type: "varchar", length: 16, default: "STOCK_IN" })
+  scan_mode!: ScanMode;
   @Column({
     type: "enum",
     enum: ["PENDING", "PROCESSING", "COMPLETED", "FAILED"],

@@ -2,6 +2,7 @@ export interface AnalyzeRequest {
   businessId: string;
   shelfId: string;
   userId: string;
+  scanMode: "STOCK_IN" | "STOCK_OUT";
 }
 
 export interface AIDetection {

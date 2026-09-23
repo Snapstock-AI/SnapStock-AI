@@ -90,7 +90,10 @@ export class DetectionController {
 
       console.log("Authenticated user:", req.user);
 
-      const { businessId, shelfId } = req.body;
+      const { businessId, shelfId, scanMode = "STOCK_IN" } = req.body;
+      if (scanMode !== "STOCK_IN" && scanMode !== "STOCK_OUT") {
+        return res.status(400).json({ success: false, message: "Invalid scan mode." });
+      }
 
       if (!req.user) {
         return res.status(401).json({
@@ -108,6 +111,7 @@ export class DetectionController {
         businessId,
         shelfId,
         userId,
+        scanMode,
       );
 
       return res.status(200).json({
