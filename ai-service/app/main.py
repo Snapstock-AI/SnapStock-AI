@@ -1,4 +1,10 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(PROJECT_ROOT / ".env")
 
 from fastapi import FastAPI
 
@@ -7,6 +13,7 @@ from app.freshness.routes import router as prediction_router
 from app.detection.routes import router as detection_router
 from app.analysis.routes import router as analysis_router
 from app.detection.model_loader import get_detection_model
+from app.messaging.sqs_worker import start_worker_thread
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -17,6 +24,12 @@ async def lifespan(app: FastAPI):
 
     app.state.freshness_model = get_model()
     app.state.detection_model = get_detection_model()
+
+    if not hasattr(app.state, "analysis_worker") or app.state.analysis_worker is None:
+        app.state.analysis_worker = start_worker_thread(
+            app.state.detection_model,
+            app.state.freshness_model,
+        )
 
     yield
 

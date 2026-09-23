@@ -21,6 +21,11 @@ export class Scan {
   })
   status!: ScanStatus;
   @Column({ type: "text", nullable: true }) error_message!: string | null;
+  @Column({ type: "text", nullable: true }) image_key!: string | null;
+  @Column({ type: "varchar", length: 100, nullable: true })
+  image_content_type!: string | null;
+  @Column({ type: "varchar", length: 255, nullable: true })
+  image_original_name!: string | null;
   @CreateDateColumn({ type: "timestamptz" }) created_at!: Date;
   @Column({ type: "timestamptz", nullable: true }) completed_at!: Date | null;
 }

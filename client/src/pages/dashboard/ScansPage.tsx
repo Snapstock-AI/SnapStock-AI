@@ -1,43 +1,43 @@
 import { useEffect, useState } from "react";
 import { Camera, Upload } from "lucide-react";
-import { Link } from "react-router";
-import { analyzeImage, countHistoryItems, formatHistoryDate, getScanHistory } from "../../lib/detection";
-import { updateDetectionFreshness } from "../../lib/detection";
-import type {
-  DetectionResult,
-  FreshnessStatus,
-  ScanHistoryItem,
+import {
+  fetchScanStatus,
+  queueUploadedScan,
+  uploadScanImage,
 } from "../../lib/detection";
-import { getShelves } from "../../lib/shelf";
+import type { DetectionResult } from "../../lib/detection";
 import CameraScanner from "../../components/scanner/CameraScanner";
 import type { Shelf } from "../../types/shelf";
 import { useAuth } from "@/context/AuthContext";
-import { PageHeader } from "@/components/PageHeader";
-import { EmptyState } from "@/components/EmptyState";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
+
+const scanHistory = [
+  { id: 1, shelf: "Shelf A · Bananas", time: "Today, 9:14 AM", score: 71, items: 41 },
+  
+];
+
+
 
 
 export default function ScansPage() {
-  const [shelves, setShelves] = useState<Shelf[]>([]);
-  const [shelvesLoading, setShelvesLoading] = useState(true);
+  const shelves: Shelf[] = [
+  {
+    id: "550e8400-e29b-41d4-a716-446655440001",
+    name: "Shelf A - Bananas",
+    category: "Fruit",
+  },
+  {
+    id: "550e8400-e29b-41d4-a716-446655440002",
+    name: "Shelf B - Tomatoes",
+    category: "Vegetable",
+  },
+  {
+    id: "550e8400-e29b-41d4-a716-446655440003",
+    name: "Shelf C - Apples",
+    category: "Fruit",
+  },
+];
+  
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
@@ -49,62 +49,68 @@ export default function ScansPage() {
 
   const [error, setError] = useState("");
 
+  const [queuedScan, setQueuedScan] = useState<{
+    scanId: string;
+    objectKey: string;
+  } | null>(null);
+
   const [showCamera, setShowCamera] = useState(false);
   const [selectedShelf, setSelectedShelf] = useState<Shelf | null>(null);
-  const [savingDetectionId, setSavingDetectionId] = useState<string | null>(null);
-  const [scanHistory, setScanHistory] = useState<ScanHistoryItem[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [historyError, setHistoryError] = useState("");
-  const [selectedHistoryScan, setSelectedHistoryScan] = useState<ScanHistoryItem | null>(null);
 
-  const { token, user } = useAuth();
-  const businessId = user?.businessId;
+  const { token } = useAuth();
 
   useEffect(() => {
-    if (!token || !businessId) {
-      setShelves([]);
-      setShelvesLoading(false);
-      return;
+    if (!queuedScan || !token) {
+      return undefined;
     }
 
-    const loadShelves = async () => {
+    let isCancelled = false;
+    let timer: number | undefined;
+
+    const pollScanStatus = async () => {
       try {
-        setShelvesLoading(true);
-        setShelves(await getShelves(token, businessId));
-      } catch (error: unknown) {
-        setShelves([]);
-        showError(error instanceof Error ? error.message : "Failed to load shelves.");
-      } finally {
-        setShelvesLoading(false);
+        const statusResponse = await fetchScanStatus(queuedScan.scanId, token);
+
+        if (isCancelled) {
+          return;
+        }
+
+        if (statusResponse.status === "COMPLETED" && statusResponse.data) {
+          setResult({
+            ...statusResponse.data,
+            shelf: selectedShelf ?? undefined,
+          });
+          setQueuedScan(null);
+          return;
+        }
+
+        if (statusResponse.status === "FAILED") {
+          setError(statusResponse.errorMessage || "Scan analysis failed.");
+          setQueuedScan(null);
+          return;
+        }
+
+        timer = window.setTimeout(pollScanStatus, 3000);
+      } catch (pollError: any) {
+        if (!isCancelled) {
+          setError(pollError.message || "Unable to fetch scan status.");
+          setQueuedScan(null);
+        }
       }
     };
 
-    loadShelves();
-  }, [token, businessId]);
+    void pollScanStatus();
 
-  useEffect(() => {
-    if (!token || !businessId) {
-      setScanHistory([]);
-      setHistoryLoading(false);
-      return;
-    }
+    return () => {
+      isCancelled = true;
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [queuedScan, selectedShelf, token]);
 
-    setHistoryError("");
-    getScanHistory(
-      businessId,
-      token,
-      new Date(0).toISOString(),
-      new Date().toISOString(),
-    )
-      .then((scans) => setScanHistory(scans.sort(
-        (first, second) => new Date(second.created_at).getTime() - new Date(first.created_at).getTime(),
-      )))
-      .catch(() => {
-        setScanHistory([]);
-        setHistoryError("Unable to load scan history. Please check that the server is running and try again.");
-      })
-      .finally(() => setHistoryLoading(false));
-  }, [token, businessId]);
+  const TEST_BUSINESS_ID =
+  "550e8400-e29b-41d4-a716-446655440000";
 
    const showError = (message: string) => {
   setError(message);
@@ -113,46 +119,6 @@ export default function ScansPage() {
     setError("");
   }, 3000);
 };
-
-  const handleFreshnessChange = async (
-    detectionId: string | undefined,
-    freshness: FreshnessStatus,
-  ) => {
-    if (!detectionId || !token || !result) return;
-
-    setSavingDetectionId(detectionId);
-    setError("");
-
-    try {
-      await updateDetectionFreshness(detectionId, freshness, token);
-      const detections = result.detections.map((detection) =>
-        detection.id === detectionId
-          ? { ...detection, freshness }
-          : detection,
-      );
-      const counts = detections.reduce<DetectionResult["counts"]>((summary, detection) => {
-        const key = detection.class_name;
-        summary[key] ||= { fresh: 0, rotten: 0, total: 0 };
-        summary[key].total += 1;
-        if (detection.freshness === "Fresh") {
-          summary[key].fresh += 1;
-        } else {
-          summary[key].rotten += 1;
-        }
-        return summary;
-      }, {});
-
-      setResult({ ...result, detections, counts });
-    } catch (correctionError: unknown) {
-      showError(
-        correctionError instanceof Error
-          ? correctionError.message
-          : "Unable to update freshness.",
-      );
-    } finally {
-      setSavingDetectionId(null);
-    }
-  };
 
 
   const analyzeSelectedImage = async (
@@ -174,18 +140,28 @@ export default function ScansPage() {
       return;
     }
 
-    const data = await analyzeImage(
+    const data = await uploadScanImage(
       file,
       shelf,
-      businessId!,
+      TEST_BUSINESS_ID,
+      token
+    );
+    await queueUploadedScan(
+      data,
+      shelf,
+      TEST_BUSINESS_ID,
+      file.type,
       token
     );
 
-    setResult(data);
-  } catch (error: unknown) {
+    setQueuedScan({
+      scanId: data.scanId,
+      objectKey: data.objectKey,
+    });
+  } catch (error: any) {
 
     showError(
-      error instanceof Error ? error.message : "Image analysis failed."
+      error.message || "Image analysis failed."
     );  
 
   } finally {
@@ -203,11 +179,6 @@ export default function ScansPage() {
 
     if (!file) return;
 
-    if (!selectedShelf) {
-      showError("Please select a shelf first.");
-      return;
-    }
-
     setPreviewImage(file);
     setResult(null);
 
@@ -220,400 +191,461 @@ export default function ScansPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Shelf scans"
-        description="Capture and review AI-powered produce inspections"
-        actions={
-          <Button asChild>
-            <Link to="/dashboard/shelves">Add shelf</Link>
-          </Button>
-        }
-      />
+      
+      <div>
+        <h1 className="font-serif text-2xl font-semibold md:text-3xl">
+          Shelf scans
+        </h1>
 
-      <Card className="border-2 border-dashed border-primary/30 bg-primary/5">
-        <CardContent className="p-8 text-center">
-          <div className="mb-4 space-y-2 text-left">
-            <Label htmlFor="shelf-select">Select a Shelf</Label>
-            <select
-              id="shelf-select"
-              className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              value={selectedShelf?.id || ""}
-              disabled={shelvesLoading || shelves.length === 0}
-              onChange={(e) => {
-                const shelf = shelves.find((s) => s.id === e.target.value);
-                setSelectedShelf(shelf || null);
-              }}
-            >
-              <option value="">
-                {shelvesLoading ? "Loading shelves..." : "Select a shelf"}
+        <p className="mt-1 text-sm text-muted">
+          Capture and review AI-powered produce inspections
+        </p>
+      </div>
+
+      <div className="rounded-2xl border-2 border-dashed border-brand-300 bg-brand-50/50 p-8 text-center 
+      dark:border-brand-800 dark:bg-brand-900/20">
+        <div className="mb-4 ">
+          <label className="mt-4 font-serif text-l font-semibold">
+          Select a Shelf
+        </label>
+
+
+        <select 
+          value={selectedShelf?.id || ""}
+          onChange={(e)=> {
+            const shelf = shelves.find(
+              s => s.id === e.target.value
+            );
+
+            setSelectedShelf(shelf || null);
+          }}
+          className="border p-2 rounded w-full inline-flex items-center justify-center  rounded-full px-3 py-2 text-sm  "
+        >
+          
+              <option value="" >
+                Select a Shelf
               </option>
-              {shelves.map((shelf) => (
-                <option key={shelf.id} value={shelf.id}>
-                  {shelf.name} ({shelf.category})
-                </option>
-              ))}
-            </select>
+        
 
-            {!shelvesLoading && shelves.length === 0 && (
-              <p className="mt-2 text-sm text-muted-foreground">
-                No shelves found. Create a shelf before starting a scan.
-              </p>
-            )}
-          </div>
+        {shelves.map((shelf)=>(
+          <option
+            key={shelf.id}
+            value={shelf.id}
+          >
+            {shelf.name} ({shelf.category})
+          </option>
+        ))}
 
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/15">
-            <Camera className="h-8 w-8 text-primary" />
-          </div>
+        </select>
 
-          <h2 className="mt-4 text-xl font-semibold tracking-tight">
-            Scan a shelf
-          </h2>
+        </div>
+        
 
-          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-            Use your phone camera to capture produce. Our AI will count items and
-            grade freshness.
-          </p>
+    
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900/50">
+          <Camera className="h-8 w-8 text-brand-600 dark:text-brand-400" />
+        </div>
 
-          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-            <Button
-              type="button"
-              onClick={() => {
-                if (!selectedShelf) {
-                  showError("Please select a shelf first.");
-                  return;
-                }
-                setShowCamera(true);
-              }}
-            >
-              <Camera className="h-4 w-4" />
-              Open Camera
-            </Button>
+        <h2 className="mt-4 font-serif text-xl font-semibold">
+          Scan a shelf
+        </h2>
 
-            <Button variant="outline" asChild>
-              <label
-                className="cursor-pointer"
-                onClick={(e) => {
-                  if (!selectedShelf) {
-                    e.preventDefault();
-                    showError("Please select a shelf first.");
-                  }
-                }}
-              >
-                <Upload className="h-4 w-4" />
-                Upload Photo
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageUpload}
-                />
-              </label>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
+          Use your phone camera to capture produce. Our AI will count items and
+          grade freshness.
+        </p>
 
-      <Dialog open={showCamera} onOpenChange={(open) => { if (!open) setShowCamera(false); }}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Camera</DialogTitle>
-          </DialogHeader>
-          <CameraScanner
-            onClose={() => setShowCamera(false)}
-            onCapture={(file) => {
-              setPreviewImage(file);
-              setShowCamera(false);
+        <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+
+        
+          <button
+            type="button"
+            onClick={() => {
+
+              if (!selectedShelf) {
+
+                showError("Please select a shelf first.");
+
+                return;
+
+              }
+
+
+              setShowCamera(true);
+
             }}
-          />
-        </DialogContent>
-      </Dialog>
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-600"
+          >
+            <Camera className="h-4 w-4" />
+            Open Camera
+          </button>
 
+          <label
+            onClick={(e) => {
+
+              if(!selectedShelf){
+
+                e.preventDefault();
+
+                showError("Please select a shelf first.");
+
+              }
+
+            }} className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-semibold hover:bg-surface-muted">
+            <Upload className="h-4 w-4" />
+            Upload Photo
+
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageUpload}
+            />
+          </label>
+
+        </div>
+      </div>
+
+      
+      {showCamera && (
+
+        <div className="
+        fixed inset-0
+        z-50
+        flex
+        items-center
+        justify-center
+        bg-black/70
+        p-4
+        ">
+
+        <div className="
+        w-full
+        max-w-3xl
+        rounded-2xl
+        bg-surface-elevated
+        p-6
+        ">
+
+
+        <h2 className="
+        mb-4
+        text-xl
+        font-semibold
+        ">
+
+        Camera
+
+        </h2>
+
+
+
+        <CameraScanner
+
+        onClose={() =>
+          setShowCamera(false)
+        }
+
+
+        onCapture={(file) => {
+
+          setPreviewImage(file);
+
+          setShowCamera(false);
+
+              }}
+        />
+
+
+        </div>
+
+        </div>
+
+      )}
+      
       {previewImage && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Preview</CardTitle>
-          </CardHeader>
-          <CardContent>
+
+        <div className="rounded-2xl border border-border bg-surface-elevated p-6">
+
+            <h2 className="mb-4 text-xl font-semibold">
+                Preview
+            </h2>
+
             <img
-              src={URL.createObjectURL(previewImage)}
-              alt="Preview"
-              className="mx-auto max-h-[450px] rounded-xl"
+                src={URL.createObjectURL(previewImage)}
+                alt="Preview"
+                className="mx-auto max-h-[450px] rounded-xl"
             />
 
             <div className="mt-6 flex justify-center gap-4">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setPreviewImage(null);
-                  setShowCamera(true);
-                }}
-              >
-                Retake
-              </Button>
 
-              <Button
-                type="button"
-                onClick={async () => {
-                  if (!selectedShelf) {
-                    showError("Please select a shelf first.");
-                    return;
-                  }
+                <button
 
-                  setSelectedImage(previewImage);
-                  setResult(null);
-                  setError("");
+                    onClick={() => {
 
-                  await analyzeSelectedImage(previewImage, selectedShelf);
+                        setPreviewImage(null);
 
-                  setPreviewImage(null);
-                }}
-              >
-                Analyze
-              </Button>
+                        setShowCamera(true);
+
+                    }}
+
+                    className="rounded-full bg-gray-500 px-6 py-3 font-semibold text-white hover:bg-gray-600"
+
+                >
+                    Retake
+                </button>
+
+                <button
+
+                    onClick={async () => {
+
+  if (!selectedShelf) {
+    showError("Please select a shelf first.");
+    return;
+  }
+
+  setSelectedImage(previewImage);
+  setResult(null);
+  setError("");
+
+  await analyzeSelectedImage(
+    previewImage,
+    selectedShelf
+  );
+
+  setPreviewImage(null);
+}}
+
+                    className="rounded-full bg-brand-500 px-6 py-3 font-semibold text-white hover:bg-brand-600"
+
+                >
+                    Analyze
+                </button>
+
             </div>
-          </CardContent>
-        </Card>
+
+        </div>
+
       )}
 
       {selectedImage && (
-        <div className="relative mx-auto w-fit overflow-hidden rounded-xl">
-          <img
-            src={URL.createObjectURL(selectedImage)}
-            alt="Selected"
-            className="mx-auto max-h-80 w-auto rounded-xl border border-border object-contain"
-          />
+  <div className="relative mx-auto w-fit rounded-xl overflow-hidden">
+    <img
+      src={URL.createObjectURL(selectedImage)}
+      alt="Selected"
+      className="mx-auto max-h-80 w-auto rounded-xl border border-border object-contain"
+    />
 
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
-              <div className="flex flex-col items-center gap-3">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent" />
-                <p className="font-medium text-white">Analyzing...</p>
-              </div>
-            </div>
-          )}
+    {loading && (
+      <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent" />
+          <p className="font-medium text-white">
+            Uploading scan...
+          </p>
         </div>
-      )}
+      </div>
+    )}
+  </div>
+)}
+          
+          
 
-      {error && (
-        <Alert
-          variant="destructive"
-          className="fixed right-5 top-5 z-50 w-auto shadow-lg"
-        >
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+      
+
+      <div className="space-y-6">
+        {error && (
+  <div
+    className="
+      fixed
+      top-5
+      right-5
+      z-50
+      rounded-xl
+      border
+      border-red-300
+      bg-red-50
+      px-5
+      py-3
+      text-red-700
+      shadow-lg
+      animate-in
+      slide-in-from-right
+    "
+  >
+    {error}
+  </div>
+  )}
+  </div>
+      
+      
+
+    
+      {queuedScan && !result && (
+        <div className="rounded-2xl border border-border bg-surface-elevated p-6">
+          <h2 className="font-serif text-xl font-semibold">
+            Scan queued
+          </h2>
+          <p className="mt-2 text-sm text-muted">
+            Your image was uploaded successfully and is waiting for AI analysis.
+          </p>
+          <dl className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">Status</dt>
+              <dd className="font-semibold">PENDING</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">Scan ID</dt>
+              <dd className="max-w-[70%] truncate font-mono text-xs">
+                {queuedScan.scanId}
+              </dd>
+            </div>
+          </dl>
+        </div>
       )}
 
       {result && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Scan Result</CardTitle>
-            {selectedShelf && (
-              <p className="text-sm text-muted-foreground">
-                Shelf: {selectedShelf.name}
-              </p>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="rounded-xl border border-border bg-muted p-5">
-              <p className="text-sm text-muted-foreground">Total Detected Items</p>
-              <p className="mt-2 text-3xl font-semibold tracking-tight">
-                {result.total_count}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {result.total_count === 1 ? "item" : "items"} detected
-              </p>
-            </div>
+  <div className="rounded-2xl border border-border bg-surface-elevated p-6">
 
-            <div>
-              <h3 className="mb-4 text-lg font-semibold tracking-tight">
-                Detected Products
-              </h3>
+    <h2 className="font-serif text-xl font-semibold">
+      Scan Result
+    </h2>
 
-              <div className="space-y-4">
-                {result.detections.map((detection, index) => (
-                  <div
-                    key={detection.id || `${detection.class_name}-${index}`}
-                    className="flex flex-col gap-3 rounded-xl border border-border bg-muted p-5 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div>
-                      <p className="font-semibold capitalize">{detection.class_name}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Model freshness: {detection.freshness}
-                        {detection.freshness_confidence_percent
-                          ? ` (${detection.freshness_confidence_percent.toFixed(0)}% confidence)`
-                          : ""}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Label className="text-muted-foreground">Correct state</Label>
-                      <Select
-                        value={detection.freshness}
-                        disabled={!detection.id || savingDetectionId === detection.id}
-                        onValueChange={(value) =>
-                          handleFreshnessChange(
-                            detection.id,
-                            value as FreshnessStatus,
-                          )
-                        }
-                      >
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Fresh">Fresh</SelectItem>
-                          <SelectItem value="Medium">Medium</SelectItem>
-                          <SelectItem value="Spoiled">Spoiled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                ))}
+    {result.shelf && (
+      <p className="mt-2 text-sm text-muted">
+        Shelf: {result.shelf.name}
+      </p>
+    )}
 
-                {Object.entries(result.counts).map(([productName, product]) => (
-                  <div
-                    key={productName}
-                    className="rounded-xl border border-border bg-muted p-5"
-                  >
-                    <h4 className="text-lg font-semibold capitalize">{productName}</h4>
+    
+    <div className="mt-6 rounded-2xl border border-border bg-surface-muted p-5">
+      <p className="text-sm text-muted">
+        Total Detected Items
+      </p>
 
-                    <div className="mt-4 grid grid-cols-3 gap-3">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Total</p>
-                        <p className="mt-1 text-xl font-semibold">{product.total}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Fresh</p>
-                        <p className="mt-1 text-xl font-semibold">{product.fresh}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Rotten</p>
-                        <p className="mt-1 text-xl font-semibold">{product.rotten}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+      <p className="mt-2 font-serif text-3xl font-semibold">
+        {result.total_count}
+      </p>
+
+      <p className="text-sm text-muted">
+        {result.total_count === 1 ? "item" : "items"} detected
+      </p>
+    </div>
+
+   
+    <div className="mt-6">
+
+      <h3 className="mb-4 font-serif text-lg font-semibold">
+        Detected Products
+      </h3>
+
+      <div className="space-y-4">
+
+        {Object.entries(result.counts).map(
+          ([productName, product]) => {
+            const displayProductName = productName
+              .toLowerCase()
+              .split(" ")
+              .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+              .join(" ");
+
+            return (
+            <div
+              key={productName}
+              className="rounded-2xl border border-border bg-surface-muted p-5"
+            >
+
+              <h4 className="text-lg font-semibold">
+                {displayProductName}
+              </h4>
+
+              <div className="mt-4 grid grid-cols-3 gap-3">
+
+                <div>
+                  <p className="text-sm text-muted">
+                    Total
+                  </p>
+
+                  <p className="mt-1 text-xl font-semibold">
+                    {product.total}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted">
+                    Fresh
+                  </p>
+
+                  <p className="mt-1 text-xl font-semibold">
+                    {product.fresh}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted">
+                    Rotten
+                  </p>
+
+                  <p className="mt-1 text-xl font-semibold">
+                    {product.rotten}
+                  </p>
+                </div>
+
               </div>
+
             </div>
-          </CardContent>
-        </Card>
-      )}
+            );
+          }
+        )}
 
-      <div>
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight">Scan History</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Today and previous scans</p>
-          </div>
-          <Button variant="link" asChild className="h-auto shrink-0 p-0">
-            <Link to="/dashboard/scans/history">Custom date range</Link>
-          </Button>
-        </div>
-
-        {historyLoading && (
-          <p className="text-sm text-muted-foreground">Loading scan history...</p>
-        )}
-        {!historyLoading && historyError && (
-          <Alert variant="destructive">
-            <AlertDescription>{historyError}</AlertDescription>
-          </Alert>
-        )}
-        {!historyLoading && !historyError && scanHistory.length === 0 && (
-          <EmptyState title="No scans found." />
-        )}
-        {!historyLoading && scanHistory.length > 0 && (
-          <Card>
-            <CardContent className="divide-y divide-border p-0">
-              {scanHistory.map((scan) => (
-                <button
-                  key={scan.id}
-                  type="button"
-                  onClick={() => setSelectedHistoryScan(scan)}
-                  className="flex w-full flex-col gap-2 px-4 py-4 text-left transition hover:bg-muted sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{scan.shelf_name}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {scan.item_count} item{scan.item_count === 1 ? "" : "s"} · Fresh {scan.fresh_count} · Medium {scan.medium_count} · Spoiled {scan.spoiled_count}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{scan.status}</span>
-                    <span>{formatHistoryDate(scan.created_at)}</span>
-                  </div>
-                </button>
-              ))}
-            </CardContent>
-          </Card>
-        )}
       </div>
 
-      <Dialog
-        open={!!selectedHistoryScan}
-        onOpenChange={(open) => { if (!open) setSelectedHistoryScan(null); }}
-      >
-        <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
-          {selectedHistoryScan && (
-            <>
-              <DialogHeader>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Scan details
+    </div>
+
+  </div>
+)}
+
+      <div>
+
+        <h2 className="mb-4 font-serif text-lg font-semibold">
+          Scan History
+        </h2>
+
+        <div className="space-y-3">
+
+          {scanHistory.map((scan) => (
+
+            <div
+              key={scan.id}
+              className="flex items-center justify-between rounded-2xl border border-border bg-surface-elevated p-4"
+            >
+              <div>
+                <p className="font-medium">
+                  {scan.shelf}
                 </p>
-                <DialogTitle className="text-2xl">
-                  {selectedHistoryScan.shelf_name}
-                </DialogTitle>
-                <DialogDescription>
-                  {formatHistoryDate(selectedHistoryScan.created_at)}
-                </DialogDescription>
-              </DialogHeader>
 
-              <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                <div className="rounded-xl bg-muted p-3">
-                  <p className="text-muted-foreground">Status</p>
-                  <p className="mt-1 font-semibold">{selectedHistoryScan.status}</p>
-                </div>
-                <div className="rounded-xl bg-muted p-3">
-                  <p className="text-muted-foreground">Items</p>
-                  <p className="mt-1 font-semibold">{selectedHistoryScan.item_count}</p>
-                </div>
-                <div className="rounded-xl bg-muted p-3">
-                  <p className="text-muted-foreground">Fresh</p>
-                  <p className="mt-1 font-semibold">{selectedHistoryScan.fresh_count}</p>
-                </div>
-                <div className="rounded-xl bg-muted p-3">
-                  <p className="text-muted-foreground">Spoiled</p>
-                  <p className="mt-1 font-semibold">{selectedHistoryScan.spoiled_count}</p>
-                </div>
+                <p className="text-xs text-muted">
+                  {scan.time}
+                </p>
               </div>
 
-              <h3 className="text-lg font-semibold tracking-tight">Detected items</h3>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(countHistoryItems(selectedHistoryScan.items)).map(
-                  ([type, count]) => (
-                    <Badge key={type} variant="success">
-                      {type}: {count}
-                    </Badge>
-                  ),
-                )}
+              <div className="text-right">
+                <p className="font-serif text-lg font-semibold text-brand-500">
+                  {scan.score}
+                </p>
+
+                <p className="text-xs text-muted">
+                  {scan.items} items
+                </p>
               </div>
-              <div className="divide-y divide-border rounded-xl border border-border">
-                {selectedHistoryScan.items.length === 0 && (
-                  <p className="p-4 text-sm text-muted-foreground">No detected items.</p>
-                )}
-                {selectedHistoryScan.items.map((item, index) => (
-                  <div
-                    key={`${selectedHistoryScan.id}-${item.type}-${index}`}
-                    className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
-                  >
-                    <span className="font-medium capitalize">{item.type}</span>
-                    <Badge variant="secondary">{item.freshness}</Badge>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </div>
     </div>
   );
 }
