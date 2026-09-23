@@ -91,7 +91,7 @@ export class AuthService {
         full_name: user.full_name,
         email: user.email,
         system_role: user.system_role,
-        ...(businessId ? { businessId } : {}),
+        businessId,
       },
     };
   }

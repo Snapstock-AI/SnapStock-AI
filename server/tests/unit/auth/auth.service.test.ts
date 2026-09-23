@@ -3,12 +3,7 @@ import jwt from "jsonwebtoken";
 
 import { AuthService } from "../../../src/modules/auth/auth.service";
 import { AuthRepository } from "../../../src/modules/auth/auth.repository";
-
-jest.mock("../../../src/modules/business/business.repository", () => ({
-  BusinessRepository: {
-    findBusinessIdByUserId: jest.fn().mockResolvedValue(null),
-  },
-}));
+import { BusinessRepository } from "../../../src/modules/business/business.repository";
 
 jest.mock("../../../src/modules/auth/auth.repository", () => ({
   AuthRepository: {
@@ -36,7 +31,14 @@ jest.mock("../../../src/shared/utils/email", () => ({
   sendPasswordResetEmail: jest.fn(),
 }));
 
+jest.mock("../../../src/modules/business/business.repository", () => ({
+  BusinessRepository: {
+    findBusinessIdByUserId: jest.fn(),
+  },
+}));
+
 const mockedRepository = AuthRepository as jest.Mocked<typeof AuthRepository>;
+const mockedBusinessRepository = BusinessRepository as jest.Mocked<typeof BusinessRepository>;
 
 describe("AuthService", () => {
   const password = "Secret123!";
@@ -49,6 +51,7 @@ describe("AuthService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.JWT_SECRET = "test-secret";
+    mockedBusinessRepository.findBusinessIdByUserId.mockResolvedValue(null);
   });
 
   describe("login", () => {
@@ -89,6 +92,7 @@ describe("AuthService", () => {
         full_name: "Test User",
         email: "test@example.com",
         system_role: "BUSINESS_USER",
+        businessId: null,
       });
 
       const decoded = jwt.verify(result.token, "test-secret") as {

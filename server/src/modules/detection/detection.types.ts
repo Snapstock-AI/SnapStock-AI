@@ -2,6 +2,7 @@ export interface AnalyzeRequest {
   businessId: string;
   shelfId: string;
   userId: string;
+  scanMode: "STOCK_IN" | "STOCK_OUT";
 }
 
 export interface AIDetection {
@@ -46,4 +47,11 @@ export interface DetectionResult {
   total: number;
 }>;
   detections: SavedDetection[];
+  inventoryChanges: Array<{
+    productId: string;
+    product: string;
+    detected: number;
+    currentQuantity: number;
+    quantity: number;
+  }>;
 }

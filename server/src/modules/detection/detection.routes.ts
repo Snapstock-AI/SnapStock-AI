@@ -1,29 +1,21 @@
 import { Router } from "express";
+import multer from "multer";
 import { DetectionController } from "./detection.controller";
 import { authMiddleware } from "../../shared/middleware/auth.middleware";
 
 const router = Router();
 
-router.post(
-  "/upload-url",
-  authMiddleware,
-  DetectionController.createUploadUrl,
-);
-
-router.get(
-  "/status/:scanId",
-  authMiddleware,
-  DetectionController.getScanStatus,
-);
+const upload = multer({
+  storage: multer.memoryStorage(),
+});
 
 router.post(
-  "/queue",
+  "/analyze",
   authMiddleware,
-  DetectionController.queueUploadedScan,
+  upload.single("file"),
+  DetectionController.analyze,
 );
-
 router.get("/history", authMiddleware, DetectionController.history);
-
 router.patch(
   "/:detectionId/freshness",
   authMiddleware,
