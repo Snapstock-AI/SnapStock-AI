@@ -6,6 +6,7 @@ tensorflow
 ultralytics
 huggingface_hub
 python-dotenv
+boto3
 pytest
 pytest-cov
 pytest-mock
