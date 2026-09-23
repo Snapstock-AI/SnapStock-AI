@@ -447,7 +447,7 @@ export default function ScansPage() {
                     <div key={change.productId} className="flex items-center justify-between gap-4">
                       <span className="capitalize">{change.product}</span>
                       <span>
-                        Detected {change.detected} · New stock {change.quantity}
+                        Current {change.currentQuantity} · Detected {change.detected} · New stock {change.quantity}
                       </span>
                     </div>
                   ))}
