@@ -2,6 +2,7 @@ import { AppDataSource } from "../../config/data-source";
 import { Detection } from "../../entities/Detection";
 import { Scan } from "../../entities/Scan";
 import { Shelf } from "../../entities/Shelf";
+import { Alert } from "../../entities/Alert";
 
 const FRESHNESS_EXPR =
   "COALESCE(detection.corrected_freshness, detection.freshness)";
@@ -33,6 +34,7 @@ export class DashboardRepository {
     const rows = await AppDataSource.getRepository(Detection)
       .createQueryBuilder("detection")
       .innerJoin(Scan, "scan", "scan.id = detection.scan_id")
+      .leftJoin("products", "product", "product.id = detection.product_id")
       .select([
         `COUNT(detection.id)::int AS total`,
         `COUNT(DISTINCT detection.product_label)::int AS sku_count`,
@@ -131,6 +133,7 @@ export class DashboardRepository {
       .innerJoin(Scan, "scan", "scan.id = detection.scan_id")
       .select([
         "detection.product_label AS product_label",
+        "MAX(product.quantity)::int AS quantity",
         `COUNT(detection.id)::int AS total`,
         `COUNT(detection.id) FILTER (WHERE ${FRESHNESS_EXPR} = 'Fresh')::int AS fresh_count`,
         `COUNT(detection.id) FILTER (WHERE ${FRESHNESS_EXPR} = 'Medium')::int AS medium_count`,
@@ -147,6 +150,7 @@ export class DashboardRepository {
     return rows.map((r) => ({
       product_label: String(r.product_label),
       total: Number(r.total),
+      quantity: r.quantity == null ? Number(r.total) : Number(r.quantity),
       fresh_count: Number(r.fresh_count),
       medium_count: Number(r.medium_count),
       spoiled_count: Number(r.spoiled_count),
@@ -182,11 +186,29 @@ export class DashboardRepository {
       shelf_name: String(r.shelf_name),
       product_label: String(r.product_label),
       total: Number(r.total),
+      quantity: r.quantity == null ? Number(r.total) : Number(r.quantity),
       fresh_count: Number(r.fresh_count),
       medium_count: Number(r.medium_count),
       spoiled_count: Number(r.spoiled_count),
       last_seen: r.last_seen as Date,
     }));
+  }
+
+  static async activeLowStockAlerts(businessId: string) {
+    return AppDataSource.getRepository(Alert)
+      .createQueryBuilder("alert")
+      .leftJoin("products", "product", "product.id = alert.product_id")
+      .select([
+        "alert.id AS id",
+        "alert.message AS message",
+        "alert.created_at AS created_at",
+        "product.name AS product_name",
+      ])
+      .where("alert.business_id = :businessId", { businessId })
+      .andWhere("alert.type = :type", { type: "LOW_STOCK" })
+      .andWhere("alert.active = TRUE")
+      .orderBy("alert.created_at", "DESC")
+      .getRawMany();
   }
 
   static async listShelves(businessId: string) {
