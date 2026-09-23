@@ -9,6 +9,12 @@ jest.mock("../../../src/modules/detection/detection.service", () => ({
   },
 }));
 
+jest.mock("../../../src/modules/business/business.service", () => ({
+  BusinessService: {
+    assertMember: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
 const mockedService = DetectionService as jest.Mocked<
   typeof DetectionService
 >;
@@ -114,7 +120,8 @@ describe("DetectionController", () => {
         req.file,
         "business-123",
         "shelf-123",
-        "user-123"
+        "user-123",
+        "STOCK_IN",
       );
 
       expect(res.status).toHaveBeenCalledWith(200);

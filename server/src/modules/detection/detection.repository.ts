@@ -3,6 +3,7 @@ import { Detection } from "../../entities/Detection";
 import { Product } from "../../entities/Product";
 import { Scan, ScanMode, ScanStatus } from "../../entities/Scan";
 import { calculateInventoryQuantity } from "./inventory.utils";
+import db from "../../config/db";
 
 export class DetectionRepository {
   static async findScanHistory(
@@ -66,18 +67,18 @@ export class DetectionRepository {
   }
 
   static async createScan(businessId: string, shelfId: string, userId: string, scanMode: ScanMode = "STOCK_IN") {
-    const repository = AppDataSource.getRepository(Scan);
-    return repository.save(
-      repository.create({
-        business_id: businessId,
-        shelf_id: shelfId,
-        user_id: userId,
-        scan_mode: scanMode,
-        status: "PENDING",
-        error_message: null,
-        completed_at: null,
-      }),
-    );
+    const result = scanMode === "STOCK_IN"
+      ? await db.query(
+          `INSERT INTO scans (business_id, shelf_id, user_id, status)
+           VALUES ($1, $2, $3, 'PENDING') RETURNING id`,
+          [businessId, shelfId, userId],
+        )
+      : await db.query(
+          `INSERT INTO scans (business_id, shelf_id, user_id, scan_mode, status)
+           VALUES ($1, $2, $3, $4, 'PENDING') RETURNING id`,
+          [businessId, shelfId, userId, scanMode],
+        );
+    return result.rows[0];
   }
 
   static async applyInventoryChange(scanId: string, businessId: string, scanMode: ScanMode) {
@@ -144,26 +145,31 @@ export class DetectionRepository {
     status: ScanStatus,
     errorMessage?: string,
   ) {
-    const repository = AppDataSource.getRepository(Scan);
-    await repository.update(
-      { id: scanId },
-      {
-        status,
-        error_message: status === "COMPLETED" ? null : (errorMessage ?? null),
-        ...(status === "COMPLETED" ? { completed_at: new Date() } : {}),
-      },
+    if (status === "COMPLETED") {
+      const result = await db.query(
+        `UPDATE scans SET status = $1, completed_at = CURRENT_TIMESTAMP
+         WHERE id = $2 RETURNING *`,
+        [status, scanId],
+      );
+      return result.rows[0];
+    }
+
+    const result = await db.query(
+      `UPDATE scans SET status = $1, error_message = $2
+       WHERE id = $3 RETURNING *`,
+      [status, errorMessage ?? null, scanId],
     );
-    return repository.findOneBy({ id: scanId });
+    return result.rows[0];
   }
 
   static async findProductByName(businessId: string, productName: string) {
-    return AppDataSource.getRepository(Product)
-      .createQueryBuilder("product")
-      .where("product.business_id = :businessId", { businessId })
-      .andWhere("LOWER(product.name) = LOWER(:productName)", { productName })
-      .andWhere("product.is_active = :isActive", { isActive: true })
-      .andWhere("product.deleted_at IS NULL")
-      .getOne();
+    const result = await db.query(
+      `SELECT id FROM products
+       WHERE business_id = $1 AND LOWER(name) = LOWER($2)
+       AND is_active = TRUE AND deleted_at IS NULL LIMIT 1`,
+      [businessId, productName],
+    );
+    return result.rows[0] ?? null;
   }
 
   static async createDetection(
@@ -175,21 +181,12 @@ export class DetectionRepository {
     freshness: string | null,
     freshnessConfidence: number | null,
   ) {
-    const repository = AppDataSource.getRepository(Detection);
-    return repository.save(
-      repository.create({
-        scan_id: scanId,
-        product_label: productLabel,
-        product_id: productId,
-        confidence,
-        bbox_json: bbox,
-        freshness: freshness as Detection["freshness"],
-        freshness_confidence: freshnessConfidence,
-        needs_review: false,
-        corrected_freshness: null,
-        corrected_by: null,
-        corrected_at: null,
-      }),
+    const result = await db.query(
+      `INSERT INTO detections
+       (scan_id, product_label, product_id, confidence, bbox_json, freshness, freshness_confidence)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [scanId, productLabel, productId, confidence, JSON.stringify(bbox), freshness, freshnessConfidence],
     );
+    return result.rows[0];
   }
 }
