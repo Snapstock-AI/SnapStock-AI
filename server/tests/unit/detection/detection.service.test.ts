@@ -11,6 +11,7 @@ jest.mock("../../../src/modules/detection/detection.repository", () => ({
     updateScanStatus: jest.fn(),
     findProductByName: jest.fn(),
     createDetection: jest.fn(),
+    applyInventoryChange: jest.fn(),
   },
 }));
 

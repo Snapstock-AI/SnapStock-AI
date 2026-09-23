@@ -10,6 +10,7 @@ import type {
 
 import { DetectionRepository } from "./detection.repository";
 import { BusinessService } from "../business/business.service";
+import type { ScanMode } from "../../entities/Scan";
 
 const CORRECTABLE_FRESHNESS = ["Fresh", "Medium", "Spoiled"] as const;
 
@@ -81,6 +82,7 @@ export class DetectionService {
     businessId: string,
     shelfId: string,
     userId: string,
+    scanMode: ScanMode = "STOCK_IN",
   ): Promise<DetectionResult> {
     if (!file) {
       throw new Error("No image uploaded.");
@@ -104,11 +106,18 @@ export class DetectionService {
       userId,
     };
 
-    const scan = await DetectionRepository.createScan(
-      analyzeRequest.businessId,
-      analyzeRequest.shelfId,
-      analyzeRequest.userId,
-    );
+    const scan = scanMode === "STOCK_IN"
+      ? await DetectionRepository.createScan(
+          analyzeRequest.businessId,
+          analyzeRequest.shelfId,
+          analyzeRequest.userId,
+        )
+      : await DetectionRepository.createScan(
+          analyzeRequest.businessId,
+          analyzeRequest.shelfId,
+          analyzeRequest.userId,
+          scanMode,
+        );
 
     const scanId = scan.id;
 
@@ -179,6 +188,7 @@ export class DetectionService {
         });
       }
 
+      await DetectionRepository.applyInventoryChange(scanId, businessId, scanMode);
       await DetectionRepository.updateScanStatus(scanId, "COMPLETED");
 
       const result: DetectionResult = {
