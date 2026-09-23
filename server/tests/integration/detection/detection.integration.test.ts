@@ -6,6 +6,12 @@ jest.mock("../../../src/modules/detection/detection.service", () => ({
   DetectionService: { analyze: jest.fn() },
 }));
 
+jest.mock("../../../src/modules/business/business.service", () => ({
+  BusinessService: {
+    assertMember: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
 jest.mock("../../../src/shared/middleware/auth.middleware", () => ({
   authMiddleware: jest.fn((req, _res, next) => {
     req.user = { id: "user-123" };

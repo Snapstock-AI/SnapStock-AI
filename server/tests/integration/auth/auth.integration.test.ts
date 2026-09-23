@@ -31,6 +31,12 @@ jest.mock("../../../src/modules/auth/auth.repository", () => ({
   },
 }));
 
+jest.mock("../../../src/modules/business/business.service", () => ({
+  BusinessService: {
+    assertMember: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
 const mockedAuthService = AuthService as jest.Mocked<typeof AuthService>;
 const mockedDetectionService = DetectionService as jest.Mocked<
   typeof DetectionService
@@ -244,7 +250,8 @@ describe("Protected detection with real auth middleware", () => {
       expect.objectContaining({ originalname: "shelf.jpg" }),
       "business-123",
       "shelf-123",
-      "user-1"
+      "user-1",
+      "STOCK_IN",
     );
   });
 });
