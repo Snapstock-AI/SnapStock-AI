@@ -42,6 +42,7 @@ export type DetectionResult = {
     productId: string;
     product: string;
     detected: number;
+    currentQuantity: number;
     quantity: number;
   }[];
 };

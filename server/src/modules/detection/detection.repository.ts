@@ -82,8 +82,9 @@ export class DetectionRepository {
   static async applyInventoryChange(scanId: string, businessId: string, scanMode: ScanMode) {
     return AppDataSource.transaction(async (manager) => {
       const rows = await manager.query(
-        `SELECT p.id, p.name, p.quantity, p.low_stock_threshold
+        `SELECT p.id, p.name, p.quantity, b.low_stock_threshold
          FROM products p
+         INNER JOIN businesses b ON b.id = p.business_id AND b.deleted_at IS NULL
          WHERE p.business_id = $1 AND p.deleted_at IS NULL
            AND EXISTS (SELECT 1 FROM detections d WHERE d.scan_id = $2 AND d.product_id = p.id)
          FOR UPDATE`,
@@ -102,7 +103,7 @@ export class DetectionRepository {
         if (quantity < 0) {
           throw new Error(`Insufficient stock. Current quantity is ${product.quantity} but the scan detected ${count.detected} items for removal.`);
         }
-        return { product, detected: count.detected, quantity };
+        return { product, detected: count.detected, currentQuantity: product.quantity, quantity };
       });
 
       for (const change of changes) {
@@ -124,10 +125,11 @@ export class DetectionRepository {
           );
         }
       }
-      return changes.map(({ product, detected, quantity }) => ({
+      return changes.map(({ product, detected, currentQuantity, quantity }) => ({
         productId: product.id,
         product: product.name,
         detected,
+        currentQuantity,
         quantity,
       }));
     });
