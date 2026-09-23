@@ -2,6 +2,7 @@ import json
 import os
 import threading
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 import boto3
@@ -52,6 +53,23 @@ def _result_queue_url() -> str:
     return queue_url
 
 
+def _send_result(payload: dict[str, Any]) -> None:
+    get_sqs_client().send_message(
+        QueueUrl=_result_queue_url(),
+        MessageBody=json.dumps(payload),
+        MessageAttributes={
+            "eventType": {
+                "DataType": "String",
+                "StringValue": str(payload["eventType"]),
+            },
+            "scanId": {
+                "DataType": "String",
+                "StringValue": str(payload["scanId"]),
+            },
+        },
+    )
+
+
 def process_message(message: dict[str, Any], detection_model: Any, freshness_model: Any) -> dict[str, Any]:
     payload = message if isinstance(message, dict) else json.loads(message)
     event_type = payload.get("eventType")
@@ -92,24 +110,11 @@ def process_message(message: dict[str, Any], detection_model: Any, freshness_mod
         "bucket": bucket,
         "objectKey": object_key,
         "contentType": payload.get("contentType"),
-        "timestamp": payload.get("timestamp") or __import__("datetime").datetime.utcnow().isoformat() + "Z",
+        "timestamp": payload.get("timestamp") or datetime.now(timezone.utc).isoformat(),
         "data": analysis_payload,
     }
 
-    get_sqs_client().send_message(
-        QueueUrl=_result_queue_url(),
-        MessageBody=json.dumps(result_payload),
-        MessageAttributes={
-            "eventType": {
-                "DataType": "String",
-                "StringValue": "ANALYSIS_COMPLETED",
-            },
-            "scanId": {
-                "DataType": "String",
-                "StringValue": str(scan_id),
-            },
-        },
-    )
+    _send_result(result_payload)
 
     return result_payload
 
@@ -142,14 +147,51 @@ def consume_messages(
     for record in messages:
         receipt_handle = record.get("ReceiptHandle")
         body = record.get("Body")
+        payload: dict[str, Any] | None = None
 
         if not body:
             continue
 
         try:
-            result = process_message(json.loads(body), detection_model, freshness_model)
+            payload = json.loads(body)
+            result = process_message(payload, detection_model, freshness_model)
             processed.append(result)
-        finally:
+            logger.info("Analysis completed for scan %s", payload.get("scanId"))
+            if receipt_handle:
+                sqs_client.delete_message(
+                    QueueUrl=source_queue_url,
+                    ReceiptHandle=receipt_handle,
+                )
+        except Exception as error:
+            scan_id = payload.get("scanId") if payload else None
+            if not scan_id:
+                logger.exception("Analysis job is invalid and will be retried")
+                continue
+
+            failure_payload = {
+                "eventType": "ANALYSIS_FAILED",
+                "status": "FAILED",
+                "scanId": scan_id,
+                "businessId": payload.get("businessId"),
+                "shelfId": payload.get("shelfId"),
+                "userId": payload.get("userId"),
+                "bucket": payload.get("bucket"),
+                "objectKey": payload.get("objectKey"),
+                "contentType": payload.get("contentType"),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "errorMessage": str(error),
+            }
+
+            try:
+                _send_result(failure_payload)
+            except Exception:
+                logger.exception(
+                    "Could not publish failure result for scan %s; leaving job for retry",
+                    scan_id,
+                )
+                continue
+
+            logger.error("Analysis failed for scan %s: %s", scan_id, error)
             if receipt_handle:
                 sqs_client.delete_message(
                     QueueUrl=source_queue_url,

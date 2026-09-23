@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SnapStock analysis queues, DLQs, visibility timeouts, and alarms.
+
+Parameters:
+  AlertTopicArn:
+    Type: String
+    Default: ''
+    Description: Optional SNS topic ARN for operational alarms.
+
+Conditions:
+  HasAlertTopic: !Not [!Equals [!Ref AlertTopicArn, '']]
+
+Resources:
+  AnalysisWorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /snapstock/analysis-worker
+      RetentionInDays: 30
+
+  AnalysisJobsDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: snapstock-analysis-jobs-dlq
+      MessageRetentionPeriod: 1209600
+
+  AnalysisJobs:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: snapstock-analysis-jobs
+      VisibilityTimeout: 900
+      ReceiveMessageWaitTimeSeconds: 20
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AnalysisJobsDlq.Arn
+        maxReceiveCount: 3
+
+  AnalysisResultsDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: snapstock-analysis-results-dlq
+      MessageRetentionPeriod: 1209600
+
+  AnalysisResults:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: snapstock-analysis-results
+      VisibilityTimeout: 120
+      ReceiveMessageWaitTimeSeconds: 20
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AnalysisResultsDlq.Arn
+        maxReceiveCount: 3
+
+  JobsBacklogAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: snapstock-analysis-jobs-backlog
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt AnalysisJobs.QueueName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 5
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlertTopic, [!Ref AlertTopicArn], []]
+
+  JobsDlqAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: snapstock-analysis-jobs-dlq-not-empty
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt AnalysisJobsDlq.QueueName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlertTopic, [!Ref AlertTopicArn], []]
+
+  ResultsDlqAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: snapstock-analysis-results-dlq-not-empty
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt AnalysisResultsDlq.QueueName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlertTopic, [!Ref AlertTopicArn], []]
+
+Outputs:
+  JobsQueueUrl:
+    Value: !Ref AnalysisJobs
+  ResultsQueueUrl:
+    Value: !Ref AnalysisResults
+  JobsDlqUrl:
+    Value: !Ref AnalysisJobsDlq
+  ResultsDlqUrl:
+    Value: !Ref AnalysisResultsDlq
