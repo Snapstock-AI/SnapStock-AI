@@ -2,6 +2,7 @@ import { AppDataSource } from "../../config/data-source";
 import { Detection } from "../../entities/Detection";
 import { Product } from "../../entities/Product";
 import { Scan, ScanMode, ScanStatus } from "../../entities/Scan";
+import { calculateInventoryQuantity } from "./inventory.utils";
 
 export class DetectionRepository {
   static async findScanHistory(
@@ -99,10 +100,7 @@ export class DetectionRepository {
       const products = new Map(rows.map((row) => [row.id, row]));
       const changes = counts.map((count) => {
         const product = products.get(count.id)!;
-        const quantity = product.quantity + (scanMode === "STOCK_IN" ? count.detected : -count.detected);
-        if (quantity < 0) {
-          throw new Error(`Insufficient stock. Current quantity is ${product.quantity} but the scan detected ${count.detected} items for removal.`);
-        }
+        const quantity = calculateInventoryQuantity(product.quantity, count.detected, scanMode);
         return { product, detected: count.detected, currentQuantity: product.quantity, quantity };
       });
 
@@ -125,6 +123,12 @@ export class DetectionRepository {
           );
         }
       }
+      await manager.query(
+        `UPDATE scans
+         SET status = 'COMPLETED', error_message = NULL, completed_at = CURRENT_TIMESTAMP
+         WHERE id = $1`,
+        [scanId],
+      );
       return changes.map(({ product, detected, currentQuantity, quantity }) => ({
         productId: product.id,
         product: product.name,

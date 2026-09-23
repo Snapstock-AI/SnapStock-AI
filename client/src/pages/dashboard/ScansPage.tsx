@@ -437,13 +437,13 @@ export default function ScansPage() {
             )}
           </CardHeader>
           <CardContent className="space-y-6">
-            {result.inventoryChanges.length > 0 && (
+            {(result.inventoryChanges ?? []).length > 0 && (
               <div className="rounded-xl border border-border bg-muted p-5">
                 <p className="text-sm font-semibold">
                   {scanMode === "STOCK_OUT" ? "Stock removed" : "Stock added"}
                 </p>
                 <div className="mt-3 space-y-2 text-sm">
-                  {result.inventoryChanges.map((change) => (
+                  {(result.inventoryChanges ?? []).map((change) => (
                     <div key={change.productId} className="flex items-center justify-between gap-4">
                       <span className="capitalize">{change.product}</span>
                       <span>
