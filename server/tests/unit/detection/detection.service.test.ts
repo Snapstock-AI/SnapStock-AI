@@ -312,11 +312,10 @@ describe("DetectionService", () => {
       );
 
       
-      expect(
-        mockedRepository.updateScanStatus
-      ).toHaveBeenLastCalledWith(
+      expect(mockedRepository.applyInventoryChange).toHaveBeenCalledWith(
         "scan-123",
-        "COMPLETED"
+        "business-123",
+        "STOCK_IN",
       );
 
  

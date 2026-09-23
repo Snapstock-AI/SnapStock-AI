@@ -194,8 +194,6 @@ export class DetectionService {
         businessId,
         scanMode,
       );
-      await DetectionRepository.updateScanStatus(scanId, "COMPLETED");
-
       const result: DetectionResult = {
         scanId,
 
