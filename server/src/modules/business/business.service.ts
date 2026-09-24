@@ -64,6 +64,13 @@ export class BusinessService {
     }
   }
 
+  static async assertOwner(userId: string, businessId: string) {
+    const membership = await this.getMembership(userId, businessId);
+    if (!membership || membership.role !== "OWNER") {
+      throw new Error("Only the business owner can access this area.");
+    }
+  }
+
   static async updateForOwner(
     ownerId: string,
     businessId: string,

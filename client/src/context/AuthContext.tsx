@@ -24,6 +24,7 @@ type AuthContextValue = {
   register: (full_name: string, email: string, password: string) => Promise<string>
   createBusiness: (data: CreateBusinessInput) => Promise<Business>
   acceptInvitation: (token: string) => Promise<void>
+  changePassword: (password: string) => Promise<void>
   updateProfile: (full_name: string) => Promise<void>
   syncBusinessMembership: () => Promise<boolean>
   logout: () => Promise<void>
@@ -142,6 +143,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.data.user)
   }, [])
 
+  const changePassword = useCallback(async (password: string) => {
+    const result = await apiRequest<{ message: string }>('/auth/password', {
+      method: 'PATCH',
+      body: JSON.stringify({ password }),
+    }, true)
+
+    if (!result.data) throw new Error('Password update failed')
+
+    setUser((currentUser) => {
+      if (!currentUser) return currentUser
+      const nextUser = { ...currentUser, must_change_password: false }
+      setAuth(token || '', nextUser)
+      return nextUser
+    })
+  }, [token])
+
   const updateProfile = useCallback(async (full_name: string) => {
     const result = await apiRequest<AuthUser>('/auth/profile', {
       method: 'PATCH',
@@ -150,22 +167,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!result.data) throw new Error('Profile update failed')
 
-    const nextUser = { ...result.data, businessId: user?.businessId || null }
+    const nextUser = { ...result.data, businessId: user?.businessId || null, businessRole: user?.businessRole || null }
     setAuth(token || '', nextUser)
     setUser(nextUser)
-  }, [token, user?.businessId])
+  }, [token, user?.businessId, user?.businessRole])
 
   const syncBusinessMembership = useCallback(async () => {
     if (!user || !token) return false
 
-    const result = await apiRequest<Business[]>('/businesses/mine', {}, true)
-    const businessId = result.data?.[0]?.id || null
+    const result = await apiRequest<{ id: string; role: 'OWNER' | 'EMPLOYEE' }[]>('/businesses/mine', {}, true)
+    const membership = result.data?.[0] ?? null
+    const businessId = membership?.id || null
+    const businessRole = membership?.role || null
 
-    if (businessId === user.businessId) {
+    if (businessId === user.businessId && businessRole === user.businessRole) {
       return Boolean(businessId)
     }
 
-    const nextUser = { ...user, businessId }
+    const nextUser = { ...user, businessId, businessRole }
     setAuth(token, nextUser)
     setUser(nextUser)
     return Boolean(businessId)
@@ -192,11 +211,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       createBusiness,
       acceptInvitation,
+      changePassword,
       updateProfile,
       syncBusinessMembership,
       logout,
     }),
-    [user, token, login, loginWithGoogle, register, createBusiness, acceptInvitation, updateProfile, syncBusinessMembership, logout]
+    [user, token, login, loginWithGoogle, register, createBusiness, acceptInvitation, changePassword, updateProfile, syncBusinessMembership, logout]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
