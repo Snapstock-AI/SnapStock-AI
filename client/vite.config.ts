@@ -12,6 +12,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
     globals: true,
+    // React's production build has no act(); force the dev build even if the shell exports NODE_ENV=production.
+    env: { NODE_ENV: 'test' },
     environment: 'jsdom',
     setupFiles: './tests/setup.ts',
     include: ['tests/**/*.test.{ts,tsx}'],

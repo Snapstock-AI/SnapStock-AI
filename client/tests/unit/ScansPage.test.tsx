@@ -6,15 +6,23 @@ import {
   waitFor,
 } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { MemoryRouter } from "react-router";
 
 import ScansPage from "../../src/pages/dashboard/ScansPage";
-import { analyzeImage } from "../../src/lib/detection";
+import { analyzeImage, getScanHistory } from "../../src/lib/detection";
+import { getShelves } from "../../src/lib/shelf";
 
 
-vi.mock("../../src/lib/detection", () => ({
+vi.mock("../../src/lib/detection", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/lib/detection")>()),
   analyzeImage: vi.fn(),
+  getScanHistory: vi.fn().mockResolvedValue([]),
 }));
 
+
+vi.mock("../../src/lib/shelf", () => ({
+  getShelves: vi.fn(),
+}));
 
 vi.mock("../../src/context/AuthContext", () => ({
   useAuth: () => ({
@@ -65,6 +73,12 @@ const mockShelf = {
   category: "Fruit",
 };
 
+const mockShelves = [
+  mockShelf,
+  { id: "550e8400-e29b-41d4-a716-446655440002", name: "Shelf B - Tomatoes", category: "Vegetable" },
+  { id: "550e8400-e29b-41d4-a716-446655440003", name: "Shelf C - Apples", category: "Fruit" },
+];
+
 const mockResult = {
   scanId: "scan-123",
 
@@ -114,13 +128,25 @@ const mockResult = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(getShelves).mockResolvedValue(mockShelves as never);
+  vi.mocked(getScanHistory).mockResolvedValue([] as never);
 });
+
+// Shelves are fetched asynchronously, so wait until they are selectable.
+const renderPage = async () => {
+  render(
+    <MemoryRouter>
+      <ScansPage />
+    </MemoryRouter>,
+  );
+  await screen.findByRole("option", { name: /Shelf A - Bananas/i });
+};
 
 describe("ScansPage", () => {
 
 
-  it("should render the shelf scanning page", () => {
-    render(<ScansPage />);
+  it("should render the shelf scanning page", async () => {
+    await renderPage();
 
     expect(
       screen.getByRole("heading", {
@@ -149,8 +175,8 @@ describe("ScansPage", () => {
 
 
 
-  it("should display available shelves", () => {
-    render(<ScansPage />);
+  it("should display available shelves", async () => {
+    await renderPage();
 
     expect(
       screen.getByRole("option", {
@@ -171,8 +197,8 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("should allow the user to select a shelf", () => {
-    render(<ScansPage />);
+  it("should allow the user to select a shelf", async () => {
+    await renderPage();
 
     const select = screen.getByRole("combobox");
 
@@ -187,8 +213,8 @@ describe("ScansPage", () => {
 
 
 
-  it("should show an error when opening the camera without selecting a shelf", () => {
-    render(<ScansPage />);
+  it("should show an error when opening the camera without selecting a shelf", async () => {
+    await renderPage();
 
     const cameraButton = screen.getByRole("button", {
       name: /open camera/i,
@@ -205,8 +231,8 @@ describe("ScansPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("should open the camera after selecting a shelf", () => {
-    render(<ScansPage />);
+  it("should open the camera after selecting a shelf", async () => {
+    await renderPage();
 
     const select = screen.getByRole("combobox");
 
@@ -231,8 +257,8 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("should close the camera when close is clicked", () => {
-    render(<ScansPage />);
+  it("should close the camera when close is clicked", async () => {
+    await renderPage();
 
     const select = screen.getByRole("combobox");
 
@@ -265,8 +291,8 @@ describe("ScansPage", () => {
 
  
 
-  it("should show the preview after capturing an image", () => {
-    render(<ScansPage />);
+  it("should show the preview after capturing an image", async () => {
+    await renderPage();
 
     const select = screen.getByRole("combobox");
 
@@ -307,8 +333,8 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("should reopen the camera when retake is clicked", () => {
-    render(<ScansPage />);
+  it("should reopen the camera when retake is clicked", async () => {
+    await renderPage();
 
     const select = screen.getByRole("combobox");
 
@@ -344,7 +370,7 @@ describe("ScansPage", () => {
 
 
   it("should show the preview after uploading an image", async () => {
-    render(<ScansPage />);
+    await renderPage();
 
     const select = screen.getByRole("combobox");
 
@@ -386,7 +412,7 @@ describe("ScansPage", () => {
       mockResult
     );
 
-    render(<ScansPage />);
+    await renderPage();
 
     const select = screen.getByRole("combobox");
 
@@ -444,7 +470,7 @@ describe("ScansPage", () => {
       mockResult
     );
 
-    render(<ScansPage />);
+    await renderPage();
 
     const select = screen.getByRole("combobox");
 
@@ -498,9 +524,10 @@ describe("ScansPage", () => {
       screen.getAllByText("Total")
     ).toHaveLength(2);
 
+    // 2 product summary cards + 1 editable per-detection freshness selector (FR-FRESH-003)
     expect(
       screen.getAllByText("Fresh")
-    ).toHaveLength(2);
+    ).toHaveLength(3);
 
     expect(
       screen.getAllByText("Rotten")
@@ -513,7 +540,7 @@ describe("ScansPage", () => {
       new Error("AI service unavailable")
     );
 
-    render(<ScansPage />);
+    await renderPage();
 
     const select = screen.getByRole("combobox");
 
