@@ -27,16 +27,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/context/AuthContext'
-import { apiRequest } from '@/lib/api'
 import { getAlertsCount } from '@/lib/dashboard'
 import { usePollingData } from '@/hooks/usePollingData'
 import PageTransition from '@/components/dashboard/PageTransition'
 import { cn } from '@/lib/utils'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
-type BusinessMembership = {
-  id: string
-  role: 'OWNER' | 'EMPLOYEE'
-}
 
 const applications = [
   { to: '/dashboard/inventory', label: 'Inventory', icon: Package },
@@ -97,9 +102,13 @@ function SidebarLink({
 export default function DashboardLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { logout, user } = useAuth()
-  const [isOwner, setIsOwner] = useState(false)
+  const { logout, user, changePassword } = useAuth()
+  const isOwner = user?.businessRole === 'OWNER'
   const [query, setQuery] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [savingPassword, setSavingPassword] = useState(false)
   const businessId = user?.businessId
 
   const loadAlertCount = useCallback(async () => {
@@ -115,30 +124,10 @@ export default function DashboardLayout() {
   )
 
   useEffect(() => {
-    if (!user?.businessId) {
-      setIsOwner(false)
-      return
+    if (isOwner === false && location.pathname === '/dashboard/analytics') {
+      navigate('/dashboard')
     }
-
-    let active = true
-    apiRequest<BusinessMembership[]>('/businesses/mine', {}, true)
-      .then((response) => {
-        if (active) {
-          setIsOwner(
-            response.data?.some(
-              (business) => business.id === user.businessId && business.role === 'OWNER',
-            ) || false,
-          )
-        }
-      })
-      .catch(() => {
-        if (active) setIsOwner(false)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [user?.businessId])
+  }, [isOwner, location.pathname, navigate])
 
   async function handleLogout() {
     await logout()
@@ -258,7 +247,7 @@ export default function DashboardLayout() {
 
           <p className="mb-2 px-[30px] text-xs font-medium uppercase text-fd-cap">Applications</p>
           <ul>
-            {applications.map((link) => (
+            {applications.filter((link) => !(isOwner && link.to === '/dashboard/scans')).map((link) => (
               <SidebarLink key={link.to} {...link} />
             ))}
             {isOwner && <SidebarLink to="/dashboard/invitations" label="Team" icon={Users} />}
@@ -268,7 +257,7 @@ export default function DashboardLayout() {
 
           <p className="mb-2 px-[30px] text-xs font-medium uppercase text-fd-cap">Components</p>
           <ul>
-            {components.map((link) => (
+            {components.filter((link) => isOwner || link.to !== '/dashboard/analytics').map((link) => (
               <SidebarLink key={link.to} {...link} />
             ))}
           </ul>
@@ -317,7 +306,7 @@ export default function DashboardLayout() {
           [
             { to: '/dashboard', label: 'Home', icon: LayoutDashboard, end: true },
             { to: '/dashboard/inventory', label: 'Inventory', icon: Package, end: false },
-            { to: '/dashboard/scans', label: 'Scans', icon: Camera, end: false },
+            ...(!isOwner ? [{ to: '/dashboard/scans', label: 'Scans', icon: Camera, end: false as const }] : []),
             { to: '/dashboard/alerts', label: 'Alerts', icon: AlertTriangle, end: false },
           ] as const
         ).map(({ to, label, icon: Icon, end }) => (
@@ -338,6 +327,55 @@ export default function DashboardLayout() {
           </NavLink>
         ))}
       </nav>
+
+      <Dialog open={Boolean(user?.must_change_password)}>
+        <DialogContent onEscapeKeyDown={(event) => event.preventDefault()} onPointerDownOutside={(event) => event.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Create a new password</DialogTitle>
+            <DialogDescription>
+              Your account was created with a temporary password. Choose a new password to continue.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={async (event) => {
+              event.preventDefault()
+              setPasswordError('')
+              if (newPassword.length < 8) {
+                setPasswordError('Password must be at least 8 characters long.')
+                return
+              }
+              if (newPassword !== confirmPassword) {
+                setPasswordError('Passwords do not match.')
+                return
+              }
+              setSavingPassword(true)
+              try {
+                await changePassword(newPassword)
+                setNewPassword('')
+                setConfirmPassword('')
+              } catch (error: unknown) {
+                setPasswordError(error instanceof Error ? error.message : 'Unable to update password.')
+              } finally {
+                setSavingPassword(false)
+              }
+            }}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New password</Label>
+              <Input id="new-password" type="password" minLength={8} required value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm new password</Label>
+              <Input id="confirm-password" type="password" minLength={8} required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+            </div>
+            {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+            <DialogFooter>
+              <Button type="submit" disabled={savingPassword}>{savingPassword ? 'Saving...' : 'Save new password'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

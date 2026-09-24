@@ -14,10 +14,10 @@ export type DetectionResult = {
   total_count: number;
 
   counts: Record<string, {
-      fresh: number;
-      rotten: number;
-      total: number;
-    }>;
+    fresh: number;
+    rotten: number;
+    total: number;
+  }>;
 
   detections: {
     id?: string;
@@ -173,11 +173,60 @@ export function countHistoryItems(items: ScanHistoryItem["items"]) {
   }, {});
 }
 
-export function formatHistoryDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+export function formatHistoryDate(value: string | Date | null | undefined): string {
+  if (!value) return "";
+
+  let date: Date;
+  if (value instanceof Date) {
+    date = value;
+  } else {
+    const str = String(value).trim();
+    // Normalize "YYYY-MM-DD HH:mm:ss..." to ISO format for consistent browser parsing
+    const isoStr = str.includes("T") ? str : str.replace(" ", "T");
+    date = new Date(isoStr);
+  }
+
+  if (isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  const now = new Date();
+
+  // Local 12-hour time format: e.g. "9:14 AM", "3:25 PM"
+  const timeStr = date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  if (isToday) {
+    return `Today, ${timeStr}`;
+  }
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  if (isYesterday) {
+    return `Yesterday, ${timeStr}`;
+  }
+
+  const isThisYear = date.getFullYear() === now.getFullYear();
+  const dateStr = date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    ...(isThisYear ? {} : { year: "numeric" }),
+  });
+
+  return `${dateStr}, ${timeStr}`;
 }
 
 export async function getScanHistory(
