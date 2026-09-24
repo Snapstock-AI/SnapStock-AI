@@ -5,6 +5,10 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "jest",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --reporters=default --reporters=jest-junit",
     "test:watch": "jest --watch",
     "predev": "ts-node --project tsconfig.scripts.json scripts/check-migrations.ts",
     "dev": "nodemon --exec ts-node src/index.ts",
@@ -49,6 +53,7 @@
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.1",
     "jest": "^30.4.2",
+    "jest-junit": "^17.0.0",
     "nodemon": "^3.1.14",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.12",
