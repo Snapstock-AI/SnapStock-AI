@@ -72,6 +72,17 @@ async def analyze(
         )
 
 
+    state = request.app.state
+
+    if not (
+        hasattr(state, "detection_model")
+        and hasattr(state, "freshness_model")
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="AI models are not loaded yet. Try again shortly.",
+        )
+
     try:
         return await run_in_threadpool(
             analyze_image,
