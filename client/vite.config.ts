@@ -17,6 +17,15 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './tests/setup.ts',
     include: ['tests/**/*.test.{ts,tsx}'],
+    reporters: ['default', 'junit'],
+    outputFile: { junit: './reports/junit.xml' },
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/components/ui/**'],
+      reportsDirectory: './reports/coverage',
+      reporter: ['text-summary', 'json-summary', 'lcov'],
+    },
   },
   resolve: {
     alias: {
