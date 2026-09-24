@@ -160,11 +160,11 @@ export default function ScansPage() {
   const analyzeSelectedImage = async (
   file: File, 
   shelf: Shelf | null
-) => {
+): Promise<boolean> => {
 
   if (!shelf) {
     showError("Please select a shelf first.");
-    return;
+    return false;
   }
 
   try {
@@ -173,7 +173,7 @@ export default function ScansPage() {
 
     if (!token) {
       showError("You are not authenticated.");
-      return;
+      return false;
     }
 
     const data = await analyzeImage(
@@ -185,11 +185,13 @@ export default function ScansPage() {
     );
 
     setResult(data);
+    return true;
   } catch (error: unknown) {
 
     showError(
       error instanceof Error ? error.message : "Image analysis failed."
     );  
+    return false;
 
   } finally {
     setLoading(false);
@@ -386,9 +388,10 @@ export default function ScansPage() {
                   setResult(null);
                   setError("");
 
-                  await analyzeSelectedImage(previewImage, selectedShelf);
-
-                  setPreviewImage(null);
+                  // FR-SCAN-004: keep the preview after a failure so Analyze acts as "retry".
+                  if (await analyzeSelectedImage(previewImage, selectedShelf)) {
+                    setPreviewImage(null);
+                  }
                 }}
               >
                 Analyze
