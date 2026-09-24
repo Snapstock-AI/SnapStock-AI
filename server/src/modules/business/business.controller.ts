@@ -1,3 +1,4 @@
+import { errorMessage, errorStatus } from "../../shared/utils/errors";
 import { Response } from "express";
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
 import { AuthService } from "../auth/auth.service";
@@ -15,8 +16,8 @@ export class BusinessController {
       );
       return res.status(200).json({ success: true, data: business });
     } catch (error: any) {
-      const message = error?.issues?.[0]?.message || error.message;
-      return res.status(400).json({ success: false, message });
+      const message = error?.issues?.[0]?.message || errorMessage(error);
+      return res.status(errorStatus(error)).json({ success: false, message });
     }
   }
 
@@ -28,7 +29,7 @@ export class BusinessController {
       );
       return res.status(200).json({ success: true });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -41,7 +42,7 @@ export class BusinessController {
 
       return res.status(200).json({ success: true, data: employees });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -55,7 +56,7 @@ export class BusinessController {
 
       return res.status(200).json({ success: true });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -64,7 +65,7 @@ export class BusinessController {
       const businesses = await BusinessService.listForUser(req.user!.userId);
       return res.status(200).json({ success: true, data: businesses });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -85,8 +86,8 @@ export class BusinessController {
         },
       });
     } catch (error: any) {
-      const message = error?.issues?.[0]?.message || error.message;
-      return res.status(400).json({ success: false, message });
+      const message = error?.issues?.[0]?.message || errorMessage(error);
+      return res.status(errorStatus(error)).json({ success: false, message });
     }
   }
 }

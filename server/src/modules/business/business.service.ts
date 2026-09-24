@@ -1,3 +1,4 @@
+import { ForbiddenError } from "../../shared/utils/errors";
 import { BusinessRepository } from "./business.repository";
 import { CreateBusinessDTO, UpdateBusinessDTO } from "./business.types";
 
@@ -60,7 +61,7 @@ export class BusinessService {
 
   static async assertMember(userId: string, businessId: string) {
     if (!(await BusinessRepository.isMember(userId, businessId))) {
-      throw new Error("You do not belong to this business");
+      throw new ForbiddenError("You do not belong to this business");
     }
   }
 
@@ -71,7 +72,7 @@ export class BusinessService {
   ) {
     const membership = await this.getMembership(ownerId, businessId);
     if (!membership || membership.role !== "OWNER") {
-      throw new Error("Only the business owner can update business details.");
+      throw new ForbiddenError("Only the business owner can update business details.");
     }
 
     const business = await BusinessRepository.findById(businessId);
@@ -94,7 +95,7 @@ export class BusinessService {
   static async deleteForOwner(ownerId: string, businessId: string) {
     const membership = await this.getMembership(ownerId, businessId);
     if (!membership || membership.role !== "OWNER") {
-      throw new Error("Only the business owner can delete the business.");
+      throw new ForbiddenError("Only the business owner can delete the business.");
     }
 
     const result = await BusinessRepository.delete(businessId);
@@ -109,7 +110,7 @@ export class BusinessService {
     const membership = await this.getMembership(ownerId, businessId);
 
     if (!membership || membership.role !== "OWNER") {
-      throw new Error("Only the business owner can view employees.");
+      throw new ForbiddenError("Only the business owner can view employees.");
     }
 
     return BusinessRepository.findEmployeesByBusinessId(businessId);
@@ -123,7 +124,7 @@ export class BusinessService {
     const membership = await this.getMembership(ownerId, businessId);
 
     if (!membership || membership.role !== "OWNER") {
-      throw new Error("Only the business owner can remove employees.");
+      throw new ForbiddenError("Only the business owner can remove employees.");
     }
 
     const employee = await BusinessRepository.findMembership(

@@ -1,3 +1,4 @@
+import { ForbiddenError } from "../../shared/utils/errors";
 import axios from "axios";
 import FormData from "form-data";
 
@@ -85,7 +86,7 @@ export class DetectionService {
 
     const isMember = await BusinessService.isMember(userId, businessId);
     if (!isMember) {
-      throw new Error("You do not belong to this business.");
+      throw new ForbiddenError("You do not belong to this business.");
     }
 
     return DetectionRepository.correctFreshness(

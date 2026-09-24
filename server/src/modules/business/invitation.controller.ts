@@ -1,3 +1,4 @@
+import { errorMessage, errorStatus } from "../../shared/utils/errors";
 import { Response } from "express";
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
 import { InvitationService } from "./invitation.service";
@@ -18,9 +19,9 @@ export class InvitationController {
         message: "Invitation accepted successfully.",
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message || "Unable to accept invitation.",
+        message: errorMessage(error, "Unable to accept invitation."),
       });
     }
   }
@@ -34,9 +35,9 @@ export class InvitationController {
 
       return res.status(200).json({ success: true, data: invitations });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message || "Unable to load invitations.",
+        message: errorMessage(error, "Unable to load invitations."),
       });
     }
   }
@@ -64,9 +65,9 @@ export class InvitationController {
         message: "Invitation sent successfully.",
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message || "Unable to send invitation.",
+        message: errorMessage(error, "Unable to send invitation."),
       });
     }
   }

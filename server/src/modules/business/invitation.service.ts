@@ -1,3 +1,4 @@
+import { ForbiddenError } from "../../shared/utils/errors";
 import crypto from "crypto";
 import { AppDataSource } from "../../config/data-source";
 import { EmployeeInvitation } from "../../entities/EmployeeInvitation";
@@ -86,7 +87,7 @@ export class InvitationService {
     );
 
     if (!membership || membership.role !== "OWNER") {
-      throw new Error("Only the business owner can view invitations.");
+      throw new ForbiddenError("Only the business owner can view invitations.");
     }
 
     const invitations = await AppDataSource.getRepository(
@@ -114,7 +115,7 @@ export class InvitationService {
     );
 
     if (!membership || membership.role !== "OWNER") {
-      throw new Error("Only the business owner can invite employees.");
+      throw new ForbiddenError("Only the business owner can invite employees.");
     }
 
     const normalizedEmail = email.trim().toLowerCase();

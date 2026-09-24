@@ -1,3 +1,4 @@
+import { errorMessage, errorStatus } from "../../shared/utils/errors";
 import { Response } from "express";
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
 import { ShelfService } from "./shelf.service";
@@ -21,7 +22,7 @@ export class ShelfController {
 
       return res.status(200).json({ success: true, data: shelves });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -45,7 +46,7 @@ export class ShelfController {
 
       return res.status(201).json({ success: true, data: shelf });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -69,7 +70,7 @@ export class ShelfController {
 
       return res.status(200).json({ success: true, data: shelf });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -78,7 +79,7 @@ export class ShelfController {
       await ShelfService.remove(req.user!.userId, String(req.params.id));
       return res.status(200).json({ success: true });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 }

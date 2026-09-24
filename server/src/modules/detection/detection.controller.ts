@@ -1,3 +1,4 @@
+import { errorMessage, errorStatus } from "../../shared/utils/errors";
 import { Response } from "express";
 import { DetectionService } from "./detection.service";
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
@@ -41,7 +42,7 @@ export class DetectionController {
 
       return res.status(200).json({ success: true, data: scans });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -71,9 +72,9 @@ export class DetectionController {
         },
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message || "Unable to correct freshness.",
+        message: errorMessage(error, "Unable to correct freshness."),
       });
     }
   }
@@ -123,13 +124,13 @@ export class DetectionController {
         return res.status(503).json({
           success: false,
           code: "AI_UNAVAILABLE",
-          message: error.message,
+          message: errorMessage(error),
         });
       }
 
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message,
+        message: errorMessage(error),
       });
     }
   }
