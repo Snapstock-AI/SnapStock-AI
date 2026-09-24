@@ -15,19 +15,6 @@ export class AuthController {
     }
   }
 
-  static async changePassword(req: AuthRequest, res: Response) {
-    try {
-      const password = String(req.body.password || "");
-      const result = await AuthService.changePassword(
-        req.user!.userId,
-        password,
-      );
-      return res.status(200).json({ success: true, data: result });
-    } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
-    }
-  }
-
   //REGISTER
   static async register(req: Request, res: Response) {
     try {

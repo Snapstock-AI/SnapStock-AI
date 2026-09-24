@@ -1,8 +1,6 @@
-import { IsNull } from "typeorm";
 import { AppDataSource } from "../../config/data-source";
 import { Business } from "../../entities/Business";
 import { BusinessUser } from "../../entities/BusinessUser";
-import { Session } from "../../entities/Session";
 import { User } from "../../entities/User";
 
 export class BusinessRepository {
@@ -25,21 +23,6 @@ export class BusinessRepository {
     });
 
     return membership?.business_id ?? null;
-  }
-
-  static async findBusinessMembershipByUserId(
-    userId: string,
-  ): Promise<{ businessId: string; role: "OWNER" | "EMPLOYEE" } | null> {
-    const membership = await AppDataSource.getRepository(BusinessUser).findOne({
-      where: { user_id: userId },
-      select: { business_id: true, role: true },
-    });
-
-    if (!membership) return null;
-    return {
-      businessId: membership.business_id,
-      role: membership.role as "OWNER" | "EMPLOYEE",
-    };
   }
 
   static async findByUserId(userId: string) {
@@ -109,20 +92,10 @@ export class BusinessRepository {
   }
 
   static async removeEmployee(userId: string, businessId: string) {
-    return AppDataSource.transaction(async (manager) => {
-      await manager.delete(BusinessUser, {
-        user_id: userId,
-        business_id: businessId,
-        role: "EMPLOYEE",
-      });
-
-      await manager.update(
-        Session,
-        { user_id: userId, revoked_at: IsNull() },
-        { revoked_at: new Date() },
-      );
-
-      await manager.softDelete(User, { id: userId });
+    return AppDataSource.getRepository(BusinessUser).delete({
+      user_id: userId,
+      business_id: businessId,
+      role: "EMPLOYEE",
     });
   }
 }

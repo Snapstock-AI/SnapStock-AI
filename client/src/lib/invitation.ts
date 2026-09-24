@@ -53,18 +53,13 @@ export async function listEmployeeInvitations(
 
 export async function sendEmployeeInvitation(
   businessId: string,
-  details: {
-    email: string;
-    full_name: string;
-    nic?: string;
-    date_of_birth?: string;
-  },
+  email: string,
 ): Promise<Invitation> {
   const response = await apiRequest<Invitation>(
     `/businesses/${businessId}/invitations`,
     {
       method: "POST",
-      body: JSON.stringify(details),
+      body: JSON.stringify({ email }),
     },
     true,
   );

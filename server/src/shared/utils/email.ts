@@ -112,7 +112,8 @@ const clientUrl = () =>
   process.env.VITE_API_URL?.replace(":5000", ":5173") ||
   "http://localhost:5173";
 
-const clientPath = () => process.env.CLIENT_BASE_PATH ?? "";
+const clientPath = () =>
+  process.env.CLIENT_BASE_PATH ?? "";
 
 const emailTemplate = (
   eyebrow: string,
@@ -203,22 +204,21 @@ export const sendEmployeeInvitationEmail = async (
   email: string,
   token: string,
   businessName: string,
-  temporaryPassword: string,
 ) => {
-  const link = `${clientUrl().replace(/\/$/, "")}${clientPath()}/verify-email?token=${token}`;
+  const link = `${clientUrl().replace(/\/$/, "")}${clientPath()}/accept-invitation?token=${token}`;
 
   await sendEmail("employee-invitation", email, {
     from: `"SnapStock AI" <${process.env.SMTP_USER}>`,
     to: email,
     subject: `You have been invited to join ${businessName} on SnapStock AI`,
-    text: `You have been invited to join ${businessName} on SnapStock AI.\n\nPlease verify your email to activate your account and join the team:\n${link}\n\nSign-in credentials (use after verification):\nEmail: ${email}\nTemporary password: ${temporaryPassword}\n\nFor security, please change your temporary password immediately after signing in.`,
+    text: `You have been invited to join ${businessName} as an employee on SnapStock AI. Accept the invitation here: ${link}. This link expires in 7 days.`,
     html: emailTemplate(
       "Team invitation",
       `Join ${businessName} on SnapStock AI`,
-      `You have been invited to join <strong>${businessName}</strong> on SnapStock AI.<br /><br />Please verify your email address to activate your employee account and join the team workspace.<br /><br /><strong>Sign-in credentials (use after email verification):</strong><br />Email: <strong>${email}</strong><br />Temporary password: <strong>${temporaryPassword}</strong>`,
-      "Verify Email & Join Team",
+      `You have been invited to join ${businessName} as an employee. Accept the invitation to access the business workspace and help manage inventory.`,
+      "Accept invitation",
       link,
-      "For your security, verify your email first and change this temporary password immediately after signing in.",
+      "This invitation expires in 7 days. If you were not expecting it, you can safely ignore this email.",
     ),
   });
 };

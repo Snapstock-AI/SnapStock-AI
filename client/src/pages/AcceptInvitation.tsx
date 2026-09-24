@@ -15,11 +15,6 @@ export default function AcceptInvitation() {
   const hasSubmitted = useRef(false)
 
   useEffect(() => {
-    if (!isAuthenticated && token) {
-      navigate(`/verify-email?token=${encodeURIComponent(token)}`, { replace: true })
-      return
-    }
-
     if (!isAuthenticated || !token || hasSubmitted.current) return
 
     hasSubmitted.current = true
@@ -30,7 +25,7 @@ export default function AcceptInvitation() {
         setError(acceptError instanceof Error ? acceptError.message : 'Unable to accept invitation.')
       })
       .finally(() => setLoading(false))
-  }, [acceptInvitation, isAuthenticated, navigate, token])
+  }, [acceptInvitation, isAuthenticated, token])
 
   if (!isAuthenticated) {
     return (

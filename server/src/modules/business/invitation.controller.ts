@@ -43,7 +43,7 @@ export class InvitationController {
 
   static async send(req: AuthRequest, res: Response) {
     try {
-      const { email, full_name, nic, date_of_birth } = req.body;
+      const { email } = req.body;
 
       if (typeof email !== "string" || !email.trim()) {
         return res.status(400).json({
@@ -52,16 +52,10 @@ export class InvitationController {
         });
       }
 
-      if (typeof full_name !== "string" || !full_name.trim()) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Employee name is required." });
-      }
-
       const invitation = await InvitationService.send(
         req.user!.userId,
         String(req.params.businessId),
-        { email, full_name, nic, date_of_birth },
+        email,
       );
 
       return res.status(201).json({
