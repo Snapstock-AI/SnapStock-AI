@@ -200,13 +200,13 @@ export class DashboardService {
           ) ?? 0;
         return {
           product: r.product_label,
-          stock: r.total,
+          stock: r.quantity,
           fresh: r.fresh_count,
           ripe: r.medium_count,
           spoiled: r.spoiled_count,
           freshnessPct,
           status,
-          lowStock: r.total < lowStock,
+          lowStock: r.quantity < lowStock,
           lastSeen: r.last_seen,
         };
       }),
@@ -249,6 +249,18 @@ export class DashboardService {
 
     const alerts: Alert[] = [];
 
+    const activeLowStockAlerts = await DashboardRepository.activeLowStockAlerts(businessId);
+    for (const alert of activeLowStockAlerts) {
+      alerts.push({
+        id: String(alert.id),
+        severity: "warning",
+        title: `Low stock: ${alert.product_name}`,
+        message: String(alert.message),
+        createdAt: new Date(alert.created_at).toISOString(),
+        productLabel: String(alert.product_name),
+      });
+    }
+
     for (const row of byShelfProduct) {
       if (row.spoiled_count > 0) {
         alerts.push({
@@ -280,17 +292,6 @@ export class DashboardService {
         });
       }
 
-      if (row.total > 0 && row.total < lowStock) {
-        alerts.push({
-          id: `stock:${row.shelf_id}:${row.product_label}`,
-          severity: "warning",
-          title: `Low stock: ${row.product_label}`,
-          message: `Only ${row.total} detection(s) on ${row.shelf_name} (threshold ${lowStock}).`,
-          createdAt: new Date(row.last_seen).toISOString(),
-          shelfName: row.shelf_name,
-          productLabel: row.product_label,
-        });
-      }
     }
 
     const staleCutoff = hoursAgo(48);

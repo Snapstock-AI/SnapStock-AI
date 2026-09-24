@@ -12,6 +12,7 @@ import { Shelf } from "../entities/Shelf";
 import { Scan } from "../entities/Scan";
 import { Detection } from "../entities/Detection";
 import { EmployeeInvitation } from "../entities/EmployeeInvitation";
+import { Alert } from "../entities/Alert";
 
 dotenv.config({
   path: path.resolve(__dirname, "../../../.env"),
@@ -34,5 +35,6 @@ export const AppDataSource = new DataSource({
     Scan,
     Detection,
     EmployeeInvitation,
+    Alert,
   ],
 });
