@@ -131,6 +131,7 @@ export class DashboardRepository {
     const rows = await AppDataSource.getRepository(Detection)
       .createQueryBuilder("detection")
       .innerJoin(Scan, "scan", "scan.id = detection.scan_id")
+      .leftJoin("products", "product", "product.id = detection.product_id")
       .select([
         "detection.product_label AS product_label",
         "MAX(product.quantity)::int AS quantity",
