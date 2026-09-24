@@ -1,0 +1,23 @@
+{
+  "name": "snapstock-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Browser end-to-end, accessibility and degraded-mode tests for SnapStock-AI",
+  "scripts": {
+    "prepare:db": "node ../server/node_modules/ts-node/dist/bin.js --transpile-only --project ../server/tsconfig.json support/prepare-db.ts",
+    "test": "npm run prepare:db && playwright test",
+    "test:e2e": "npm run prepare:db && playwright test --project=desktop --grep-invert @a11y",
+    "test:a11y": "npm run prepare:db && playwright test --grep @a11y",
+    "install:browsers": "playwright install chromium",
+    "report": "playwright show-report reports/html"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.2",
+    "@types/pg": "^8.23.1",
+    "@types/smtp-server": "^3.5.13",
+    "pg": "^8.23.0",
+    "smtp-server": "^3.19.13"
+  }
+}
