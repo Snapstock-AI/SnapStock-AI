@@ -12,3 +12,6 @@ coverage.xml
 htmlcov/
 __pycache__/
 temp/evaluation/reports/
+
+# Generated Grad-CAM heatmaps
+temp/
