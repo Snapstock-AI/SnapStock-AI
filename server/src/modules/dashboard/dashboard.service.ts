@@ -11,19 +11,13 @@ function hoursAgo(hours: number) {
   return new Date(Date.now() - hours * 60 * 60 * 1000);
 }
 
-function freshnessScore(
-  fresh: number,
-  medium: number,
-  spoiled: number,
-  total: number,
-) {
+function freshnessScore(fresh: number, medium: number, spoiled: number, total: number) {
   if (total <= 0) return null;
   return Math.round((fresh * 100 + medium * 50 + spoiled * 0) / total);
 }
 
 function dominantStatus(fresh: number, medium: number, spoiled: number) {
-  if (spoiled >= fresh && spoiled >= medium && spoiled > 0)
-    return "Spoiled" as const;
+  if (spoiled >= fresh && spoiled >= medium && spoiled > 0) return "Spoiled" as const;
   if (medium >= fresh && medium > 0) return "Ripe" as const;
   if (fresh > 0) return "Fresh" as const;
   return "Unknown" as const;
@@ -106,8 +100,7 @@ export class DashboardService {
       avgShelfScore:
         shelfHealth.length > 0
           ? Math.round(
-              shelfHealth.reduce((sum, s) => sum + s.pct, 0) /
-                shelfHealth.length,
+              shelfHealth.reduce((sum, s) => sum + s.pct, 0) / shelfHealth.length,
             )
           : null,
       topAlert: topAlert
@@ -128,7 +121,7 @@ export class DashboardService {
   }
 
   static async getAnalytics(userId: string, businessId: string, days = 7) {
-    await BusinessService.assertOwner(userId, businessId);
+    await BusinessService.assertMember(userId, businessId);
 
     const since = daysAgo(days);
     const stats = await DashboardRepository.detectionStats(businessId, since);
@@ -149,7 +142,9 @@ export class DashboardService {
       .map((p) => ({
         product: p.product_label,
         wastePct:
-          p.total > 0 ? Math.round((p.spoiled_count / p.total) * 1000) / 10 : 0,
+          p.total > 0
+            ? Math.round((p.spoiled_count / p.total) * 1000) / 10
+            : 0,
         spoiled: p.spoiled_count,
         total: p.total,
       }))
@@ -173,14 +168,10 @@ export class DashboardService {
   static async getInventory(userId: string, businessId: string, days = 7) {
     await BusinessService.assertMember(userId, businessId);
 
-    const thresholds =
-      await DashboardRepository.getBusinessThresholds(businessId);
+    const thresholds = await DashboardRepository.getBusinessThresholds(businessId);
     const lowStock = thresholds?.low_stock_threshold ?? 25;
     const since = daysAgo(days);
-    const rows = await DashboardRepository.inventoryByProduct(
-      businessId,
-      since,
-    );
+    const rows = await DashboardRepository.inventoryByProduct(businessId, since);
 
     return {
       windowDays: days,
@@ -221,8 +212,7 @@ export class DashboardService {
   }
 
   private static async buildAlerts(businessId: string) {
-    const thresholds =
-      await DashboardRepository.getBusinessThresholds(businessId);
+    const thresholds = await DashboardRepository.getBusinessThresholds(businessId);
     const freshnessThreshold = thresholds?.freshness_alert_threshold ?? 65;
     const lowStock = thresholds?.low_stock_threshold ?? 25;
     const since = daysAgo(7);
@@ -233,9 +223,7 @@ export class DashboardService {
     );
     const shelves = await DashboardRepository.listShelves(businessId);
     const lastScans = await DashboardRepository.lastScanByShelf(businessId);
-    const lastScanMap = new Map(
-      lastScans.map((s) => [s.shelf_id, s.last_scan_at]),
-    );
+    const lastScanMap = new Map(lastScans.map((s) => [s.shelf_id, s.last_scan_at]));
 
     type Alert = {
       id: string;
@@ -276,9 +264,7 @@ export class DashboardService {
 
       const atRiskShare =
         row.total > 0
-          ? Math.round(
-              ((row.medium_count + row.spoiled_count) / row.total) * 100,
-            )
+          ? Math.round(((row.medium_count + row.spoiled_count) / row.total) * 100)
           : 0;
       if (row.total > 0 && atRiskShare >= freshnessThreshold) {
         alerts.push({
@@ -305,9 +291,7 @@ export class DashboardService {
           message: last
             ? `Last completed scan was ${new Date(last).toLocaleString()}.`
             : "No completed scans yet for this shelf.",
-          createdAt: last
-            ? new Date(last).toISOString()
-            : new Date().toISOString(),
+          createdAt: last ? new Date(last).toISOString() : new Date().toISOString(),
           shelfName: shelf.name,
         });
       }

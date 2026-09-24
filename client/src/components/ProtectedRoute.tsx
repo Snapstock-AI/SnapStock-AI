@@ -39,17 +39,18 @@ export default function ProtectedRoute() {
 
   const isBusinessOnboarding = location.pathname === '/onboarding/business'
   const isSettings = location.pathname === '/dashboard/settings'
-  const isEmployee = user?.businessRole === 'EMPLOYEE'
+  const isWorkspacePage = [
+    '/dashboard',
+    '/dashboard/inventory',
+    '/dashboard/scans',
+    '/dashboard/scans/history',
+    '/dashboard/alerts',
+    '/dashboard/analytics',
+  ].includes(location.pathname)
   const hasBusiness = Boolean(user?.businessId)
 
-  // Employees are always associated with the owner's business — never redirect them to create one
-  if (!hasBusiness && !isEmployee && !isBusinessOnboarding && !isSettings) {
+  if (!hasBusiness && !isBusinessOnboarding && !isSettings && !isWorkspacePage) {
     return <Navigate to="/onboarding/business" replace />
-  }
-
-  // Employees trying to access business onboarding should go to dashboard
-  if (isEmployee && isBusinessOnboarding) {
-    return <Navigate to="/dashboard" replace />
   }
 
   if (hasBusiness && isBusinessOnboarding) {

@@ -17,7 +17,6 @@ import {
 } from "../../shared/utils/email";
 import { BusinessRepository } from "../business/business.repository";
 import { OAuth2Client } from "google-auth-library";
-import { InvitationService } from "../business/invitation.service";
 
 const ACCESS_TOKEN_TTL = "1d";
 const REFRESH_TOKEN_DAYS = 7;
@@ -51,7 +50,6 @@ export class AuthService {
     },
     sessionId: string,
     businessId: string | null,
-    businessRole: "OWNER" | "EMPLOYEE" | null,
   ) {
     return jwt.sign(
       {
@@ -60,7 +58,6 @@ export class AuthService {
         system_role: user.system_role,
         sessionId,
         businessId,
-        businessRole,
       },
       process.env.JWT_SECRET!,
       { expiresIn: ACCESS_TOKEN_TTL },
@@ -72,7 +69,6 @@ export class AuthService {
     email: string;
     system_role: string;
     full_name: string;
-    must_change_password: boolean;
   }) {
     const refreshToken = crypto.randomBytes(48).toString("hex");
     const expiresAt = new Date();
@@ -84,10 +80,8 @@ export class AuthService {
       expiresAt,
     );
 
-    const membership = await BusinessRepository.findBusinessMembershipByUserId(user.id);
-    const businessId = membership?.businessId ?? null;
-    const businessRole = membership?.role ?? null;
-    const token = AuthService.signAccessToken(user, session.id, businessId, businessRole);
+    const businessId = await BusinessRepository.findBusinessIdByUserId(user.id);
+    const token = AuthService.signAccessToken(user, session.id, businessId);
 
     return {
       token,
@@ -97,23 +91,16 @@ export class AuthService {
         full_name: user.full_name,
         email: user.email,
         system_role: user.system_role,
-        must_change_password: user.must_change_password,
-        ...(businessId ? { businessId } : {}),
-        ...(businessRole ? { businessRole } : {}),
+        businessId,
       },
     };
   }
 
   //REGISTER USER
   static async register(data: RegisterDTO) {
-    const existingUser = await AuthRepository.findByEmailIncludingDeleted(
-      data.email,
-    );
+    const existingUser = await AuthRepository.findByEmail(data.email);
 
     if (existingUser) {
-      if (existingUser.deleted_at) {
-        throw new Error("This email is no longer available.");
-      }
       throw new Error("User already exists");
     }
 
@@ -167,7 +154,6 @@ export class AuthService {
 
     return {
       message: "Login successful",
-      mustChangePassword: user.must_change_password,
       ...session,
     };
   }
@@ -200,22 +186,15 @@ export class AuthService {
     const email = payload.email.toLowerCase();
     const fullName =
       payload.name?.trim() ||
-      [payload.given_name, payload.family_name]
-        .filter(Boolean)
-        .join(" ")
-        .trim() ||
+      [payload.given_name, payload.family_name].filter(Boolean).join(" ").trim() ||
       email.split("@")[0];
 
     let user = await AuthRepository.findByGoogleId(googleId);
 
     if (!user) {
-      const existing = await AuthRepository.findByEmailIncludingDeleted(email);
+      const existing = await AuthRepository.findByEmail(email);
 
       if (existing) {
-        if (existing.deleted_at) {
-          throw new Error("This email is no longer available.");
-        }
-
         if (existing.google_id && existing.google_id !== googleId) {
           throw new Error("This email is linked to a different Google account");
         }
@@ -262,18 +241,6 @@ export class AuthService {
     };
   }
 
-  static async changePassword(userId: string, password: string) {
-    if (password.length < 8) {
-      throw new Error("Password must be at least 8 characters long.");
-    }
-
-    await AuthRepository.updatePassword(
-      userId,
-      await bcrypt.hash(password, 10),
-    );
-    return { message: "Password updated successfully" };
-  }
-
   static async rotateSession(sessionId: string) {
     const session = await AuthRepository.findActiveSessionById(sessionId);
 
@@ -294,7 +261,6 @@ export class AuthService {
       email: user.email,
       system_role: user.system_role,
       full_name: user.full_name,
-      must_change_password: user.must_change_password,
     });
   }
 
@@ -320,7 +286,6 @@ export class AuthService {
       email: user.email,
       system_role: user.system_role,
       full_name: user.full_name,
-      must_change_password: user.must_change_password,
     });
 
     return {
@@ -347,12 +312,6 @@ export class AuthService {
     }
 
     if (user.email_verified) {
-      try {
-        await InvitationService.activateByToken(record.user_id, token);
-      } catch (invErr) {
-        console.error("[verifyEmail] Invitation activation failed:", invErr);
-      }
-      await AuthRepository.deleteEmailToken(token);
       return {
         message: "Email already verified",
       };
@@ -361,23 +320,8 @@ export class AuthService {
     await AuthRepository.verifyUser(record.user_id);
     await AuthRepository.deleteEmailToken(token);
 
-    // If this token belongs to an employee invitation, activate the BusinessUser record now
-    let invitationActivated = false;
-    try {
-      const invResult = await InvitationService.activateByToken(record.user_id, token);
-      if (invResult) {
-        invitationActivated = true;
-      }
-    } catch (invErr) {
-      // Don't fail the whole verification if invitation activation fails;
-      // the email is already verified. Owner can resend if needed.
-      console.error("[verifyEmail] Invitation activation failed:", invErr);
-    }
-
     return {
-      message: invitationActivated
-        ? "Email verified and your employee account has been activated! You can now sign in with your temporary password."
-        : "Email verified successfully",
+      message: "Email verified successfully",
     };
   }
 
