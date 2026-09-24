@@ -110,6 +110,8 @@ export async function sql<T = Record<string, unknown>>(text: string, params: unk
 /** Puts a session into the browser exactly as the app's own login would (see client/src/lib/auth.ts). */
 export async function signInBrowser(page: Page, account: Pick<Account, "token" | "refreshToken" | "user">) {
   await page.addInitScript((a) => {
+    // The script re-runs on every navigation; only seed a fresh browser so reloads keep app-made changes.
+    if (localStorage.getItem("snapstock_token")) return;
     localStorage.setItem("snapstock_token", a.token);
     localStorage.setItem("snapstock_refresh", a.refreshToken);
     localStorage.setItem("snapstock_user", JSON.stringify(a.user));
