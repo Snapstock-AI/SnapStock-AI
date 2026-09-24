@@ -1,0 +1,30 @@
+name: Security checks
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"
+  pull_request:
+    branches: [dev]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Secret scan
+        run: node tests/security/secrets-scan.mjs
+      - run: npm ci
+        working-directory: server
+      - run: npm ci
+        working-directory: client
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pip-audit
+      # Reports advisories without failing the build; use --strict once existing findings are resolved.
+      - name: Dependency audit
+        run: node tests/security/dependency-audit.mjs
