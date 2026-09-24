@@ -119,6 +119,14 @@ export class DetectionController {
         data: result,
       });
     } catch (error: any) {
+      if (error.code === "AI_UNAVAILABLE") {
+        return res.status(503).json({
+          success: false,
+          code: "AI_UNAVAILABLE",
+          message: error.message,
+        });
+      }
+
       return res.status(400).json({
         success: false,
         message: error.message,

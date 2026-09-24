@@ -33,6 +33,24 @@ function mapFreshness(
   }
 }
 
+const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_SERVICE_TIMEOUT_MS) || 30_000;
+const AI_UNAVAILABLE_MESSAGE =
+  "AI analysis is temporarily unavailable. Please try again shortly.";
+const AI_UNREACHABLE_CODES = ["ECONNREFUSED", "ECONNABORTED", "ETIMEDOUT", "ENOTFOUND", "ECONNRESET", "EAI_AGAIN"];
+
+export class AiServiceUnavailableError extends Error {
+  readonly code = "AI_UNAVAILABLE";
+
+  constructor() {
+    super(AI_UNAVAILABLE_MESSAGE);
+    this.name = "AiServiceUnavailableError";
+  }
+}
+
+function isAiUnreachable(error: any) {
+  return AI_UNREACHABLE_CODES.includes(error?.code) || error?.response?.status === 503;
+}
+
 export class DetectionService {
   static async history(
     userId: string,
@@ -139,6 +157,7 @@ export class DetectionService {
           headers: {
             ...formData.getHeaders(),
           },
+          timeout: AI_REQUEST_TIMEOUT_MS,
         },
       );
 
@@ -216,6 +235,16 @@ export class DetectionService {
 
       return result;
     } catch (error: any) {
+      if (isAiUnreachable(error)) {
+        // FR-HEALTH-002: controlled error; the raw socket error names internal hosts.
+        await DetectionRepository.updateScanStatus(
+          scanId,
+          "FAILED",
+          AI_UNAVAILABLE_MESSAGE,
+        );
+        throw new AiServiceUnavailableError();
+      }
+
       await DetectionRepository.updateScanStatus(
         scanId,
         "FAILED",
