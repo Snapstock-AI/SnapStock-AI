@@ -8,17 +8,11 @@ import {
 import "@testing-library/jest-dom";
 
 import ScansPage from "../../src/pages/dashboard/ScansPage";
-import {
-  queueUploadedScan,
-  uploadScanImage,
-  fetchScanStatus,
-} from "../../src/lib/detection";
+import { analyzeImage } from "../../src/lib/detection";
 
 
 vi.mock("../../src/lib/detection", () => ({
-  queueUploadedScan: vi.fn(),
-  uploadScanImage: vi.fn(),
-  fetchScanStatus: vi.fn(),
+  analyzeImage: vi.fn(),
 }));
 
 
@@ -120,7 +114,6 @@ const mockResult = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(queueUploadedScan).mockResolvedValue(undefined);
 });
 
 describe("ScansPage", () => {
@@ -389,13 +382,9 @@ describe("ScansPage", () => {
  
 
   it("should analyze the selected image", async () => {
-    vi.mocked(uploadScanImage).mockResolvedValue({
-      scanId: "scan-123",
-      status: "PENDING",
-      objectKey: "business-123/scan-123/shelf.jpg",
-      uploadUrl: "http://signed-upload-url",
-      expiresInSeconds: 900,
-    });
+    vi.mocked(analyzeImage).mockResolvedValue(
+      mockResult
+    );
 
     render(<ScansPage />);
 
@@ -438,31 +427,22 @@ describe("ScansPage", () => {
     );
 
     await waitFor(() => {
-      expect(uploadScanImage).toHaveBeenCalledTimes(1);
+      expect(analyzeImage).toHaveBeenCalledTimes(1);
     });
 
-    expect(uploadScanImage).toHaveBeenCalledWith(
+    expect(analyzeImage).toHaveBeenCalledWith(
       file,
       mockShelf,
       businessId,
-      "test-token"
+      "test-token",
+      "STOCK_IN"
     );
   });
 
   it("should display the scan result after successful analysis", async () => {
-    vi.mocked(uploadScanImage).mockResolvedValue({
-      scanId: "scan-123",
-      status: "PENDING",
-      objectKey: "business-123/scan-123/shelf.jpg",
-      uploadUrl: "http://signed-upload-url",
-      expiresInSeconds: 900,
-    });
-
-    vi.mocked(fetchScanStatus).mockResolvedValue({
-      scanId: "scan-123",
-      status: "COMPLETED",
-      data: mockResult,
-    });
+    vi.mocked(analyzeImage).mockResolvedValue(
+      mockResult
+    );
 
     render(<ScansPage />);
 
@@ -498,25 +478,38 @@ describe("ScansPage", () => {
       })
     );
 
-    await waitFor(() => {
-      expect(uploadScanImage).toHaveBeenCalledTimes(1);
-    });
-
-    await waitFor(() => {
-      expect(fetchScanStatus).toHaveBeenCalledWith("scan-123", "test-token");
-    });
-
     expect(
       await screen.findByText("Scan Result")
     ).toBeInTheDocument();
 
-    expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("Apple")).toBeInTheDocument();
+    expect(
+      screen.getByText("2")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("apple")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("lemon")
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getAllByText("Total")
+    ).toHaveLength(2);
+
+    expect(
+      screen.getAllByText("Fresh")
+    ).toHaveLength(2);
+
+    expect(
+      screen.getAllByText("Rotten")
+    ).toHaveLength(2);
   });
 
 
   it("should display an error when image analysis fails", async () => {
-    vi.mocked(uploadScanImage).mockRejectedValue(
+    vi.mocked(analyzeImage).mockRejectedValue(
       new Error("AI service unavailable")
     );
 

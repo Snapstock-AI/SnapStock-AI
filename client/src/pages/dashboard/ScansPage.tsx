@@ -34,11 +34,6 @@ export default function ScansPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [queuedScan, setQueuedScan] = useState<{
-    scanId: string;
-    objectKey: string;
-  } | null>(null);
-
   const [showCamera, setShowCamera] = useState(false);
 
   // Fetch shelves for current business
@@ -94,14 +89,13 @@ export default function ScansPage() {
 
   // Poll scan status when queued
   useEffect(() => {
-    if (!queuedScan || !token) {
-      return undefined;
+    if (!token || !businessId) {
+      setShelves([]);
+      setShelvesLoading(false);
+      return;
     }
 
-    let isCancelled = false;
-    let timer: number | undefined;
-
-    const pollScanStatus = async () => {
+    const loadShelves = async () => {
       try {
         const statusResponse = await fetchScanStatus(queuedScan.scanId, token);
 
@@ -134,15 +128,15 @@ export default function ScansPage() {
       }
     };
 
-    void pollScanStatus();
+    loadShelves();
+  }, [token, businessId]);
 
-    return () => {
-      isCancelled = true;
-      if (timer) {
-        window.clearTimeout(timer);
-      }
-    };
-  }, [queuedScan, selectedShelf, token]);
+  useEffect(() => {
+    if (!token || !businessId) {
+      setScanHistory([]);
+      setHistoryLoading(false);
+      return;
+    }
 
   const showError = (message: string) => {
     setError(message);
@@ -224,6 +218,11 @@ export default function ScansPage() {
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    if (!selectedShelf) {
+      showError("Please select a shelf first.");
+      return;
+    }
 
     setPreviewImage(file);
     setResult(null);
@@ -471,7 +470,7 @@ export default function ScansPage() {
                 {queuedScan.scanId}
               </dd>
             </div>
-          </dl>
+          )}
         </div>
       )}
 

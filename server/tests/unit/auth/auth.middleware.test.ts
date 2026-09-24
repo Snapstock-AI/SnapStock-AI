@@ -116,6 +116,7 @@ describe("authMiddleware", () => {
       email: "test@example.com",
       system_role: "BUSINESS_USER",
       sessionId: "session-1",
+      businessId: null,
     });
     expect(next).toHaveBeenCalled();
     expect(res.status).not.toHaveBeenCalled();
