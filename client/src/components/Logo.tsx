@@ -37,7 +37,7 @@ export default function Logo({ className, showText = true, variant = 'default' }
   }
 
   return (
-    <Link to="/" className={cn('flex items-center gap-2.5', className)}>
+    <Link to="/" aria-label="SnapStock-AI home" className={cn('flex items-center gap-2.5', className)}>
       {content}
     </Link>
   )

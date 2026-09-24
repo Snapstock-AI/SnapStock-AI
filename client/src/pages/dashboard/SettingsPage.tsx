@@ -258,6 +258,7 @@ export default function SettingsPage() {
                   <Label>Business name</Label>
                   <Input
                     value={businessForm.business_name}
+                    aria-label="Business name"
                     readOnly
                     onChange={(event) => setBusinessForm({ ...businessForm, business_name: event.target.value })}
                     required
@@ -272,6 +273,7 @@ export default function SettingsPage() {
                     <Input
                       type="email"
                       value={businessForm.business_email}
+                      aria-label="Business email"
                       readOnly
                       className="cursor-default bg-muted pl-10"
                     />
@@ -283,6 +285,7 @@ export default function SettingsPage() {
                     <Phone className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       value={businessForm.contact_number}
+                      aria-label="Contact number"
                       readOnly
                       className="cursor-default bg-muted pl-10"
                     />
@@ -300,6 +303,7 @@ export default function SettingsPage() {
                     <MapPin className="pointer-events-none absolute left-3 top-3 h-4 w-4 shrink-0 text-muted-foreground" />
                     <Input
                       value={businessForm.address}
+                      aria-label="Address"
                       readOnly
                       className="cursor-default bg-muted pl-10"
                     />

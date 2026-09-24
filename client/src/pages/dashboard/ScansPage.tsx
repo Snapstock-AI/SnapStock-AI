@@ -241,7 +241,7 @@ export default function ScansPage() {
             <Label htmlFor="shelf-select">Select a Shelf</Label>
             <select
               id="shelf-select"
-              className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-11 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               value={selectedShelf?.id || ""}
               disabled={shelvesLoading || shelves.length === 0}
               onChange={(e) => {
@@ -269,6 +269,7 @@ export default function ScansPage() {
           <div className="mb-6 flex justify-center gap-3" role="group" aria-label="Inventory scan mode">
             <Button
               type="button"
+              className="min-h-11"
               variant={scanMode === "STOCK_IN" ? "default" : "outline"}
               aria-pressed={scanMode === "STOCK_IN"}
               onClick={() => setScanMode("STOCK_IN")}
@@ -277,6 +278,7 @@ export default function ScansPage() {
             </Button>
             <Button
               type="button"
+              className="min-h-11"
               variant={scanMode === "STOCK_OUT" ? "destructive" : "outline"}
               aria-pressed={scanMode === "STOCK_OUT"}
               onClick={() => setScanMode("STOCK_OUT")}
@@ -301,6 +303,7 @@ export default function ScansPage() {
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Button
               type="button"
+              className="min-h-11"
               onClick={() => {
                 if (!selectedShelf) {
                   showError("Please select a shelf first.");
@@ -313,7 +316,7 @@ export default function ScansPage() {
               Open Camera
             </Button>
 
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild className="min-h-11">
               <label
                 className="cursor-pointer"
                 onClick={(e) => {
@@ -499,7 +502,10 @@ export default function ScansPage() {
                           )
                         }
                       >
-                        <SelectTrigger className="w-[140px]">
+                        <SelectTrigger
+                          className="w-[140px]"
+                          aria-label={`Correct freshness state for ${detection.class_name}`}
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

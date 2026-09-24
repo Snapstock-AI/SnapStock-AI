@@ -197,6 +197,7 @@ export default function DashboardLayout() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search"
+                aria-label="Search"
                 className="h-[46px] w-full rounded-[60px] border-0 bg-white px-7 pr-11 text-sm text-fd-ink outline-none placeholder:text-[#b8c3d5] fd-shadow-input dark:bg-card"
               />
             </div>
