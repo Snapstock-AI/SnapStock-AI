@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import AuthLayout from '@/components/AuthLayout'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -11,12 +11,19 @@ export default function VerifyEmail() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('Verifying your email...')
 
+  // Verification tokens are single use: a second request (StrictMode remount, double open)
+  // would answer "Invalid or expired token" and overwrite the success message.
+  const requestedToken = useRef<string | null>(null)
+
   useEffect(() => {
     if (!token) {
       setStatus('error')
       setMessage('Missing verification token.')
       return
     }
+
+    if (requestedToken.current === token) return
+    requestedToken.current = token
 
     apiRequest<{ message: string }>(`/auth/verify-email?token=${encodeURIComponent(token)}`)
       .then((result) => {

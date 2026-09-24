@@ -205,6 +205,7 @@ export default function DashboardLayout() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
+                  data-testid="user-menu"
                   className="flex items-center gap-3 rounded-[60px] py-1.5 pl-1.5 pr-3 transition hover:bg-white dark:hover:bg-card"
                 >
                   <Avatar className="h-10 w-10">
