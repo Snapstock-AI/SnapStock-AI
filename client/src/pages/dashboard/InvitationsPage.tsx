@@ -36,7 +36,10 @@ function formatDate(value: string) {
 
 export default function InvitationsPage() {
   const { user } = useAuth()
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [nic, setNic] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState('')
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isOwner, setIsOwner] = useState<boolean | null>(null)
@@ -84,8 +87,16 @@ export default function InvitationsPage() {
     setError('')
     setMessage('')
     try {
-      await sendEmployeeInvitation(user.businessId, email.trim())
+      await sendEmployeeInvitation(user.businessId, {
+        full_name: fullName.trim(),
+        email: email.trim(),
+        nic: nic.trim() || undefined,
+        date_of_birth: dateOfBirth || undefined,
+      })
+      setFullName('')
       setEmail('')
+      setNic('')
+      setDateOfBirth('')
       setMessage('Invitation sent successfully.')
       await loadWorkspace()
     } catch (sendError: unknown) {
@@ -97,7 +108,12 @@ export default function InvitationsPage() {
 
   async function handleRemoveEmployee(employee: Employee) {
     if (!user?.businessId) return
-    if (!window.confirm(`Remove ${employee.full_name} from this business?`)) return
+    if (
+      !window.confirm(
+        `Remove ${employee.full_name} from this business? Their login account will also be deleted.`,
+      )
+    )
+      return
 
     setRemovingEmployee(employee.user_id)
     setError('')
@@ -149,9 +165,14 @@ export default function InvitationsPage() {
           <CardTitle className="text-base">Send an invitation</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
+          <form className="grid gap-3 sm:grid-cols-2" onSubmit={handleSubmit}>
+            <div>
+              <Label htmlFor="employee-name">Full name</Label>
+              <Input id="employee-name" required value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Employee name" />
+            </div>
+            
             <Label className="sr-only" htmlFor="employee-email">Employee email</Label>
-            <div className="relative flex-1">
+            <div className="relative">
               <Mail className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="employee-email"
@@ -163,7 +184,15 @@ export default function InvitationsPage() {
                 className="pl-10"
               />
             </div>
-            <Button type="submit" disabled={sending}>
+            <div>
+              <Label htmlFor="employee-nic">NIC</Label>
+              <Input id="employee-nic" value={nic} onChange={(event) => setNic(event.target.value)} placeholder="NIC number" />
+            </div>
+            <div>
+              <Label htmlFor="employee-dob">Date of birth</Label>
+              <Input id="employee-dob" type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} />
+            </div>
+            <Button type="submit" disabled={sending} className="sm:col-span-2 sm:justify-self-start">
               <Send className="h-4 w-4" />
               {sending ? 'Sending...' : 'Send invitation'}
             </Button>
