@@ -33,7 +33,7 @@ jest.mock("../../../src/shared/utils/email", () => ({
 
 jest.mock("../../../src/modules/business/business.repository", () => ({
   BusinessRepository: {
-    findBusinessIdByUserId: jest.fn(),
+    findBusinessMembershipByUserId: jest.fn(),
   },
 }));
 
@@ -51,7 +51,7 @@ describe("AuthService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.JWT_SECRET = "test-secret";
-    mockedBusinessRepository.findBusinessIdByUserId.mockResolvedValue(null);
+    mockedBusinessRepository.findBusinessMembershipByUserId.mockResolvedValue(null as never);
   });
 
   describe("login", () => {
@@ -92,7 +92,6 @@ describe("AuthService", () => {
         full_name: "Test User",
         email: "test@example.com",
         system_role: "BUSINESS_USER",
-        businessId: null,
       });
 
       const decoded = jwt.verify(result.token, "test-secret") as {
