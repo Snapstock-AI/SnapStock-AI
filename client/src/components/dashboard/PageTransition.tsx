@@ -5,7 +5,11 @@ export default function PageTransition() {
   const location = useLocation()
 
   return (
-    <div key={location.pathname} className="dashboard-page-enter">
+    <div
+      key={location.pathname}
+      className="dashboard-page-enter"
+      style={{ minHeight: '40vh' }}
+    >
       <Outlet />
     </div>
   )
