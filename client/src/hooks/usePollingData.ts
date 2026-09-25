@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 const POLL_MS = 20_000
-const CACHE_TTL_MS = 90_000
+const CACHE_TTL_MS = 120_000
 
 type CacheEntry = { data: unknown; at: number }
 
@@ -38,20 +38,24 @@ export function usePollingData<T>(
   const [error, setError] = useState('')
   const loaderRef = useRef(loader)
   loaderRef.current = loader
+  const hasDataRef = useRef(Boolean(readCache<T>(cacheKey)))
 
   const refresh = useCallback(
     async (silent = false) => {
       if (!enabled) {
         setData(null)
         setLoading(false)
+        hasDataRef.current = false
         return
       }
-      if (!silent) setLoading(true)
+      // Keep previous content visible when we already have cached/live data.
+      if (!silent && !hasDataRef.current) setLoading(true)
       setError('')
       try {
         const next = await loaderRef.current()
         setData(next)
         writeCache(cacheKey, next)
+        hasDataRef.current = true
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Unable to load data.')
       } finally {
@@ -72,6 +76,7 @@ export function usePollingData<T>(
     if (warm) {
       setData(warm)
       setLoading(false)
+      hasDataRef.current = true
     }
 
     let active = true
