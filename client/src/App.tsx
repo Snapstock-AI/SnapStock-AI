@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router'
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router'
 import { ThemeProvider } from '@/context/ThemeContext'
 import { AuthProvider } from '@/context/AuthContext'
+import { useAuth } from '@/context/AuthContext'
 import Navigation from '@/components/Navigation'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import ProtectedRoute from '@/components/ProtectedRoute'
@@ -31,6 +32,20 @@ const authPaths = [
   '/verify-email',
   '/resend-verification',
 ]
+
+/**
+ * Gate that only allows OWNER-role users through.
+ * Employees who try to access owner-only routes (Analytics, Team) are
+ * redirected back to the dashboard home.
+ */
+function OwnerRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  if (user?.businessRole === 'EMPLOYEE') {
+    return <Navigate to="/dashboard" replace />
+  }
+  return <>{children}</>
+}
+
 // CI/CD frontend deployment test
 function AppRoutes() {
   const location = useLocation()
@@ -59,8 +74,9 @@ function AppRoutes() {
             <Route path="scans/history" element={<ScanHistoryPage />} />
             <Route path="shelves" element={<ShelvesPage />} />
             <Route path="alerts" element={<AlertsPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="invitations" element={<InvitationsPage />} />
+            {/* Owner-only routes — employees are redirected to /dashboard */}
+            <Route path="analytics" element={<OwnerRoute><AnalyticsPage /></OwnerRoute>} />
+            <Route path="invitations" element={<OwnerRoute><InvitationsPage /></OwnerRoute>} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Route>
