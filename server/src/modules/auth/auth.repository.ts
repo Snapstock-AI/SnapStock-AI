@@ -21,6 +21,7 @@ export class AuthRepository {
       password_hash: string | null;
       google_id?: string | null;
       email_verified?: boolean;
+      must_change_password?: boolean;
     },
   ) {
     const repo = AppDataSource.getRepository(User);
@@ -34,6 +35,7 @@ export class AuthRepository {
       date_of_birth: data.date_of_birth ?? null,
       system_role: "BUSINESS_USER",
       email_verified: data.email_verified ?? false,
+      must_change_password: data.must_change_password ?? false,
     });
 
     const saved = await repo.save(user);
@@ -59,6 +61,7 @@ export class AuthRepository {
         google_id: true,
         system_role: true,
         email_verified: true,
+        must_change_password: true,
       },
     });
   }
@@ -83,6 +86,25 @@ export class AuthRepository {
         google_id: true,
         system_role: true,
         email_verified: true,
+        must_change_password: true,
+      },
+    });
+  }
+
+  static async findByEmailIncludingDeleted(email: string) {
+    return AppDataSource.getRepository(User).findOne({
+      where: { email },
+      withDeleted: true,
+      select: {
+        id: true,
+        full_name: true,
+        email: true,
+        password_hash: true,
+        google_id: true,
+        system_role: true,
+        email_verified: true,
+        must_change_password: true,
+        deleted_at: true,
       },
     });
   }
@@ -97,6 +119,7 @@ export class AuthRepository {
         email: true,
         system_role: true,
         email_verified: true,
+        must_change_password: true,
       },
     });
   }
@@ -164,7 +187,7 @@ export class AuthRepository {
   static async updatePassword(userId: string, password_hash: string) {
     await AppDataSource.getRepository(User).update(
       { id: userId },
-      { password_hash },
+      { password_hash, must_change_password: false },
     );
   }
 
