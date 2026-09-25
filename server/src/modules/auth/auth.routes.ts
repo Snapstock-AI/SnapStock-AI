@@ -9,6 +9,7 @@ router.post("/login", AuthController.login);
 router.post("/google", AuthController.googleLogin);
 router.post("/logout", authMiddleware, AuthController.logout);
 router.patch("/profile", authMiddleware, AuthController.updateProfile);
+router.patch("/password", authMiddleware, AuthController.changePassword);
 router.post("/refresh", AuthController.refresh);
 router.get("/verify-email", AuthController.verifyEmail);
 router.post("/resend-verification", AuthController.resendVerification);
