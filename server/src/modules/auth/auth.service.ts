@@ -20,7 +20,7 @@ import { OAuth2Client } from "google-auth-library";
 import { InvitationService } from "../business/invitation.service";
 
 const ACCESS_TOKEN_TTL = "1d";
-const REFRESH_TOKEN_DAYS = 7;
+const REFRESH_TOKEN_DAYS = 30;
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -98,8 +98,8 @@ export class AuthService {
         email: user.email,
         system_role: user.system_role,
         must_change_password: user.must_change_password,
-        ...(businessId ? { businessId } : {}),
-        ...(businessRole ? { businessRole } : {}),
+        businessId,
+        businessRole,
       },
     };
   }

@@ -5,6 +5,7 @@ import {
   Building2,
   CalendarDays,
   Camera,
+  Check,
   ChevronDown,
   FileText,
   Globe2,
@@ -22,9 +23,21 @@ import { usePollingData } from '@/hooks/usePollingData'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { EmptyState } from '@/components/EmptyState'
 import { cn } from '@/lib/utils'
 import { useCallback, useEffect, useState } from 'react'
+
+const RANGE_OPTIONS = [
+  { days: 7, label: 'Last 7 days' },
+  { days: 14, label: 'Last 14 days' },
+  { days: 30, label: 'Last 30 days' },
+] as const
 
 function DonutChart({ segments }: { segments: FreshnessSegment[] }) {
   const radius = 54
@@ -67,12 +80,18 @@ function DonutChart({ segments }: { segments: FreshnessSegment[] }) {
   )
 }
 
-function BarChart({ points }: { points: Array<{ label: string; value: number }> }) {
+function BarChart({
+  points,
+  windowDays,
+}: {
+  points: Array<{ label: string; value: number }>
+  windowDays: number
+}) {
   const max = Math.max(1, ...points.map((d) => d.value))
   if (points.length === 0) {
     return (
       <p className="flex h-[220px] items-center justify-center text-sm text-fd-muted">
-        No scans in the last 7 days
+        No scans in the last {windowDays} days
       </p>
     )
   }
@@ -82,7 +101,7 @@ function BarChart({ points }: { points: Array<{ label: string; value: number }> 
         <div key={d.label} className="flex flex-1 flex-col items-center gap-2">
           <div className="flex h-[180px] w-full items-end justify-center border-b border-dashed border-border">
             <div
-              className="w-8 rounded-t-sm bg-primary"
+              className="w-8 rounded-t-sm bg-primary transition-all duration-300 hover:opacity-90"
               style={{ height: `${Math.max(4, (d.value / max) * 100)}%` }}
             />
           </div>
@@ -99,19 +118,20 @@ export default function DashboardHome() {
   const { token, user } = useAuth()
   const [business, setBusiness] = useState<Business | null>(null)
   const [businessError, setBusinessError] = useState('')
+  const [windowDays, setWindowDays] = useState(7)
   const businessId = user?.businessId
 
   const loadDashboard = useCallback(async () => {
     if (!businessId) throw new Error('No business')
-    const res = await getDashboard(businessId)
+    const res = await getDashboard(businessId, windowDays)
     if (!res.data) throw new Error(res.message || 'Unable to load dashboard')
     return res.data
-  }, [businessId])
+  }, [businessId, windowDays])
 
   const { data, loading, error } = usePollingData<DashboardData>(
     loadDashboard,
     Boolean(token && businessId),
-    businessId ? `dashboard:${businessId}` : undefined,
+    businessId ? `dashboard:${businessId}:${windowDays}` : undefined,
   )
 
   useEffect(() => {
@@ -187,7 +207,8 @@ export default function DashboardHome() {
   const hour = new Date().getHours()
   const greeting =
     hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening'
-  const today = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const rangeLabel =
+    RANGE_OPTIONS.find((option) => option.days === windowDays)?.label ?? `Last ${windowDays} days`
   const kpis = data?.kpis
   const stats = [
     {
@@ -224,14 +245,30 @@ export default function DashboardHome() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex h-[42px] items-center gap-2 rounded-[60px] border-0 bg-white px-4 text-sm text-fd-ink fd-shadow-input dark:bg-card"
-          >
-            <CalendarDays className="h-4 w-4 text-primary" />
-            {today}
-            <ChevronDown className="h-4 w-4 text-fd-muted" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex h-[42px] items-center gap-2 rounded-[60px] border border-border bg-white px-4 text-sm text-fd-ink shadow-sm transition hover:border-primary/40 hover:shadow-md dark:bg-card"
+              >
+                <CalendarDays className="h-4 w-4 text-primary" />
+                {rangeLabel}
+                <ChevronDown className="h-4 w-4 text-fd-muted" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {RANGE_OPTIONS.map((option) => (
+                <DropdownMenuItem
+                  key={option.days}
+                  className="flex items-center justify-between"
+                  onClick={() => setWindowDays(option.days)}
+                >
+                  {option.label}
+                  {windowDays === option.days ? <Check className="h-4 w-4 text-primary" /> : null}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button className="h-[42px] rounded-[60px]" asChild>
             <Link to="/dashboard/scans">
               <Camera className="h-4 w-4" />
@@ -328,9 +365,9 @@ export default function DashboardHome() {
               <CardTitle>Scan volume</CardTitle>
             </CardHeader>
             <CardContent className="pt-2">
-              <BarChart points={data.scanVolume} />
+              <BarChart points={data.scanVolume} windowDays={windowDays} />
               <p className="mt-3 text-center text-sm italic text-fd-muted">
-                Completed scans over the last 7 days
+                Completed scans over the last {windowDays} days
               </p>
             </CardContent>
           </Card>
@@ -340,7 +377,7 @@ export default function DashboardHome() {
               <CardTitle>Shelf health</CardTitle>
             </CardHeader>
             <CardContent className="pt-2">
-              <div className="mb-5 flex h-[140px] items-center justify-center rounded bg-[#f9fbfd] dark:bg-muted">
+              <div className="mb-5 flex h-[140px] items-center justify-center rounded-xl border border-border bg-muted/40">
                 <div className="text-center">
                   <p className="text-[30px] font-medium text-primary">
                     {data.avgShelfScore != null ? data.avgShelfScore : '—'}

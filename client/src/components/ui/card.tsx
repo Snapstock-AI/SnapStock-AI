@@ -1,12 +1,15 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 
-/** Card styles from client/UI-theme FreeDash ($shadow, 25px body padding) */
+/** Card styles — visible border so panels separate clearly in light theme */
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('rounded border-0 bg-card text-card-foreground fd-shadow', className)}
+      className={cn(
+        'rounded-xl border border-border bg-card text-card-foreground shadow-sm transition-shadow duration-200 hover:shadow-md',
+        className,
+      )}
       {...props}
     />
   ),

@@ -15,6 +15,7 @@ export type FreshnessSegment = {
 }
 
 export type DashboardData = {
+  windowDays?: number
   kpis: DashboardKpis
   freshnessMix: FreshnessSegment[]
   scanVolume: Array<{ label: string; value: number; day: string }>
@@ -79,8 +80,12 @@ export type AlertsData = {
   alerts: DashboardAlert[]
 }
 
-export async function getDashboard(businessId: string) {
-  return apiRequest<DashboardData>(`/businesses/${businessId}/dashboard`, {}, true)
+export async function getDashboard(businessId: string, days = 7) {
+  return apiRequest<DashboardData>(
+    `/businesses/${businessId}/dashboard?days=${days}`,
+    {},
+    true,
+  )
 }
 
 export async function getAnalytics(businessId: string, days = 7) {

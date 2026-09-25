@@ -1,5 +1,5 @@
-import { useCallback, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router'
 import AuthLayout from '@/components/AuthLayout'
 import GoogleContinueButton from '@/components/GoogleContinueButton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -10,11 +10,24 @@ import { useAuth } from '@/context/AuthContext'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { login, loginWithGoogle } = useAuth()
+  const location = useLocation()
+  const { login, loginWithGoogle, isAuthenticated } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const redirectTo =
+    (location.state as { from?: string } | null)?.from &&
+    !(location.state as { from?: string }).from?.startsWith('/login')
+      ? (location.state as { from: string }).from
+      : '/dashboard'
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(redirectTo, { replace: true })
+    }
+  }, [isAuthenticated, navigate, redirectTo])
 
   const handleGoogle = useCallback(
     async (credential: string) => {
@@ -22,14 +35,14 @@ export default function Login() {
       setLoading(true)
       try {
         await loginWithGoogle(credential)
-        navigate('/dashboard')
-      } catch (err: any) {
-        setError(err.message || 'Google sign-in failed')
+        navigate(redirectTo, { replace: true })
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Google sign-in failed')
       } finally {
         setLoading(false)
       }
     },
-    [loginWithGoogle, navigate],
+    [loginWithGoogle, navigate, redirectTo],
   )
 
   async function handleSubmit(e: FormEvent) {
@@ -38,9 +51,9 @@ export default function Login() {
     setLoading(true)
     try {
       await login(email, password)
-      navigate('/dashboard')
-    } catch (err: any) {
-      setError(err.message || 'Login failed')
+      navigate(redirectTo, { replace: true })
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
       setLoading(false)
     }

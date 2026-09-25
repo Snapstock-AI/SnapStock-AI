@@ -30,13 +30,14 @@ function dominantStatus(fresh: number, medium: number, spoiled: number) {
 }
 
 export class DashboardService {
-  static async getDashboard(userId: string, businessId: string) {
+  static async getDashboard(userId: string, businessId: string, days = 7) {
     await BusinessService.assertMember(userId, businessId);
 
-    const since7 = daysAgo(7);
-    const stats = await DashboardRepository.detectionStats(businessId, since7);
+    const windowDays = Math.max(1, Math.min(90, Math.floor(days)));
+    const since = daysAgo(windowDays);
+    const stats = await DashboardRepository.detectionStats(businessId, since);
     const scansToday = await DashboardRepository.countScansToday(businessId);
-    const scanVolume = await DashboardRepository.scansByDay(businessId, 7);
+    const scanVolume = await DashboardRepository.scansByDay(businessId, windowDays);
     const shelves = await DashboardRepository.shelfHealth(businessId);
     const alerts = await this.buildAlerts(businessId);
 
@@ -90,6 +91,7 @@ export class DashboardService {
       null;
 
     return {
+      windowDays,
       kpis: {
         totalSkus: stats.sku_count,
         avgFreshness,
