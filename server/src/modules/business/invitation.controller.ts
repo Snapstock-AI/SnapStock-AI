@@ -6,11 +6,14 @@ import { AuthService } from "../auth/auth.service";
 export class InvitationController {
   static async accept(req: AuthRequest, res: Response) {
     try {
-      await InvitationService.accept(
+      const accepted = await InvitationService.accept(
         req.user!.userId,
         String(req.body.token || ""),
       );
-      const auth = await AuthService.rotateSession(req.user!.sessionId);
+      const auth = await AuthService.rotateSession(
+        req.user!.sessionId,
+        accepted.businessId,
+      );
 
       return res.status(200).json({
         success: true,
@@ -43,7 +46,7 @@ export class InvitationController {
 
   static async send(req: AuthRequest, res: Response) {
     try {
-      const { email, full_name, nic, date_of_birth } = req.body;
+      const { email, full_name } = req.body;
 
       if (typeof email !== "string" || !email.trim()) {
         return res.status(400).json({
@@ -52,16 +55,13 @@ export class InvitationController {
         });
       }
 
-      if (typeof full_name !== "string" || !full_name.trim()) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Employee name is required." });
-      }
-
       const invitation = await InvitationService.send(
         req.user!.userId,
         String(req.params.businessId),
-        { email, full_name, nic, date_of_birth },
+        {
+          email,
+          full_name: typeof full_name === "string" ? full_name : undefined,
+        },
       );
 
       return res.status(201).json({

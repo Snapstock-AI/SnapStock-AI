@@ -25,6 +25,7 @@ type AuthContextValue = {
   register: (full_name: string, email: string, password: string) => Promise<string>
   createBusiness: (data: CreateBusinessInput) => Promise<Business>
   acceptInvitation: (token: string) => Promise<void>
+  switchBusiness: (businessId: string) => Promise<void>
   changePassword: (password: string) => Promise<void>
   updateProfile: (full_name: string) => Promise<void>
   syncBusinessMembership: () => Promise<boolean>
@@ -187,6 +188,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.data.user)
   }, [])
 
+  const switchBusiness = useCallback(async (businessId: string) => {
+    const result = await apiRequest<{
+      token: string
+      refreshToken: string
+      user: AuthUser
+    }>(
+      '/businesses/switch',
+      {
+        method: 'POST',
+        body: JSON.stringify({ businessId }),
+      },
+      true,
+    )
+
+    if (!result.data?.token || !result.data.user) {
+      throw new Error('Unable to switch workspace')
+    }
+
+    setAuth(result.data.token, result.data.user, result.data.refreshToken)
+    setToken(result.data.token)
+    setUser(result.data.user)
+  }, [])
+
   const changePassword = useCallback(
     async (password: string) => {
       const result = await apiRequest<{ message: string }>(
@@ -243,14 +267,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!currentUser || !currentToken) return false
 
     try {
-      const result = await apiRequest<{ id: string; role: 'OWNER' | 'EMPLOYEE' }[]>(
-        '/businesses/mine',
-        {},
-        true,
-      )
-      const membership = result.data?.[0] ?? null
-      const businessId = membership?.id || null
-      const businessRole = membership?.role || null
+      const result = await apiRequest<Business[]>('/businesses/mine', {}, true)
+      const memberships = result.data ?? []
+      const preferred =
+        memberships.find((item) => item.id === currentUser.businessId) ??
+        memberships[0] ??
+        null
+      const businessId = preferred?.id || null
+      const businessRole = preferred?.role || null
 
       if (
         businessId === currentUser.businessId &&
@@ -290,6 +314,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       createBusiness,
       acceptInvitation,
+      switchBusiness,
       changePassword,
       updateProfile,
       syncBusinessMembership,
@@ -303,6 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       createBusiness,
       acceptInvitation,
+      switchBusiness,
       changePassword,
       updateProfile,
       syncBusinessMembership,

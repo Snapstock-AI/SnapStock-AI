@@ -34,6 +34,7 @@ jest.mock("../../../src/shared/utils/email", () => ({
 jest.mock("../../../src/modules/business/business.repository", () => ({
   BusinessRepository: {
     findBusinessMembershipByUserId: jest.fn(),
+    findMembership: jest.fn(),
   },
 }));
 
@@ -92,6 +93,9 @@ describe("AuthService", () => {
         full_name: "Test User",
         email: "test@example.com",
         system_role: "BUSINESS_USER",
+        must_change_password: undefined,
+        businessId: null,
+        businessRole: null,
       });
 
       const decoded = jwt.verify(result.token, "test-secret") as {
@@ -208,6 +212,60 @@ describe("AuthService", () => {
       await expect(
         AuthService.refresh({ refreshToken: "bad" })
       ).rejects.toThrow("Invalid or expired refresh token");
+    });
+  });
+
+  describe("switchBusiness", () => {
+    it("re-issues tokens for a business the user belongs to", async () => {
+      mockedRepository.findActiveSessionById = jest.fn().mockResolvedValue({
+        id: "session-1",
+        user_id: "user-1",
+        expires_at: new Date(Date.now() + 86400000),
+        revoked_at: null,
+      } as any);
+      mockedRepository.findById.mockResolvedValue({
+        id: "user-1",
+        email: "test@example.com",
+        system_role: "BUSINESS_USER",
+        full_name: "Test User",
+        must_change_password: false,
+      } as any);
+      mockedRepository.revokeSession.mockResolvedValue(undefined as any);
+      mockedRepository.createSession.mockResolvedValue({
+        id: "session-2",
+        user_id: "user-1",
+        refresh_token: "unused",
+        expires_at: new Date(Date.now() + 86400000),
+        revoked_at: null,
+        created_at: new Date(),
+      } as any);
+      mockedBusinessRepository.findMembership.mockResolvedValue({
+        business_id: "biz-2",
+        role: "EMPLOYEE",
+      } as never);
+
+      const result = await AuthService.switchBusiness("session-1", "biz-2");
+
+      expect(mockedBusinessRepository.findMembership).toHaveBeenCalledWith(
+        "user-1",
+        "biz-2",
+      );
+      expect(result.user.businessId).toBe("biz-2");
+      expect(result.user.businessRole).toBe("EMPLOYEE");
+    });
+
+    it("rejects switching to a business the user is not a member of", async () => {
+      mockedRepository.findActiveSessionById = jest.fn().mockResolvedValue({
+        id: "session-1",
+        user_id: "user-1",
+        expires_at: new Date(Date.now() + 86400000),
+        revoked_at: null,
+      } as any);
+      mockedBusinessRepository.findMembership.mockResolvedValue(null as never);
+
+      await expect(
+        AuthService.switchBusiness("session-1", "biz-x"),
+      ).rejects.toThrow("You do not belong to this business");
     });
   });
 

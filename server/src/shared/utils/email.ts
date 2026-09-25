@@ -203,22 +203,23 @@ export const sendEmployeeInvitationEmail = async (
   email: string,
   token: string,
   businessName: string,
-  temporaryPassword: string,
+  inviteeName?: string,
 ) => {
-  const link = `${clientUrl().replace(/\/$/, "")}${clientPath()}/verify-email?token=${token}`;
+  const link = `${clientUrl().replace(/\/$/, "")}${clientPath()}/accept-invitation?token=${token}`;
+  const greeting = inviteeName ? `Hi ${inviteeName},` : "Hi,";
 
   await sendEmail("employee-invitation", email, {
     from: `"SnapStock AI" <${process.env.SMTP_USER}>`,
     to: email,
     subject: `You have been invited to join ${businessName} on SnapStock AI`,
-    text: `You have been invited to join ${businessName} on SnapStock AI.\n\nPlease verify your email to activate your account and join the team:\n${link}\n\nSign-in credentials (use after verification):\nEmail: ${email}\nTemporary password: ${temporaryPassword}\n\nFor security, please change your temporary password immediately after signing in.`,
+    text: `${greeting}\n\nYou have been invited to join ${businessName} on SnapStock AI as a team member.\n\nIf you already have an account, sign in and open this link:\n${link}\n\nIf you are new, create an account with this email address, then open the same link to join the workspace.\n\nThis invitation expires in 7 days.`,
     html: emailTemplate(
       "Team invitation",
       `Join ${businessName} on SnapStock AI`,
-      `You have been invited to join <strong>${businessName}</strong> on SnapStock AI.<br /><br />Please verify your email address to activate your employee account and join the team workspace.<br /><br /><strong>Sign-in credentials (use after email verification):</strong><br />Email: <strong>${email}</strong><br />Temporary password: <strong>${temporaryPassword}</strong>`,
-      "Verify Email & Join Team",
+      `${greeting}<br /><br />You have been invited to join <strong>${businessName}</strong> on SnapStock AI as a team member.<br /><br />Sign in with this email if you already have an account, or create one first — then use the button below to join the workspace. No temporary password is required.`,
+      "Accept invitation",
       link,
-      "For your security, verify your email first and change this temporary password immediately after signing in.",
+      "This invitation expires in 7 days. If you did not expect this email, you can ignore it.",
     ),
   });
 };

@@ -11,7 +11,8 @@
     "prestart": "ts-node --project tsconfig.scripts.json scripts/check-migrations.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "migration": "ts-node --project tsconfig.scripts.json scripts/migrate.ts"
+    "migration": "ts-node --project tsconfig.scripts.json scripts/migrate.ts",
+    "ensure:must-change-password": "ts-node --project tsconfig.scripts.json scripts/ensure-must-change-password.ts"
   },
   "keywords": [],
   "author": "",

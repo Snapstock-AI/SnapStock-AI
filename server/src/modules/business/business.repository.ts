@@ -1,9 +1,6 @@
-import { IsNull } from "typeorm";
 import { AppDataSource } from "../../config/data-source";
 import { Business } from "../../entities/Business";
 import { BusinessUser } from "../../entities/BusinessUser";
-import { Session } from "../../entities/Session";
-import { User } from "../../entities/User";
 
 export class BusinessRepository {
   static async findById(businessId: string) {
@@ -109,20 +106,10 @@ export class BusinessRepository {
   }
 
   static async removeEmployee(userId: string, businessId: string) {
-    return AppDataSource.transaction(async (manager) => {
-      await manager.delete(BusinessUser, {
-        user_id: userId,
-        business_id: businessId,
-        role: "EMPLOYEE",
-      });
-
-      await manager.update(
-        Session,
-        { user_id: userId, revoked_at: IsNull() },
-        { revoked_at: new Date() },
-      );
-
-      await manager.softDelete(User, { id: userId });
+    return AppDataSource.getRepository(BusinessUser).delete({
+      user_id: userId,
+      business_id: businessId,
+      role: "EMPLOYEE",
     });
   }
 }

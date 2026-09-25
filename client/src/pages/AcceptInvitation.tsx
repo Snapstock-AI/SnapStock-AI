@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, CheckCircle2, LogIn } from 'lucide-react'
+import { ArrowRight, CheckCircle2, LogIn, UserPlus } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -14,12 +14,11 @@ export default function AcceptInvitation() {
   const [error, setError] = useState('')
   const hasSubmitted = useRef(false)
 
-  useEffect(() => {
-    if (!isAuthenticated && token) {
-      navigate(`/verify-email?token=${encodeURIComponent(token)}`, { replace: true })
-      return
-    }
+  const returnPath = token
+    ? `/accept-invitation?token=${encodeURIComponent(token)}`
+    : '/accept-invitation'
 
+  useEffect(() => {
     if (!isAuthenticated || !token || hasSubmitted.current) return
 
     hasSubmitted.current = true
@@ -30,7 +29,25 @@ export default function AcceptInvitation() {
         setError(acceptError instanceof Error ? acceptError.message : 'Unable to accept invitation.')
       })
       .finally(() => setLoading(false))
-  }, [acceptInvitation, isAuthenticated, navigate, token])
+  }, [acceptInvitation, isAuthenticated, token])
+
+  if (!token) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center bg-background px-4 py-10">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-7 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight">Invalid invitation</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This invitation link is missing a token. Ask the owner to resend the invite.
+            </p>
+            <Button variant="outline" asChild className="mt-6">
+              <Link to="/login">Go to sign in</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    )
+  }
 
   if (!isAuthenticated) {
     return (
@@ -42,14 +59,22 @@ export default function AcceptInvitation() {
             </div>
             <h1 className="mt-5 text-2xl font-semibold tracking-tight">Sign in to accept your invitation</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Sign in with the email address that received the invitation, then open this invitation
-              link again.
+              Use the email address that received this invitation. If you do not have an account yet,
+              create one with that email, then return here.
             </p>
-            <Button asChild className="mt-6">
-              <Link to="/login">
-                Go to sign in <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <Button asChild>
+                <Link to={`/login?from=${encodeURIComponent(returnPath)}`}>
+                  Sign in <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to={`/signup?from=${encodeURIComponent(returnPath)}`}>
+                  <UserPlus className="h-4 w-4" />
+                  Create account
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </main>

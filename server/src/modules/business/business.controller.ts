@@ -75,7 +75,10 @@ export class BusinessController {
         req.user!.userId,
         data,
       );
-      const auth = await AuthService.rotateSession(req.user!.sessionId);
+      const auth = await AuthService.rotateSession(
+        req.user!.sessionId,
+        business.id,
+      );
 
       return res.status(201).json({
         success: true,
@@ -87,6 +90,34 @@ export class BusinessController {
     } catch (error: any) {
       const message = error?.issues?.[0]?.message || error.message;
       return res.status(400).json({ success: false, message });
+    }
+  }
+
+  static async switchBusiness(req: AuthRequest, res: Response) {
+    try {
+      const businessId = String(req.body.businessId || "");
+      if (!businessId) {
+        return res.status(400).json({
+          success: false,
+          message: "businessId is required.",
+        });
+      }
+
+      const auth = await AuthService.switchBusiness(
+        req.user!.sessionId,
+        businessId,
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: auth,
+        message: "Workspace switched.",
+      });
+    } catch (error: any) {
+      return res.status(400).json({
+        success: false,
+        message: error.message || "Unable to switch workspace.",
+      });
     }
   }
 }
