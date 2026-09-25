@@ -1,11 +1,12 @@
 import { NavLink, useLocation, useNavigate } from 'react-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle,
   BarChart3,
   Bell,
   Camera,
   ChevronDown,
+  History,
   LayoutDashboard,
   LogOut,
   Package,
@@ -42,10 +43,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-
 const applications = [
   { to: '/dashboard/inventory', label: 'Inventory', icon: Package },
-  { to: '/dashboard/scans', label: 'Scans', icon: Camera },
+  { to: '/dashboard/scans', label: 'Scans', icon: Camera, end: true as const },
+  { to: '/dashboard/scans/history', label: 'History', icon: History },
   { to: '/dashboard/alerts', label: 'Alerts', icon: AlertTriangle },
 ]
 
@@ -105,11 +106,48 @@ export default function DashboardLayout() {
   const { logout, user, changePassword } = useAuth()
   const isOwner = user?.businessRole === 'OWNER'
   const [query, setQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [savingPassword, setSavingPassword] = useState(false)
   const businessId = user?.businessId
+
+  const searchableLinks = useMemo(() => {
+    const links = [
+      { to: '/dashboard', label: 'Dashboard', keywords: 'home overview' },
+      ...applications.map((link) => ({ ...link, keywords: '' })),
+      ...components
+        .filter((link) => isOwner || link.to !== '/dashboard/analytics')
+        .map((link) => ({ ...link, keywords: '' })),
+    ]
+    if (isOwner) {
+      links.push({ to: '/dashboard/invitations', label: 'Team', keywords: 'invite employees' })
+    }
+    return links
+  }, [isOwner])
+
+  const searchResults = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return []
+    return searchableLinks.filter(
+      (link) =>
+        link.label.toLowerCase().includes(q) ||
+        link.to.toLowerCase().includes(q) ||
+        link.keywords.includes(q),
+    )
+  }, [query, searchableLinks])
+
+  useEffect(() => {
+    function onPointerDown(event: MouseEvent) {
+      if (!searchRef.current?.contains(event.target as Node)) {
+        setSearchOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [])
 
   const loadAlertCount = useCallback(async () => {
     if (!businessId) return 0
@@ -134,6 +172,12 @@ export default function DashboardLayout() {
     navigate('/login')
   }
 
+  function goToSearchResult(to: string) {
+    setQuery('')
+    setSearchOpen(false)
+    navigate(to, { viewTransition: true })
+  }
+
   const pageTitle = useMemo(() => {
     const all = [
       { to: '/dashboard', label: 'Dashboard', end: true },
@@ -142,11 +186,14 @@ export default function DashboardLayout() {
       { to: '/dashboard/invitations', label: 'Team' },
     ]
     return (
-      all.find((link) =>
-        'end' in link && link.end
-          ? location.pathname === link.to
-          : location.pathname === link.to || location.pathname.startsWith(`${link.to}/`),
-      )?.label ?? 'Dashboard'
+      [...all]
+        .sort((a, b) => b.to.length - a.to.length)
+        .find((link) =>
+          'end' in link && link.end
+            ? location.pathname === link.to
+            : location.pathname === link.to ||
+              location.pathname.startsWith(`${link.to}/`),
+        )?.label ?? 'Dashboard'
     )
   }, [location.pathname])
 
@@ -180,14 +227,50 @@ export default function DashboardLayout() {
               <ThemeToggle className="h-10 w-10 rounded-full border-0 bg-transparent shadow-none" />
             </div>
 
-            <div className="relative hidden max-w-md flex-1 md:block lg:max-w-lg">
+            <div ref={searchRef} className="relative hidden max-w-md flex-1 md:block lg:max-w-lg">
               <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#b8c3d5]" />
               <input
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search"
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  setSearchOpen(true)
+                }}
+                onFocus={() => setSearchOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchResults[0]) {
+                    e.preventDefault()
+                    goToSearchResult(searchResults[0].to)
+                  }
+                  if (e.key === 'Escape') {
+                    setSearchOpen(false)
+                    setQuery('')
+                  }
+                }}
+                placeholder="Search pages…"
+                aria-label="Search dashboard pages"
                 className="h-[46px] w-full rounded-[60px] border-0 bg-white px-7 pr-11 text-sm text-fd-ink outline-none placeholder:text-[#b8c3d5] fd-shadow-input dark:bg-card"
               />
+              {searchOpen && query.trim() && (
+                <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-border bg-white shadow-lg dark:bg-card">
+                  {searchResults.length === 0 ? (
+                    <p className="px-4 py-3 text-sm text-fd-muted">No matching pages</p>
+                  ) : (
+                    <ul className="py-1">
+                      {searchResults.map((result) => (
+                        <li key={result.to}>
+                          <button
+                            type="button"
+                            className="flex w-full items-center px-4 py-2.5 text-left text-sm text-fd-ink transition hover:bg-muted"
+                            onClick={() => goToSearchResult(result.to)}
+                          >
+                            {result.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
 
             <DropdownMenu>
@@ -247,7 +330,7 @@ export default function DashboardLayout() {
 
           <p className="mb-2 px-[30px] text-xs font-medium uppercase text-fd-cap">Applications</p>
           <ul>
-            {applications.filter((link) => !(isOwner && link.to === '/dashboard/scans')).map((link) => (
+            {applications.map((link) => (
               <SidebarLink key={link.to} {...link} />
             ))}
             {isOwner && <SidebarLink to="/dashboard/invitations" label="Team" icon={Users} />}
@@ -257,9 +340,11 @@ export default function DashboardLayout() {
 
           <p className="mb-2 px-[30px] text-xs font-medium uppercase text-fd-cap">Components</p>
           <ul>
-            {components.filter((link) => isOwner || link.to !== '/dashboard/analytics').map((link) => (
-              <SidebarLink key={link.to} {...link} />
-            ))}
+            {components
+              .filter((link) => isOwner || link.to !== '/dashboard/analytics')
+              .map((link) => (
+                <SidebarLink key={link.to} {...link} />
+              ))}
           </ul>
         </nav>
       </aside>
@@ -306,7 +391,8 @@ export default function DashboardLayout() {
           [
             { to: '/dashboard', label: 'Home', icon: LayoutDashboard, end: true },
             { to: '/dashboard/inventory', label: 'Inventory', icon: Package, end: false },
-            ...(!isOwner ? [{ to: '/dashboard/scans', label: 'Scans', icon: Camera, end: false as const }] : []),
+            { to: '/dashboard/scans', label: 'Scans', icon: Camera, end: false },
+            { to: '/dashboard/shelves', label: 'Shelves', icon: Package, end: false },
             { to: '/dashboard/alerts', label: 'Alerts', icon: AlertTriangle, end: false },
           ] as const
         ).map(({ to, label, icon: Icon, end }) => (

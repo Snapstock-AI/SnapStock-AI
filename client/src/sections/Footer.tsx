@@ -57,7 +57,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 border-t border-border pt-6 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} SnapStock-AI · PID 5. Made for small-scale retailers.
+          © {new Date().getFullYear()} SnapStock-AI. Made for small-scale retailers.
         </div>
       </div>
     </footer>
