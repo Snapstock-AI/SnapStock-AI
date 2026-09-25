@@ -27,7 +27,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth, type Business } from '@/context/AuthContext'
+import { apiRequest } from '@/lib/api'
 import { getAlertsCount } from '@/lib/dashboard'
 import { usePollingData } from '@/hooks/usePollingData'
 import PageTransition from '@/components/dashboard/PageTransition'
@@ -110,7 +111,7 @@ function SidebarLink({
 export default function DashboardLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { logout, user, changePassword } = useAuth()
+  const { logout, user, changePassword, switchBusiness } = useAuth()
   const isOwner = user?.businessRole === 'OWNER'
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -119,7 +120,43 @@ export default function DashboardLayout() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [savingPassword, setSavingPassword] = useState(false)
+  const [workspaces, setWorkspaces] = useState<Business[]>([])
+  const [switchingWorkspace, setSwitchingWorkspace] = useState(false)
   const businessId = user?.businessId
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadWorkspaces() {
+      try {
+        const result = await apiRequest<Business[]>('/businesses/mine', {}, true)
+        if (!cancelled) setWorkspaces(result.data ?? [])
+      } catch {
+        if (!cancelled) setWorkspaces([])
+      }
+    }
+    if (user?.id) void loadWorkspaces()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, user?.businessId])
+
+  const activeWorkspace = useMemo(
+    () => workspaces.find((item) => item.id === businessId) ?? null,
+    [workspaces, businessId],
+  )
+
+  async function handleSwitchWorkspace(nextBusinessId: string) {
+    if (!nextBusinessId || nextBusinessId === businessId || switchingWorkspace) return
+    setSwitchingWorkspace(true)
+    try {
+      await switchBusiness(nextBusinessId)
+      navigate('/dashboard', { replace: true })
+    } catch {
+      // Keep current workspace if switch fails.
+    } finally {
+      setSwitchingWorkspace(false)
+    }
+  }
 
   const searchableLinks = useMemo(() => {
     const links = [
@@ -233,6 +270,48 @@ export default function DashboardLayout() {
               </Button>
               <ThemeToggle className="h-10 w-10 rounded-full border-0 bg-transparent shadow-none" />
             </div>
+
+            {workspaces.length > 0 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={switchingWorkspace}
+                    className="hidden max-w-[220px] items-center gap-2 rounded-[60px] border border-border bg-white px-4 py-2 text-left text-sm transition hover:bg-muted/40 disabled:opacity-60 md:flex dark:bg-card"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-fd-ink">
+                        {activeWorkspace?.business_name || 'Workspace'}
+                      </p>
+                      <p className="truncate text-xs text-fd-muted">
+                        {activeWorkspace?.role || user?.businessRole || 'Member'}
+                      </p>
+                    </div>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-fd-muted" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-[260px] border-0 fd-shadow">
+                  <DropdownMenuLabel>Switch workspace</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {workspaces.map((workspace) => (
+                    <DropdownMenuItem
+                      key={workspace.id}
+                      onClick={() => handleSwitchWorkspace(workspace.id)}
+                      className={cn(
+                        workspace.id === businessId && 'bg-muted font-medium',
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate">{workspace.business_name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{workspace.role}</p>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="hidden flex-1 md:block" />
+            )}
 
             <div ref={searchRef} className="relative hidden max-w-md flex-1 md:block lg:max-w-lg">
               <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-fd-muted" />

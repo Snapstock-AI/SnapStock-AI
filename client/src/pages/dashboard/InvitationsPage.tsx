@@ -38,8 +38,6 @@ export default function InvitationsPage() {
   const { user } = useAuth()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
-  const [nic, setNic] = useState('')
-  const [dateOfBirth, setDateOfBirth] = useState('')
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isOwner, setIsOwner] = useState<boolean | null>(null)
@@ -88,16 +86,12 @@ export default function InvitationsPage() {
     setMessage('')
     try {
       await sendEmployeeInvitation(user.businessId, {
-        full_name: fullName.trim(),
         email: email.trim(),
-        nic: nic.trim() || undefined,
-        date_of_birth: dateOfBirth || undefined,
+        full_name: fullName.trim() || undefined,
       })
       setFullName('')
       setEmail('')
-      setNic('')
-      setDateOfBirth('')
-      setMessage('Invitation sent successfully.')
+      setMessage('Invitation email sent. They can sign up or sign in, then open the link to join.')
       await loadWorkspace()
     } catch (sendError: unknown) {
       setError(sendError instanceof Error ? sendError.message : 'Unable to send invitation.')
@@ -110,7 +104,7 @@ export default function InvitationsPage() {
     if (!user?.businessId) return
     if (
       !window.confirm(
-        `Remove ${employee.full_name} from this business? Their login account will also be deleted.`,
+        `Remove ${employee.full_name} from this workspace? Their account stays active for other businesses.`,
       )
     )
       return
@@ -122,7 +116,7 @@ export default function InvitationsPage() {
       setEmployees((currentEmployees) =>
         currentEmployees.filter((item) => item.user_id !== employee.user_id),
       )
-      setMessage(`${employee.full_name} was removed from the business.`)
+      setMessage(`${employee.full_name} was removed from this workspace.`)
     } catch (removeError: unknown) {
       setError(removeError instanceof Error ? removeError.message : 'Unable to remove employee.')
     } finally {
@@ -152,7 +146,7 @@ export default function InvitationsPage() {
           <PageHeader
             className="mt-4 mb-0"
             title="Employee invitations"
-            description="Invite team members and keep track of every invitation."
+            description="Invite people by email. They join this workspace as employees after signing in."
           />
         </div>
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary">
@@ -167,30 +161,28 @@ export default function InvitationsPage() {
         <CardContent>
           <form className="grid gap-3 sm:grid-cols-2" onSubmit={handleSubmit}>
             <div>
-              <Label htmlFor="employee-name">Full name</Label>
-              <Input id="employee-name" required value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Employee name" />
-            </div>
-            
-            <Label className="sr-only" htmlFor="employee-email">Employee email</Label>
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="employee-name">Display name (optional)</Label>
               <Input
-                id="employee-email"
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="employee@example.com"
-                className="pl-10"
+                id="employee-name"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                placeholder="Name used in the email greeting"
               />
             </div>
             <div>
-              <Label htmlFor="employee-nic">NIC</Label>
-              <Input id="employee-nic" value={nic} onChange={(event) => setNic(event.target.value)} placeholder="NIC number" />
-            </div>
-            <div>
-              <Label htmlFor="employee-dob">Date of birth</Label>
-              <Input id="employee-dob" type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} />
+              <Label htmlFor="employee-email">Email</Label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="employee-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="employee@example.com"
+                  className="pl-10"
+                />
+              </div>
             </div>
             <Button type="submit" disabled={sending} className="sm:col-span-2 sm:justify-self-start">
               <Send className="h-4 w-4" />
@@ -260,7 +252,7 @@ export default function InvitationsPage() {
           <div>
             <h2 className="text-xl font-semibold tracking-tight">Team members</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {employees.length} employee{employees.length === 1 ? '' : 's'} in this business
+              {employees.length} employee{employees.length === 1 ? '' : 's'} in this workspace
             </p>
           </div>
           <Users className="h-5 w-5 text-muted-foreground" />

@@ -3,18 +3,16 @@ import { AppDataSource } from "../../config/data-source";
 import { EmployeeInvitation } from "../../entities/EmployeeInvitation";
 import { User } from "../../entities/User";
 import { BusinessUser } from "../../entities/BusinessUser";
-import { EmailVerificationToken } from "../../entities/EmailVerificationToken";
 import { BusinessService } from "./business.service";
 import { AuthRepository } from "../auth/auth.repository";
 import { sendEmployeeInvitationEmail } from "../../shared/utils/email";
-import bcrypt from "bcrypt";
 
 const INVITATION_VALIDITY_DAYS = 7;
 
 export class InvitationService {
   /**
-   * Called when a logged-in employee visits /accept-invitation?token=...
-   * Edge-case path for users already authenticated but not yet linked to business.
+   * Logged-in user accepts an invite for the email that received it.
+   * Joins that business as EMPLOYEE without leaving other workspaces.
    */
   static async accept(userId: string, token: string) {
     const normalizedToken = token.trim();
@@ -63,12 +61,11 @@ export class InvitationService {
         throw new Error("This invitation has expired.");
       }
 
-      const membershipInAnotherBusiness = await manager.findOne(BusinessUser, {
-        where: { user_id: userId },
-      });
-
-      if (membershipInAnotherBusiness) {
-        throw new Error("This user already belongs to a business.");
+      if (existingMembership) {
+        invitation.status = "ACCEPTED";
+        invitation.accepted_at = new Date();
+        await manager.save(invitation);
+        return { businessId: invitation.business_id };
       }
 
       if (!user.email_verified) {
@@ -94,9 +91,8 @@ export class InvitationService {
   }
 
   /**
-   * Activate a PENDING invitation by token after the employee verifies their email.
-   * Called from AuthService.verifyEmail() automatically — no separate auth step.
-   * Creates the BusinessUser record and marks the invitation ACCEPTED.
+   * Legacy helper used when an old invite token doubles as an email-verification
+   * token. Safe no-op when the token is only an EmployeeInvitation.
    */
   static async activateByToken(userId: string, token: string) {
     const repo = AppDataSource.getRepository(EmployeeInvitation);
@@ -106,7 +102,6 @@ export class InvitationService {
     });
 
     if (!invitation) {
-      // No matching pending invitation — this is a normal email verification
       return null;
     }
 
@@ -117,13 +112,14 @@ export class InvitationService {
       );
     }
 
-    const existingMembership = await AppDataSource.getRepository(
-      BusinessUser,
-    ).findOne({ where: { user_id: userId } });
+    const membershipRepo = AppDataSource.getRepository(BusinessUser);
+    const existingForBusiness = await membershipRepo.findOne({
+      where: { user_id: userId, business_id: invitation.business_id },
+    });
 
-    if (!existingMembership) {
-      await AppDataSource.getRepository(BusinessUser).save(
-        AppDataSource.getRepository(BusinessUser).create({
+    if (!existingForBusiness) {
+      await membershipRepo.save(
+        membershipRepo.create({
           business_id: invitation.business_id,
           user_id: userId,
           role: "EMPLOYEE",
@@ -169,25 +165,15 @@ export class InvitationService {
   }
 
   /**
-   * Owner sends an invitation:
-   *  1. Creates an unverified User account with a temporary password.
-   *  2. Stores the invitation token as the email verification token.
-   *  3. Creates a PENDING EmployeeInvitation (no BusinessUser yet).
-   *  4. Sends a verification/invitation email with the token link.
-   *
-   * When the employee clicks the verify link:
-   *  → GET /auth/verify-email?token=<token> → AuthService.verifyEmail()
-   *  → verifyEmail marks email verified, then calls InvitationService.activateByToken()
-   *  → activateByToken creates BusinessUser + marks invitation ACCEPTED.
+   * Owner invites by email only. Does not create users or temporary passwords.
+   * Recipient signs up or logs in normally, then accepts the invite link.
    */
   static async send(
     invitedBy: string,
     businessId: string,
     details: {
       email: string;
-      full_name: string;
-      nic?: string;
-      date_of_birth?: string;
+      full_name?: string;
     },
   ) {
     const membership = await BusinessService.getMembership(
@@ -200,16 +186,26 @@ export class InvitationService {
     }
 
     const normalizedEmail = details.email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      throw new Error("Employee email is required.");
+    }
+
     const recipient =
       await AuthRepository.findByEmailIncludingDeleted(normalizedEmail);
 
+    if (recipient?.deleted_at) {
+      throw new Error(
+        "This email belongs to a removed account and cannot be reused.",
+      );
+    }
+
     if (recipient) {
-      if (recipient.deleted_at) {
-        throw new Error(
-          "This email belongs to a removed account and cannot be reused.",
-        );
+      const alreadyMember = await AppDataSource.getRepository(BusinessUser).exist({
+        where: { user_id: recipient.id, business_id: businessId },
+      });
+      if (alreadyMember) {
+        throw new Error("This person is already a member of this business.");
       }
-      throw new Error("An account already exists for this email address.");
     }
 
     const invRepo = AppDataSource.getRepository(EmployeeInvitation);
@@ -230,72 +226,32 @@ export class InvitationService {
       await invRepo.save(existingInvitation);
     }
 
-    // The invitation token doubles as the email verification token
     const invitationToken = crypto.randomBytes(32).toString("hex");
-    const temporaryPassword = crypto.randomBytes(9).toString("base64url");
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + INVITATION_VALIDITY_DAYS);
 
-    let createdUserId: string | null = null;
-    let createdInvitationId: string | null = null;
-
-    const invitation = await AppDataSource.transaction(async (manager) => {
-      // 1. Create unverified user
-      const user = await manager.save(
-        manager.create(User, {
-          full_name: details.full_name.trim(),
-          email: normalizedEmail,
-          nic: details.nic?.trim() || null,
-          date_of_birth: details.date_of_birth || null,
-          password_hash: await bcrypt.hash(temporaryPassword, 10),
-          email_verified: false,         // not verified yet
-          must_change_password: true,
-        }),
-      );
-      createdUserId = user.id;
-
-      // 2. Store invitation token as email verification token in the same transaction
-      await manager.save(
-        manager.create(EmailVerificationToken, {
-          user_id: user.id,
-          token: invitationToken,
-          expires_at: expiresAt,
-        }),
-      );
-
-      // 3. Create PENDING invitation — BusinessUser NOT created yet
-      return manager.save(
-        manager.create(EmployeeInvitation, {
-          business_id: businessId,
-          invited_by: invitedBy,
-          email: normalizedEmail,
-          role: "EMPLOYEE",
-          invitation_token: invitationToken,
-          status: "PENDING",
-          expires_at: expiresAt,
-          accepted_at: null,
-        }),
-      );
-    });
-
-    createdInvitationId = invitation.id;
+    const invitation = await invRepo.save(
+      invRepo.create({
+        business_id: businessId,
+        invited_by: invitedBy,
+        email: normalizedEmail,
+        role: "EMPLOYEE",
+        invitation_token: invitationToken,
+        status: "PENDING",
+        expires_at: expiresAt,
+        accepted_at: null,
+      }),
+    );
 
     try {
       await sendEmployeeInvitationEmail(
         normalizedEmail,
         invitationToken,
         membership.business_name,
-        temporaryPassword,
+        details.full_name?.trim() || undefined,
       );
     } catch (emailError) {
-      // Roll back if email delivery fails
-      if (createdInvitationId) {
-        await invRepo.delete({ id: createdInvitationId });
-      }
-      if (createdUserId) {
-        await AuthRepository.deleteEmailTokensForUser(createdUserId);
-        await AppDataSource.getRepository(User).delete({ id: createdUserId });
-      }
+      await invRepo.delete({ id: invitation.id });
       throw emailError;
     }
 

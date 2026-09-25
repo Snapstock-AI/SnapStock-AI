@@ -1,5 +1,5 @@
 import { useCallback, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import AuthLayout from '@/components/AuthLayout'
 import GoogleContinueButton from '@/components/GoogleContinueButton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext'
 
 export default function Signup() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { register, loginWithGoogle } = useAuth()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -18,6 +19,16 @@ export default function Signup() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const queryFrom = new URLSearchParams(location.search).get('from')
+  const redirectAfterAuth =
+    queryFrom && queryFrom.startsWith('/') && !queryFrom.startsWith('/login')
+      ? queryFrom
+      : '/dashboard'
+  const loginPath =
+    redirectAfterAuth === '/dashboard'
+      ? '/login'
+      : `/login?from=${encodeURIComponent(redirectAfterAuth)}`
+
   const handleGoogle = useCallback(
     async (credential: string) => {
       setError('')
@@ -25,14 +36,14 @@ export default function Signup() {
       setLoading(true)
       try {
         await loginWithGoogle(credential)
-        navigate('/dashboard')
+        navigate(redirectAfterAuth)
       } catch (err: any) {
         setError(err.message || 'Google sign-in failed')
       } finally {
         setLoading(false)
       }
     },
-    [loginWithGoogle, navigate],
+    [loginWithGoogle, navigate, redirectAfterAuth],
   )
 
   async function handleSubmit(e: FormEvent) {
@@ -43,7 +54,7 @@ export default function Signup() {
     try {
       const successMessage = await register(fullName, email, password)
       setMessage(successMessage)
-      setTimeout(() => navigate('/login'), 2000)
+      setTimeout(() => navigate(loginPath), 2000)
     } catch (err: any) {
       setError(err.message || 'Signup failed')
     } finally {
@@ -130,7 +141,7 @@ export default function Signup() {
 
         <p className="mt-8 text-center text-sm text-muted-foreground">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-primary hover:underline">
+          <Link to={loginPath} className="font-medium text-primary hover:underline">
             Sign in
           </Link>
         </p>

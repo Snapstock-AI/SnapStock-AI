@@ -9,6 +9,7 @@ const router = Router();
 router.use(authMiddleware);
 router.get("/mine", BusinessController.listMine);
 router.post("/", BusinessController.create);
+router.post("/switch", BusinessController.switchBusiness);
 router.post("/invitations/accept", InvitationController.accept);
 router.patch("/:businessId", BusinessController.update);
 router.delete("/:businessId", BusinessController.remove);

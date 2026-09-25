@@ -17,10 +17,12 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const queryFrom = new URLSearchParams(location.search).get('from')
+  const stateFrom = (location.state as { from?: string } | null)?.from
+  const candidate = queryFrom || stateFrom || '/dashboard'
   const redirectTo =
-    (location.state as { from?: string } | null)?.from &&
-    !(location.state as { from?: string }).from?.startsWith('/login')
-      ? (location.state as { from: string }).from
+    candidate.startsWith('/') && !candidate.startsWith('/login')
+      ? candidate
       : '/dashboard'
 
   useEffect(() => {

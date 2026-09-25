@@ -67,13 +67,16 @@ export class AuthService {
     );
   }
 
-  private static async createSessionTokens(user: {
-    id: string;
-    email: string;
-    system_role: string;
-    full_name: string;
-    must_change_password: boolean;
-  }) {
+  private static async createSessionTokens(
+    user: {
+      id: string;
+      email: string;
+      system_role: string;
+      full_name: string;
+      must_change_password: boolean;
+    },
+    preferredBusinessId?: string | null,
+  ) {
     const refreshToken = crypto.randomBytes(48).toString("hex");
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_DAYS);
@@ -84,10 +87,33 @@ export class AuthService {
       expiresAt,
     );
 
-    const membership = await BusinessRepository.findBusinessMembershipByUserId(user.id);
-    const businessId = membership?.businessId ?? null;
-    const businessRole = membership?.role ?? null;
-    const token = AuthService.signAccessToken(user, session.id, businessId, businessRole);
+    let businessId: string | null = null;
+    let businessRole: "OWNER" | "EMPLOYEE" | null = null;
+
+    if (preferredBusinessId) {
+      const preferred = await BusinessRepository.findMembership(
+        user.id,
+        preferredBusinessId,
+      );
+      if (preferred) {
+        businessId = preferred.business_id;
+        businessRole = preferred.role;
+      }
+    }
+
+    if (!businessId) {
+      const membership =
+        await BusinessRepository.findBusinessMembershipByUserId(user.id);
+      businessId = membership?.businessId ?? null;
+      businessRole = membership?.role ?? null;
+    }
+
+    const token = AuthService.signAccessToken(
+      user,
+      session.id,
+      businessId,
+      businessRole,
+    );
 
     return {
       token,
@@ -274,7 +300,10 @@ export class AuthService {
     return { message: "Password updated successfully" };
   }
 
-  static async rotateSession(sessionId: string) {
+  static async rotateSession(
+    sessionId: string,
+    preferredBusinessId?: string | null,
+  ) {
     const session = await AuthRepository.findActiveSessionById(sessionId);
 
     if (!session || new Date() > session.expires_at) {
@@ -289,13 +318,35 @@ export class AuthService {
 
     await AuthRepository.revokeSession(session.id);
 
-    return AuthService.createSessionTokens({
-      id: user.id,
-      email: user.email,
-      system_role: user.system_role,
-      full_name: user.full_name,
-      must_change_password: user.must_change_password,
-    });
+    return AuthService.createSessionTokens(
+      {
+        id: user.id,
+        email: user.email,
+        system_role: user.system_role,
+        full_name: user.full_name,
+        must_change_password: user.must_change_password,
+      },
+      preferredBusinessId,
+    );
+  }
+
+  static async switchBusiness(sessionId: string, businessId: string) {
+    const session = await AuthRepository.findActiveSessionById(sessionId);
+
+    if (!session || new Date() > session.expires_at) {
+      throw new Error("Session expired or revoked");
+    }
+
+    const membership = await BusinessRepository.findMembership(
+      session.user_id,
+      businessId,
+    );
+
+    if (!membership) {
+      throw new Error("You do not belong to this business");
+    }
+
+    return AuthService.rotateSession(sessionId, businessId);
   }
 
   static async refresh(data: RefreshTokenDTO) {

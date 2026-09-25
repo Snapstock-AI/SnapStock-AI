@@ -40,12 +40,6 @@ export class BusinessService {
   }
 
   static async createForUser(userId: string, data: CreateBusinessDTO) {
-    const existingBusinesses = await BusinessRepository.findByUserId(userId);
-
-    if (existingBusinesses.length > 0) {
-      throw new Error("User already belongs to a business");
-    }
-
     const business = await BusinessRepository.createWithOwner(userId, data);
 
     return {
