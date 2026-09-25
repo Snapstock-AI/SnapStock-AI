@@ -16,16 +16,23 @@ const CORRECTABLE_FRESHNESS = ["Fresh", "Medium", "Spoiled"] as const;
 
 function mapFreshness(
   freshness: string | null | undefined,
-): "Fresh" | "Spoiled" | "UNKNOWN" {
+): "Fresh" | "Medium" | "Spoiled" | "UNKNOWN" {
   if (!freshness) {
     return "UNKNOWN";
   }
 
   switch (freshness.toLowerCase()) {
     case "good":
+    case "fresh":
       return "Fresh";
 
+    case "medium":
+    case "ripe":
+      return "Medium";
+
     case "bad":
+    case "spoiled":
+    case "rotten":
       return "Spoiled";
 
     default:
@@ -107,18 +114,12 @@ export class DetectionService {
       scanMode,
     };
 
-    const scan = scanMode === "STOCK_IN"
-      ? await DetectionRepository.createScan(
-          analyzeRequest.businessId,
-          analyzeRequest.shelfId,
-          analyzeRequest.userId,
-        )
-      : await DetectionRepository.createScan(
-          analyzeRequest.businessId,
-          analyzeRequest.shelfId,
-          analyzeRequest.userId,
-          scanMode,
-        );
+    const scan = await DetectionRepository.createScan(
+      analyzeRequest.businessId,
+      analyzeRequest.shelfId,
+      analyzeRequest.userId,
+      scanMode,
+    );
 
     const scanId = scan.id;
 
@@ -149,12 +150,26 @@ export class DetectionService {
       console.log(JSON.stringify(aiResult, null, 2));
 
       const savedDetections: SavedDetection[] = [];
+      const unmatchedLabels = new Set<string>();
+      let linkedProducts = 0;
 
       for (const detection of aiResult.detections) {
-        const product = await DetectionRepository.findProductByName(
-          analyzeRequest.businessId,
-          detection.class_name,
-        );
+        const product =
+          scanMode === "STOCK_IN"
+            ? await DetectionRepository.findOrCreateProduct(
+                analyzeRequest.businessId,
+                detection.class_name,
+              )
+            : await DetectionRepository.findProductByName(
+                analyzeRequest.businessId,
+                detection.class_name,
+              );
+
+        if (!product) {
+          unmatchedLabels.add(detection.class_name);
+        } else {
+          linkedProducts += 1;
+        }
 
         const savedDetection = await DetectionRepository.createDetection(
           scanId,
@@ -187,6 +202,16 @@ export class DetectionService {
           freshness_confidence_percent:
             Number(savedDetection.freshness_confidence) * 100,
         });
+      }
+
+      if (
+        scanMode === "STOCK_OUT" &&
+        aiResult.detections.length > 0 &&
+        linkedProducts === 0
+      ) {
+        throw new Error(
+          `No matching inventory products found for: ${[...unmatchedLabels].join(", ")}. Add stock first before removing.`,
+        );
       }
 
       const inventoryChanges = await DetectionRepository.applyInventoryChange(

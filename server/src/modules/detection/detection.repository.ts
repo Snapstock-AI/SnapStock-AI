@@ -1,6 +1,5 @@
 import { AppDataSource } from "../../config/data-source";
 import { Detection } from "../../entities/Detection";
-import { Product } from "../../entities/Product";
 import { Scan, ScanMode, ScanStatus } from "../../entities/Scan";
 import { calculateInventoryQuantity } from "./inventory.utils";
 import db from "../../config/db";
@@ -66,70 +65,150 @@ export class DetectionRepository {
     return repository.findOneBy({ id: detectionId });
   }
 
-  static async createScan(businessId: string, shelfId: string, userId: string, scanMode: ScanMode = "STOCK_IN") {
-    const result = scanMode === "STOCK_IN"
-      ? await db.query(
-          `INSERT INTO scans (business_id, shelf_id, user_id, status)
-           VALUES ($1, $2, $3, 'PENDING') RETURNING id`,
-          [businessId, shelfId, userId],
-        )
-      : await db.query(
-          `INSERT INTO scans (business_id, shelf_id, user_id, scan_mode, status)
-           VALUES ($1, $2, $3, $4, 'PENDING') RETURNING id`,
-          [businessId, shelfId, userId, scanMode],
-        );
+  static async createScan(
+    businessId: string,
+    shelfId: string,
+    userId: string,
+    scanMode: ScanMode = "STOCK_IN",
+  ) {
+    const result = await db.query(
+      `INSERT INTO scans (business_id, shelf_id, user_id, scan_mode, status)
+       VALUES ($1, $2, $3, $4, 'PENDING')
+       RETURNING id`,
+      [businessId, shelfId, userId, scanMode],
+    );
     return result.rows[0];
   }
 
-  static async applyInventoryChange(scanId: string, businessId: string, scanMode: ScanMode) {
+  static async findProductByName(businessId: string, productName: string) {
+    const result = await db.query(
+      `SELECT id, name, quantity, low_stock_threshold
+       FROM products
+       WHERE business_id = $1 AND LOWER(name) = LOWER($2)
+         AND is_active = TRUE AND deleted_at IS NULL
+       LIMIT 1`,
+      [businessId, productName],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  static async findOrCreateProduct(businessId: string, productName: string) {
+    const existing = await DetectionRepository.findProductByName(
+      businessId,
+      productName,
+    );
+    if (existing) return existing;
+
+    const normalized = productName.trim();
+    if (!normalized) return null;
+
+    try {
+      const created = await db.query(
+        `INSERT INTO products (business_id, name, quantity, low_stock_threshold, unit, is_active)
+         VALUES ($1, $2, 0, 5, 'pcs', TRUE)
+         RETURNING id, name, quantity, low_stock_threshold`,
+        [businessId, normalized],
+      );
+      return created.rows[0] ?? null;
+    } catch {
+      // Concurrent insert with same name — fetch the winner.
+      return DetectionRepository.findProductByName(businessId, normalized);
+    }
+  }
+
+  static async applyInventoryChange(
+    scanId: string,
+    businessId: string,
+    scanMode: ScanMode,
+  ) {
     return AppDataSource.transaction(async (manager) => {
-      const rows = await manager.query(
-        `SELECT p.id, p.name, p.quantity, b.low_stock_threshold
+      const rows = (await manager.query(
+        `SELECT
+           p.id,
+           p.name,
+           p.quantity,
+           COALESCE(p.low_stock_threshold, b.low_stock_threshold, 5)::int AS low_stock_threshold
          FROM products p
          INNER JOIN businesses b ON b.id = p.business_id AND b.deleted_at IS NULL
-         WHERE p.business_id = $1 AND p.deleted_at IS NULL
-           AND EXISTS (SELECT 1 FROM detections d WHERE d.scan_id = $2 AND d.product_id = p.id)
-         FOR UPDATE`,
+         WHERE p.business_id = $1
+           AND p.deleted_at IS NULL
+           AND EXISTS (
+             SELECT 1 FROM detections d
+             WHERE d.scan_id = $2 AND d.product_id = p.id
+           )
+         FOR UPDATE OF p`,
         [businessId, scanId],
-      ) as Array<{ id: string; name: string; quantity: number; low_stock_threshold: number }>;
-      const counts = await manager.query(
+      )) as Array<{
+        id: string;
+        name: string;
+        quantity: number;
+        low_stock_threshold: number;
+      }>;
+
+      const counts = (await manager.query(
         `SELECT product_id AS id, COUNT(*)::int AS detected
-         FROM detections WHERE scan_id = $1 AND product_id IS NOT NULL
+         FROM detections
+         WHERE scan_id = $1 AND product_id IS NOT NULL
          GROUP BY product_id`,
         [scanId],
-      ) as Array<{ id: string; detected: number }>;
+      )) as Array<{ id: string; detected: number }>;
+
       const products = new Map(rows.map((row) => [row.id, row]));
-      const changes = counts.map((count) => {
-        const product = products.get(count.id)!;
-        const quantity = calculateInventoryQuantity(product.quantity, count.detected, scanMode);
-        return { product, detected: count.detected, currentQuantity: product.quantity, quantity };
-      });
+      const changes = counts
+        .map((count) => {
+          const product = products.get(count.id);
+          if (!product) return null;
+          const quantity = calculateInventoryQuantity(
+            Number(product.quantity),
+            count.detected,
+            scanMode,
+          );
+          return {
+            product,
+            detected: count.detected,
+            currentQuantity: Number(product.quantity),
+            quantity,
+          };
+        })
+        .filter((change): change is NonNullable<typeof change> => change != null);
 
       for (const change of changes) {
-        await manager.query(`UPDATE products SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [change.quantity, change.product.id]);
-        const alertMessage = `Low stock: ${change.product.name} has ${change.quantity} item${change.quantity === 1 ? "" : "s"} remaining.`;
+        await manager.query(
+          `UPDATE products
+           SET quantity = $1, last_scan_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+           WHERE id = $2`,
+          [change.quantity, change.product.id],
+        );
+
+        const alertMessage = `Low stock: ${change.product.name} has ${change.quantity} item${
+          change.quantity === 1 ? "" : "s"
+        } remaining.`;
+
         if (change.quantity < change.product.low_stock_threshold) {
           await manager.query(
             `INSERT INTO alerts (business_id, product_id, type, message, active)
              VALUES ($1, $2, 'LOW_STOCK', $3, TRUE)
-             ON CONFLICT (business_id, product_id, type) WHERE active = TRUE
+             ON CONFLICT (business_id, product_id, type) WHERE (active = TRUE)
              DO UPDATE SET message = EXCLUDED.message, updated_at = CURRENT_TIMESTAMP`,
             [businessId, change.product.id, alertMessage],
           );
         } else {
           await manager.query(
-            `UPDATE alerts SET active = FALSE, resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            `UPDATE alerts
+             SET active = FALSE, resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
              WHERE business_id = $1 AND product_id = $2 AND type = 'LOW_STOCK' AND active = TRUE`,
             [businessId, change.product.id],
           );
         }
       }
+
       await manager.query(
         `UPDATE scans
          SET status = 'COMPLETED', error_message = NULL, completed_at = CURRENT_TIMESTAMP
          WHERE id = $1`,
         [scanId],
       );
+
       return changes.map(({ product, detected, currentQuantity, quantity }) => ({
         productId: product.id,
         product: product.name,
@@ -160,16 +239,6 @@ export class DetectionRepository {
       [status, errorMessage ?? null, scanId],
     );
     return result.rows[0];
-  }
-
-  static async findProductByName(businessId: string, productName: string) {
-    const result = await db.query(
-      `SELECT id FROM products
-       WHERE business_id = $1 AND LOWER(name) = LOWER($2)
-       AND is_active = TRUE AND deleted_at IS NULL LIMIT 1`,
-      [businessId, productName],
-    );
-    return result.rows[0] ?? null;
   }
 
   static async createDetection(
