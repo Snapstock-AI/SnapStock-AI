@@ -184,6 +184,9 @@ export default function DashboardHome() {
   const displayName = business?.business_name || 'Your business'
 
   const firstName = user.full_name.split(' ')[0]
+  const hour = new Date().getHours()
+  const greeting =
+    hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening'
   const today = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
   const kpis = data?.kpis
   const stats = [
@@ -214,7 +217,7 @@ export default function DashboardHome() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[21px] font-medium text-fd-ink md:text-[30px]">
-            Good Morning {firstName}!
+            {greeting} {firstName}!
           </h1>
           <p className="mt-1 text-sm text-fd-cap">
             Dashboard <span className="mx-1">/</span> {displayName}
