@@ -35,6 +35,9 @@ export class User {
   @Column({ type: "boolean", default: false })
   email_verified!: boolean;
 
+  @Column({ type: "boolean", default: false })
+  must_change_password!: boolean;
+
   @Column({
     type: "enum",
     enum: ["SYSTEM_ADMIN", "BUSINESS_USER"],
