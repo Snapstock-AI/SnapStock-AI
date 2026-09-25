@@ -5,9 +5,11 @@ import { DashboardService } from "./dashboard.service";
 export class DashboardController {
   static async dashboard(req: AuthRequest, res: Response) {
     try {
+      const days = Number(req.query.days || 7);
       const data = await DashboardService.getDashboard(
         req.user!.userId,
         String(req.params.businessId),
+        Number.isFinite(days) && days > 0 ? days : 7,
       );
       return res.status(200).json({ success: true, data });
     } catch (error: any) {

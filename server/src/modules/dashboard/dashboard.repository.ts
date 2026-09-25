@@ -1,5 +1,6 @@
 import { AppDataSource } from "../../config/data-source";
 import { Detection } from "../../entities/Detection";
+import { Product } from "../../entities/Product";
 import { Scan } from "../../entities/Scan";
 import { Shelf } from "../../entities/Shelf";
 import { Alert } from "../../entities/Alert";
@@ -131,6 +132,7 @@ export class DashboardRepository {
     const rows = await AppDataSource.getRepository(Detection)
       .createQueryBuilder("detection")
       .innerJoin(Scan, "scan", "scan.id = detection.scan_id")
+      .leftJoin(Product, "product", "product.id = detection.product_id")
       .select([
         "detection.product_label AS product_label",
         "MAX(product.quantity)::int AS quantity",

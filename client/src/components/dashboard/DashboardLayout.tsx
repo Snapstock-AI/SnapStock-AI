@@ -84,14 +84,21 @@ function SidebarLink({
         viewTransition
         className={({ isActive }) =>
           cn(
-            'mr-[17px] flex items-center gap-2 py-3 pl-[30px] pr-[30px] text-base leading-[27px] text-sidebar-foreground transition-all duration-200',
-            isActive && 'fd-nav-active rounded-r-[60px] !text-white',
+            'group mr-[17px] flex items-center gap-2 rounded-r-[60px] py-3 pl-[30px] pr-[30px] text-base leading-[27px] transition-all duration-200',
+            isActive
+              ? 'fd-nav-active !text-white'
+              : 'text-fd-body hover:translate-x-0.5 hover:bg-muted/70 hover:text-fd-ink',
           )
         }
       >
         {({ isActive }) => (
           <>
-            <Icon className={cn('h-5 w-5 shrink-0', isActive ? 'text-white' : 'text-sidebar-foreground')} />
+            <Icon
+              className={cn(
+                'h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110',
+                isActive ? 'text-white' : 'text-fd-muted group-hover:text-primary',
+              )}
+            />
             <span className="truncate">{label}</span>
           </>
         )}
@@ -209,7 +216,7 @@ export default function DashboardLayout() {
 
           <div className="flex flex-1 items-center justify-between gap-4 px-4 lg:px-6">
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="relative h-10 w-10 text-[#b8c3d5]" asChild>
+              <Button variant="ghost" size="icon" className="relative h-10 w-10 text-fd-muted" asChild>
                 <NavLink to="/dashboard/alerts" viewTransition aria-label="Notifications">
                   <Bell className="h-5 w-5" />
                   {badge > 0 ? (
@@ -219,7 +226,7 @@ export default function DashboardLayout() {
                   ) : null}
                 </NavLink>
               </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-[#b8c3d5]" asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-fd-muted" asChild>
                 <NavLink to="/dashboard/settings" viewTransition aria-label="Settings">
                   <Settings className="h-5 w-5" />
                 </NavLink>
@@ -228,7 +235,7 @@ export default function DashboardLayout() {
             </div>
 
             <div ref={searchRef} className="relative hidden max-w-md flex-1 md:block lg:max-w-lg">
-              <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#b8c3d5]" />
+              <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-fd-muted" />
               <input
                 value={query}
                 onChange={(e) => {
@@ -248,7 +255,7 @@ export default function DashboardLayout() {
                 }}
                 placeholder="Search pages…"
                 aria-label="Search dashboard pages"
-                className="h-[46px] w-full rounded-[60px] border-0 bg-white px-7 pr-11 text-sm text-fd-ink outline-none placeholder:text-[#b8c3d5] fd-shadow-input dark:bg-card"
+                className="h-[46px] w-full rounded-[60px] border border-border bg-white px-7 pr-11 text-sm text-fd-ink outline-none placeholder:text-fd-muted fd-shadow-input dark:bg-card"
               />
               {searchOpen && query.trim() && (
                 <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-border bg-white shadow-lg dark:bg-card">
@@ -326,7 +333,7 @@ export default function DashboardLayout() {
             <SidebarLink to="/dashboard" label="Dashboard" icon={LayoutDashboard} end />
           </ul>
 
-          <div className="mx-[30px] my-5 h-px bg-sidebar-foreground/10" />
+          <div className="mx-[30px] my-5 h-px bg-border" />
 
           <p className="mb-2 px-[30px] text-xs font-medium uppercase text-fd-cap">Applications</p>
           <ul>
@@ -336,7 +343,7 @@ export default function DashboardLayout() {
             {isOwner && <SidebarLink to="/dashboard/invitations" label="Team" icon={Users} />}
           </ul>
 
-          <div className="mx-[30px] my-5 h-px bg-sidebar-foreground/10" />
+          <div className="mx-[30px] my-5 h-px bg-border" />
 
           <p className="mb-2 px-[30px] text-xs font-medium uppercase text-fd-cap">Components</p>
           <ul>
@@ -403,8 +410,8 @@ export default function DashboardLayout() {
             viewTransition
             className={({ isActive }) =>
               cn(
-                'flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors duration-200',
-                isActive ? 'text-primary' : 'text-fd-muted',
+                'flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-all duration-200',
+                isActive ? 'text-primary scale-105' : 'text-fd-muted hover:text-fd-ink',
               )
             }
           >

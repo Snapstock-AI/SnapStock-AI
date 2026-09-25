@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { useAuth } from '@/context/AuthContext'
 
@@ -6,11 +6,29 @@ export default function ProtectedRoute() {
   const { isAuthenticated, user, syncBusinessMembership } = useAuth()
   const location = useLocation()
   const [membershipChecked, setMembershipChecked] = useState(false)
+  const syncedForUser = useRef<string | null>(null)
 
   useEffect(() => {
     let active = true
 
-    if (!isAuthenticated || location.pathname === '/onboarding/business') {
+    if (!isAuthenticated) {
+      setMembershipChecked(false)
+      syncedForUser.current = null
+      return () => {
+        active = false
+      }
+    }
+
+    if (location.pathname === '/onboarding/business') {
+      setMembershipChecked(true)
+      return () => {
+        active = false
+      }
+    }
+
+    const userKey = user?.id ?? 'anon'
+    // Only sync once per signed-in user — not on every tab click.
+    if (syncedForUser.current === userKey) {
       setMembershipChecked(true)
       return () => {
         active = false
@@ -21,16 +39,18 @@ export default function ProtectedRoute() {
     syncBusinessMembership()
       .catch(() => undefined)
       .finally(() => {
-        if (active) setMembershipChecked(true)
+        if (!active) return
+        syncedForUser.current = userKey
+        setMembershipChecked(true)
       })
 
     return () => {
       active = false
     }
-  }, [isAuthenticated, location.pathname, syncBusinessMembership])
+  }, [isAuthenticated, location.pathname, syncBusinessMembership, user?.id])
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
   if (!membershipChecked) {
@@ -42,12 +62,10 @@ export default function ProtectedRoute() {
   const isEmployee = user?.businessRole === 'EMPLOYEE'
   const hasBusiness = Boolean(user?.businessId)
 
-  // Employees are always associated with the owner's business — never redirect them to create one
   if (!hasBusiness && !isEmployee && !isBusinessOnboarding && !isSettings) {
     return <Navigate to="/onboarding/business" replace />
   }
 
-  // Employees trying to access business onboarding should go to dashboard
   if (isEmployee && isBusinessOnboarding) {
     return <Navigate to="/dashboard" replace />
   }

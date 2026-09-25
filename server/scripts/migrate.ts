@@ -70,7 +70,28 @@ async function runMigrations(): Promise<void> {
     }
 
     console.error("Migration failed:");
-    console.error(error instanceof Error ? error.message : error);
+    if (error instanceof AggregateError) {
+      const parts = error.errors
+        .map((err) => {
+          if (!(err instanceof Error)) return String(err);
+          const code = (err as NodeJS.ErrnoException).code;
+          return code ? `${code}: ${err.message || err.name}` : err.message || err.name;
+        })
+        .filter(Boolean);
+      console.error(
+        parts.length
+          ? parts.join("; ")
+          : "Could not connect to PostgreSQL (connection refused).",
+      );
+      console.error(
+        "Check that Docker Postgres is running and port 5432 is published (docker compose up -d postgres).",
+      );
+    } else if (error instanceof Error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      console.error(code ? `${code}: ${error.message || error.name}` : error.message || error.stack);
+    } else {
+      console.error(error);
+    }
     process.exit(1);
   } finally {
     await client.end();
