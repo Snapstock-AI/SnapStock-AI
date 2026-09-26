@@ -3,6 +3,7 @@ import { API_URL } from "./api";
 
 export type DetectionResult = {
   scanId: string;
+  shelf?: Shelf;
 
   image_width: number;
   image_height: number;
