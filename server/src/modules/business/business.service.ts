@@ -1,4 +1,6 @@
 import { BusinessRepository } from "./business.repository";
+import { AuthRepository } from "../auth/auth.repository";
+import { InvitationService } from "./invitation.service";
 import { CreateBusinessDTO, UpdateBusinessDTO } from "./business.types";
 
 export class BusinessService {
@@ -40,6 +42,17 @@ export class BusinessService {
   }
 
   static async createForUser(userId: string, data: CreateBusinessDTO) {
+    const user = await AuthRepository.findById(userId);
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Only self-registered owners can create a business; invited employees cannot.
+    if (await InvitationService.wasInvited(user.email)) {
+      throw new Error("Employee accounts cannot create a business.");
+    }
+
     const existingBusinesses = await BusinessRepository.findByUserId(userId);
 
     if (existingBusinesses.length > 0) {

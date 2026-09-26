@@ -6,10 +6,12 @@ import { DashboardController } from "../dashboard/dashboard.controller";
 
 const router = Router();
 
+// Public: the emailed invitation token itself authorizes the employee
+router.post("/invitations/accept", InvitationController.accept);
+
 router.use(authMiddleware);
 router.get("/mine", BusinessController.listMine);
 router.post("/", BusinessController.create);
-router.post("/invitations/accept", InvitationController.accept);
 router.patch("/:businessId", BusinessController.update);
 router.delete("/:businessId", BusinessController.remove);
 router.get("/:businessId/employees", BusinessController.listEmployees);

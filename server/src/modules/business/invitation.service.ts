@@ -3,7 +3,6 @@ import { AppDataSource } from "../../config/data-source";
 import { EmployeeInvitation } from "../../entities/EmployeeInvitation";
 import { User } from "../../entities/User";
 import { BusinessUser } from "../../entities/BusinessUser";
-import { EmailVerificationToken } from "../../entities/EmailVerificationToken";
 import { BusinessService } from "./business.service";
 import { AuthRepository } from "../auth/auth.repository";
 import { sendEmployeeInvitationEmail } from "../../shared/utils/email";
@@ -13,10 +12,11 @@ const INVITATION_VALIDITY_DAYS = 7;
 
 export class InvitationService {
   /**
-   * Called when a logged-in employee visits /accept-invitation?token=...
-   * Edge-case path for users already authenticated but not yet linked to business.
+   * Called when an invited employee opens the invitation link from their email.
+   * The token is only delivered to the employee's inbox, so possessing it is
+   * enough to link the pre-created account to the business — no sign-in needed.
    */
-  static async accept(userId: string, token: string) {
+  static async accept(token: string) {
     const normalizedToken = token.trim();
 
     if (!normalizedToken) {
@@ -28,29 +28,28 @@ export class InvitationService {
         where: { invitation_token: normalizedToken },
       });
 
-      const user = await manager.findOne(User, { where: { id: userId } });
-
       if (!invitation) {
         throw new Error(
           "Invitation not found. Ask the owner to send a new invitation.",
         );
       }
 
-      if (
-        !user ||
-        user.email.toLowerCase() !== invitation.email.toLowerCase()
-      ) {
+      const user = await manager.findOne(User, {
+        where: { email: invitation.email.toLowerCase() },
+      });
+
+      if (!user) {
         throw new Error(
-          "Sign in with the email address that received this invitation.",
+          "The account for this invitation no longer exists. Ask the owner to send a new invitation.",
         );
       }
 
       const existingMembership = await manager.findOne(BusinessUser, {
-        where: { user_id: userId, business_id: invitation.business_id },
+        where: { user_id: user.id, business_id: invitation.business_id },
       });
 
       if (invitation.status === "ACCEPTED" && existingMembership) {
-        return { businessId: invitation.business_id };
+        return { businessId: invitation.business_id, email: user.email };
       }
 
       if (invitation.status !== "PENDING") {
@@ -60,26 +59,23 @@ export class InvitationService {
       if (invitation.expires_at <= new Date()) {
         invitation.status = "EXPIRED";
         await manager.save(invitation);
-        throw new Error("This invitation has expired.");
+        throw new Error(
+          "This invitation has expired. Ask the owner to send a new invitation.",
+        );
       }
 
       const membershipInAnotherBusiness = await manager.findOne(BusinessUser, {
-        where: { user_id: userId },
+        where: { user_id: user.id },
       });
 
       if (membershipInAnotherBusiness) {
         throw new Error("This user already belongs to a business.");
       }
 
-      if (!user.email_verified) {
-        user.email_verified = true;
-        await manager.save(user);
-      }
-
       await manager.save(
         manager.create(BusinessUser, {
           business_id: invitation.business_id,
-          user_id: userId,
+          user_id: user.id,
           role: "EMPLOYEE",
           joined_at: new Date(),
         }),
@@ -89,55 +85,22 @@ export class InvitationService {
       invitation.accepted_at = new Date();
       await manager.save(invitation);
 
-      return { businessId: invitation.business_id };
+      return { businessId: invitation.business_id, email: user.email };
     });
   }
 
-  /**
-   * Activate a PENDING invitation by token after the employee verifies their email.
-   * Called from AuthService.verifyEmail() automatically — no separate auth step.
-   * Creates the BusinessUser record and marks the invitation ACCEPTED.
-   */
-  static async activateByToken(userId: string, token: string) {
-    const repo = AppDataSource.getRepository(EmployeeInvitation);
-
-    const invitation = await repo.findOne({
-      where: { invitation_token: token, status: "PENDING" },
+  /** True when this email has an invitation the employee has not accepted yet. */
+  static async hasPendingInvitation(email: string) {
+    return AppDataSource.getRepository(EmployeeInvitation).exists({
+      where: { email: email.trim().toLowerCase(), status: "PENDING" },
     });
+  }
 
-    if (!invitation) {
-      // No matching pending invitation — this is a normal email verification
-      return null;
-    }
-
-    if (invitation.expires_at <= new Date()) {
-      await repo.update({ id: invitation.id }, { status: "EXPIRED" });
-      throw new Error(
-        "This invitation link has expired. Ask your owner to resend the invitation.",
-      );
-    }
-
-    const existingMembership = await AppDataSource.getRepository(
-      BusinessUser,
-    ).findOne({ where: { user_id: userId } });
-
-    if (!existingMembership) {
-      await AppDataSource.getRepository(BusinessUser).save(
-        AppDataSource.getRepository(BusinessUser).create({
-          business_id: invitation.business_id,
-          user_id: userId,
-          role: "EMPLOYEE",
-          joined_at: new Date(),
-        }),
-      );
-    }
-
-    await repo.update(
-      { id: invitation.id },
-      { status: "ACCEPTED", accepted_at: new Date() },
-    );
-
-    return { businessId: invitation.business_id };
+  /** True when this email was ever invited as an employee (i.e. not a self-registered owner). */
+  static async wasInvited(email: string) {
+    return AppDataSource.getRepository(EmployeeInvitation).exists({
+      where: { email: email.trim().toLowerCase() },
+    });
   }
 
   static async list(invitedBy: string, businessId: string) {
@@ -168,18 +131,7 @@ export class InvitationService {
     }));
   }
 
-  /**
-   * Owner sends an invitation:
-   *  1. Creates an unverified User account with a temporary password.
-   *  2. Stores the invitation token as the email verification token.
-   *  3. Creates a PENDING EmployeeInvitation (no BusinessUser yet).
-   *  4. Sends a verification/invitation email with the token link.
-   *
-   * When the employee clicks the verify link:
-   *  → GET /auth/verify-email?token=<token> → AuthService.verifyEmail()
-   *  → verifyEmail marks email verified, then calls InvitationService.activateByToken()
-   *  → activateByToken creates BusinessUser + marks invitation ACCEPTED.
-   */
+ 
   static async send(
     invitedBy: string,
     businessId: string,
@@ -230,7 +182,6 @@ export class InvitationService {
       await invRepo.save(existingInvitation);
     }
 
-    // The invitation token doubles as the email verification token
     const invitationToken = crypto.randomBytes(32).toString("hex");
     const temporaryPassword = crypto.randomBytes(9).toString("base64url");
     const expiresAt = new Date();
@@ -240,7 +191,6 @@ export class InvitationService {
     let createdInvitationId: string | null = null;
 
     const invitation = await AppDataSource.transaction(async (manager) => {
-      // 1. Create unverified user
       const user = await manager.save(
         manager.create(User, {
           full_name: details.full_name.trim(),
@@ -248,22 +198,12 @@ export class InvitationService {
           nic: details.nic?.trim() || null,
           date_of_birth: details.date_of_birth || null,
           password_hash: await bcrypt.hash(temporaryPassword, 10),
-          email_verified: false,         // not verified yet
+          email_verified: true,
           must_change_password: true,
         }),
       );
       createdUserId = user.id;
 
-      // 2. Store invitation token as email verification token in the same transaction
-      await manager.save(
-        manager.create(EmailVerificationToken, {
-          user_id: user.id,
-          token: invitationToken,
-          expires_at: expiresAt,
-        }),
-      );
-
-      // 3. Create PENDING invitation — BusinessUser NOT created yet
       return manager.save(
         manager.create(EmployeeInvitation, {
           business_id: businessId,
@@ -288,12 +228,10 @@ export class InvitationService {
         temporaryPassword,
       );
     } catch (emailError) {
-      // Roll back if email delivery fails
       if (createdInvitationId) {
         await invRepo.delete({ id: createdInvitationId });
       }
       if (createdUserId) {
-        await AuthRepository.deleteEmailTokensForUser(createdUserId);
         await AppDataSource.getRepository(User).delete({ id: createdUserId });
       }
       throw emailError;

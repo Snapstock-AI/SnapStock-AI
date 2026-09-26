@@ -6,13 +6,46 @@ import {
   waitFor,
 } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { MemoryRouter } from "react-router";
 
 import ScansPage from "../../src/pages/dashboard/ScansPage";
 import { analyzeImage } from "../../src/lib/detection";
 
+// ScansPage renders <Link>, which needs a router context
+const renderScansPage = () =>
+  render(
+    <MemoryRouter>
+      <ScansPage />
+    </MemoryRouter>,
+  );
 
-vi.mock("../../src/lib/detection", () => ({
+
+vi.mock("../../src/lib/detection", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/lib/detection")>()),
   analyzeImage: vi.fn(),
+  getScanHistory: vi.fn().mockResolvedValue([]),
+}));
+
+
+vi.mock("../../src/lib/shelf", () => ({
+  getShelves: vi.fn().mockResolvedValue([
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      name: "Shelf A - Bananas",
+      category: "Fruit",
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440002",
+      name: "Shelf B - Tomatoes",
+      category: "Vegetable",
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440003",
+      name: "Shelf C - Apples",
+      category: "Fruit",
+    },
+  ]),
+  createShelf: vi.fn(),
 }));
 
 
@@ -109,6 +142,8 @@ const mockResult = {
     },
   ],
 
+  inventoryChanges: [],
+
   shelf: mockShelf,
 };
 
@@ -116,11 +151,28 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+// Shelves load asynchronously from the API, so wait for them before selecting
+const renderWithShelfSelected = async () => {
+  renderScansPage();
+
+  await screen.findByRole("option", { name: /Shelf A - Bananas/i });
+
+  const select = screen.getByRole("combobox");
+
+  fireEvent.change(select, {
+    target: {
+      value: shelfId,
+    },
+  });
+
+  return select;
+};
+
 describe("ScansPage", () => {
 
 
   it("should render the shelf scanning page", () => {
-    render(<ScansPage />);
+    renderScansPage();
 
     expect(
       screen.getByRole("heading", {
@@ -149,11 +201,11 @@ describe("ScansPage", () => {
 
 
 
-  it("should display available shelves", () => {
-    render(<ScansPage />);
+  it("should display available shelves", async () => {
+    renderScansPage();
 
     expect(
-      screen.getByRole("option", {
+      await screen.findByRole("option", {
         name: /Shelf A - Bananas/i,
       })
     ).toBeInTheDocument();
@@ -171,16 +223,8 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("should allow the user to select a shelf", () => {
-    render(<ScansPage />);
-
-    const select = screen.getByRole("combobox");
-
-    fireEvent.change(select, {
-      target: {
-        value: shelfId,
-      },
-    });
+  it("should allow the user to select a shelf", async () => {
+    const select = await renderWithShelfSelected();
 
     expect(select).toHaveValue(shelfId);
   });
@@ -188,7 +232,7 @@ describe("ScansPage", () => {
 
 
   it("should show an error when opening the camera without selecting a shelf", () => {
-    render(<ScansPage />);
+    renderScansPage();
 
     const cameraButton = screen.getByRole("button", {
       name: /open camera/i,
@@ -205,16 +249,8 @@ describe("ScansPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("should open the camera after selecting a shelf", () => {
-    render(<ScansPage />);
-
-    const select = screen.getByRole("combobox");
-
-    fireEvent.change(select, {
-      target: {
-        value: shelfId,
-      },
-    });
+  it("should open the camera after selecting a shelf", async () => {
+    await renderWithShelfSelected();
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -231,16 +267,8 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("should close the camera when close is clicked", () => {
-    render(<ScansPage />);
-
-    const select = screen.getByRole("combobox");
-
-    fireEvent.change(select, {
-      target: {
-        value: shelfId,
-      },
-    });
+  it("should close the camera when close is clicked", async () => {
+    await renderWithShelfSelected();
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -265,16 +293,8 @@ describe("ScansPage", () => {
 
  
 
-  it("should show the preview after capturing an image", () => {
-    render(<ScansPage />);
-
-    const select = screen.getByRole("combobox");
-
-    fireEvent.change(select, {
-      target: {
-        value: shelfId,
-      },
-    });
+  it("should show the preview after capturing an image", async () => {
+    await renderWithShelfSelected();
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -307,16 +327,8 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("should reopen the camera when retake is clicked", () => {
-    render(<ScansPage />);
-
-    const select = screen.getByRole("combobox");
-
-    fireEvent.change(select, {
-      target: {
-        value: shelfId,
-      },
-    });
+  it("should reopen the camera when retake is clicked", async () => {
+    await renderWithShelfSelected();
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -344,15 +356,7 @@ describe("ScansPage", () => {
 
 
   it("should show the preview after uploading an image", async () => {
-    render(<ScansPage />);
-
-    const select = screen.getByRole("combobox");
-
-    fireEvent.change(select, {
-      target: {
-        value: shelfId,
-      },
-    });
+    await renderWithShelfSelected();
 
     const input = document.querySelector(
       'input[type="file"]'
@@ -386,15 +390,7 @@ describe("ScansPage", () => {
       mockResult
     );
 
-    render(<ScansPage />);
-
-    const select = screen.getByRole("combobox");
-
-    fireEvent.change(select, {
-      target: {
-        value: shelfId,
-      },
-    });
+    await renderWithShelfSelected();
 
     const input = document.querySelector(
       'input[type="file"]'
@@ -444,15 +440,7 @@ describe("ScansPage", () => {
       mockResult
     );
 
-    render(<ScansPage />);
-
-    const select = screen.getByRole("combobox");
-
-    fireEvent.change(select, {
-      target: {
-        value: shelfId,
-      },
-    });
+    await renderWithShelfSelected();
 
     const input = document.querySelector(
       'input[type="file"]'
@@ -487,11 +475,11 @@ describe("ScansPage", () => {
     ).toBeInTheDocument();
 
     expect(
-      screen.getByText("apple")
+      screen.getByText("Apple")
     ).toBeInTheDocument();
 
     expect(
-      screen.getByText("lemon")
+      screen.getByText("Lemon")
     ).toBeInTheDocument();
 
     expect(
@@ -513,15 +501,7 @@ describe("ScansPage", () => {
       new Error("AI service unavailable")
     );
 
-    render(<ScansPage />);
-
-    const select = screen.getByRole("combobox");
-
-    fireEvent.change(select, {
-      target: {
-        value: shelfId,
-      },
-    });
+    await renderWithShelfSelected();
 
     const input = document.querySelector(
       'input[type="file"]'

@@ -75,3 +75,21 @@ export async function sendEmployeeInvitation(
 
   return response.data;
 }
+
+export async function acceptEmployeeInvitation(
+  token: string,
+): Promise<{ businessId: string; email: string }> {
+  const response = await apiRequest<{ businessId: string; email: string }>(
+    "/businesses/invitations/accept",
+    {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    },
+  );
+
+  if (!response.data) {
+    throw new Error("Invitation acceptance failed.");
+  }
+
+  return response.data;
+}

@@ -67,6 +67,27 @@ export class AuthService {
     );
   }
 
+  /**
+   * Invited employees get an account up front but must open the invitation link
+   * (which adds them to the business) before they can sign in. Otherwise they
+   * would land in the "create business" onboarding, which is owner-only.
+   */
+  private static async assertInvitationAccepted(user: {
+    id: string;
+    email: string;
+  }) {
+    const membership = await BusinessRepository.findBusinessMembershipByUserId(
+      user.id,
+    );
+    if (membership) return;
+
+    if (await InvitationService.hasPendingInvitation(user.email)) {
+      throw new Error(
+        "Please accept the invitation sent to your email before signing in.",
+      );
+    }
+  }
+
   private static async createSessionTokens(user: {
     id: string;
     email: string;
@@ -141,7 +162,9 @@ export class AuthService {
 
   //LOGIN USER
   static async login(data: LoginDTO) {
-    const user = await AuthRepository.findByEmail(data.email);
+    // Include soft-deleted users so a removed employee gets a clear message
+    // (only once they prove the password, to avoid leaking account status).
+    const user = await AuthRepository.findByEmailIncludingDeleted(data.email);
 
     if (!user) {
       throw new Error("Invalid credentials");
@@ -159,9 +182,17 @@ export class AuthService {
       throw new Error("Invalid credentials");
     }
 
+    if (user.deleted_at) {
+      throw new Error(
+        "This account has been removed from its business and can no longer sign in.",
+      );
+    }
+
     if (!user.email_verified) {
       throw new Error("Please verify your email first");
     }
+
+    await AuthService.assertInvitationAccepted(user);
 
     const session = await AuthService.createSessionTokens(user);
 
@@ -243,6 +274,8 @@ export class AuthService {
       await AuthRepository.verifyUser(user.id);
       user = { ...user, email_verified: true };
     }
+
+    await AuthService.assertInvitationAccepted(user);
 
     const session = await AuthService.createSessionTokens(user);
 
@@ -347,11 +380,6 @@ export class AuthService {
     }
 
     if (user.email_verified) {
-      try {
-        await InvitationService.activateByToken(record.user_id, token);
-      } catch (invErr) {
-        console.error("[verifyEmail] Invitation activation failed:", invErr);
-      }
       await AuthRepository.deleteEmailToken(token);
       return {
         message: "Email already verified",
@@ -361,23 +389,8 @@ export class AuthService {
     await AuthRepository.verifyUser(record.user_id);
     await AuthRepository.deleteEmailToken(token);
 
-    // If this token belongs to an employee invitation, activate the BusinessUser record now
-    let invitationActivated = false;
-    try {
-      const invResult = await InvitationService.activateByToken(record.user_id, token);
-      if (invResult) {
-        invitationActivated = true;
-      }
-    } catch (invErr) {
-      // Don't fail the whole verification if invitation activation fails;
-      // the email is already verified. Owner can resend if needed.
-      console.error("[verifyEmail] Invitation activation failed:", invErr);
-    }
-
     return {
-      message: invitationActivated
-        ? "Email verified and your employee account has been activated! You can now sign in with your temporary password."
-        : "Email verified successfully",
+      message: "Email verified successfully",
     };
   }
 

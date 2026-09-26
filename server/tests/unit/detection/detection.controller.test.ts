@@ -107,6 +107,7 @@ describe("DetectionController", () => {
             freshness_confidence_percent: 90,
           },
         ],
+        inventoryChanges: [],
       };
 
       mockedService.analyze.mockResolvedValue(result);

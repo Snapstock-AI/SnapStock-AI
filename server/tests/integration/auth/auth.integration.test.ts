@@ -53,6 +53,7 @@ describe("Auth routes", () => {
     it("should return tokens on successful login", async () => {
       mockedAuthService.login.mockResolvedValue({
         message: "Login successful",
+        mustChangePassword: false,
         token: "access-token",
         refreshToken: "refresh-token",
         user: {
@@ -60,6 +61,7 @@ describe("Auth routes", () => {
           full_name: "Test User",
           email: "test@example.com",
           system_role: "BUSINESS_USER",
+          must_change_password: false,
         },
       });
 
@@ -73,6 +75,7 @@ describe("Auth routes", () => {
         success: true,
         data: {
           message: "Login successful",
+          mustChangePassword: false,
           token: "access-token",
           refreshToken: "refresh-token",
           user: {
@@ -80,6 +83,7 @@ describe("Auth routes", () => {
             full_name: "Test User",
             email: "test@example.com",
             system_role: "BUSINESS_USER",
+            must_change_password: false,
           },
         },
       });
@@ -114,6 +118,7 @@ describe("Auth routes", () => {
           full_name: "Test User",
           email: "test@example.com",
           system_role: "BUSINESS_USER",
+          must_change_password: false,
         },
       });
 

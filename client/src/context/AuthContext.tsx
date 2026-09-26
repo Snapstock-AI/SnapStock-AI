@@ -23,7 +23,6 @@ type AuthContextValue = {
   loginWithGoogle: (credential: string) => Promise<void>
   register: (full_name: string, email: string, password: string) => Promise<string>
   createBusiness: (data: CreateBusinessInput) => Promise<Business>
-  acceptInvitation: (token: string) => Promise<void>
   changePassword: (password: string) => Promise<void>
   updateProfile: (full_name: string) => Promise<void>
   syncBusinessMembership: () => Promise<boolean>
@@ -124,25 +123,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result.data.business
   }, [])
 
-  const acceptInvitation = useCallback(async (invitationToken: string) => {
-    const result = await apiRequest<{
-      token: string
-      refreshToken: string
-      user: AuthUser
-    }>('/businesses/invitations/accept', {
-      method: 'POST',
-      body: JSON.stringify({ token: invitationToken }),
-    }, true)
-
-    if (!result.data?.token || !result.data.user) {
-      throw new Error('Invitation acceptance failed')
-    }
-
-    setAuth(result.data.token, result.data.user, result.data.refreshToken)
-    setToken(result.data.token)
-    setUser(result.data.user)
-  }, [])
-
   const changePassword = useCallback(async (password: string) => {
     const result = await apiRequest<{ message: string }>('/auth/password', {
       method: 'PATCH',
@@ -210,13 +190,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loginWithGoogle,
       register,
       createBusiness,
-      acceptInvitation,
       changePassword,
       updateProfile,
       syncBusinessMembership,
       logout,
     }),
-    [user, token, login, loginWithGoogle, register, createBusiness, acceptInvitation, changePassword, updateProfile, syncBusinessMembership, logout]
+    [user, token, login, loginWithGoogle, register, createBusiness, changePassword, updateProfile, syncBusinessMembership, logout]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,21 +1,19 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
 import { InvitationService } from "./invitation.service";
-import { AuthService } from "../auth/auth.service";
 
 export class InvitationController {
-  static async accept(req: AuthRequest, res: Response) {
+  static async accept(req: Request, res: Response) {
     try {
-      await InvitationService.accept(
-        req.user!.userId,
+      const result = await InvitationService.accept(
         String(req.body.token || ""),
       );
-      const auth = await AuthService.rotateSession(req.user!.sessionId);
 
       return res.status(200).json({
         success: true,
-        data: auth,
-        message: "Invitation accepted successfully.",
+        data: result,
+        message:
+          "Invitation accepted. Sign in with the temporary password from your invitation email.",
       });
     } catch (error: any) {
       return res.status(400).json({

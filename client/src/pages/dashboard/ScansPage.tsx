@@ -2,13 +2,12 @@ import { useEffect, useState } from "react";
 import { Camera, Plus, Upload } from "lucide-react";
 import { Link } from "react-router";
 import {
-  fetchScanStatus,
+  analyzeImage,
   formatHistoryDate,
   getScanHistory,
-  queueUploadedScan,
-  uploadScanImage,
   type DetectionResult,
   type ScanHistoryItem,
+  type ScanMode,
 } from "../../lib/detection";
 import CameraScanner from "../../components/scanner/CameraScanner";
 import type { Shelf } from "../../types/shelf";
@@ -30,9 +29,11 @@ export default function ScansPage() {
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<File | null>(null);
-  const [result, setResult] = useState<DetectionResult | null>(null);
+  const [result, setResult] = useState<(DetectionResult & { shelf?: Shelf }) | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [scanMode, setScanMode] = useState<ScanMode>("STOCK_IN");
 
   const [showCamera, setShowCamera] = useState(false);
 
@@ -87,57 +88,6 @@ export default function ScansPage() {
     loadRecentHistory();
   }, [token, user?.businessId]);
 
-  // Poll scan status when queued
-  useEffect(() => {
-    if (!token || !businessId) {
-      setShelves([]);
-      setShelvesLoading(false);
-      return;
-    }
-
-    const loadShelves = async () => {
-      try {
-        const statusResponse = await fetchScanStatus(queuedScan.scanId, token);
-
-        if (isCancelled) {
-          return;
-        }
-
-        if (statusResponse.status === "COMPLETED" && statusResponse.data) {
-          setResult({
-            ...statusResponse.data,
-            shelf: selectedShelf ?? undefined,
-          });
-          setQueuedScan(null);
-          void loadRecentHistory();
-          return;
-        }
-
-        if (statusResponse.status === "FAILED") {
-          setError(statusResponse.errorMessage || "Scan analysis failed.");
-          setQueuedScan(null);
-          return;
-        }
-
-        timer = window.setTimeout(pollScanStatus, 3000);
-      } catch (pollError: any) {
-        if (!isCancelled) {
-          setError(pollError.message || "Unable to fetch scan status.");
-          setQueuedScan(null);
-        }
-      }
-    };
-
-    loadShelves();
-  }, [token, businessId]);
-
-  useEffect(() => {
-    if (!token || !businessId) {
-      setScanHistory([]);
-      setHistoryLoading(false);
-      return;
-    }
-
   const showError = (message: string) => {
     setError(message);
     setTimeout(() => {
@@ -188,24 +138,16 @@ export default function ScansPage() {
         return;
       }
 
-      const data = await uploadScanImage(
+      const data = await analyzeImage(
         file,
         shelf,
         user.businessId,
         token,
-      );
-      await queueUploadedScan(
-        data,
-        shelf,
-        user.businessId,
-        file.type,
-        token,
+        scanMode,
       );
 
-      setQueuedScan({
-        scanId: data.scanId,
-        objectKey: data.objectKey,
-      });
+      setResult({ ...data, shelf });
+      void loadRecentHistory();
     } catch (err: any) {
       showError(err.message || "Image analysis failed.");
     } finally {
@@ -296,6 +238,31 @@ export default function ScansPage() {
 
             <option value="__new__">+ Create new shelf...</option>
           </select>
+
+          <div className="mt-4">
+            <p className="mb-2 text-sm font-medium">Scan mode</p>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Scan mode">
+              {([
+                ["STOCK_IN", "Stock in"],
+                ["STOCK_OUT", "Stock out"],
+              ] as const).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  role="radio"
+                  aria-checked={scanMode === mode}
+                  onClick={() => setScanMode(mode)}
+                  className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                    scanMode === mode
+                      ? "border-brand-500 bg-brand-500 text-white"
+                      : "border-border bg-surface hover:bg-surface-muted"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {shelves.length === 0 && !loadingShelves && (
             <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center justify-between">
@@ -435,7 +402,7 @@ export default function ScansPage() {
               <div className="flex flex-col items-center gap-3">
                 <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent" />
                 <p className="font-medium text-white">
-                  Uploading scan...
+                  Analyzing scan...
                 </p>
               </div>
             </div>
@@ -450,29 +417,6 @@ export default function ScansPage() {
           </div>
         )}
       </div>
-
-      {queuedScan && !result && (
-        <div className="rounded-2xl border border-border bg-surface-elevated p-6">
-          <h2 className="font-serif text-xl font-semibold">
-            Scan queued
-          </h2>
-          <p className="mt-2 text-sm text-muted">
-            Your image was uploaded successfully and is waiting for AI analysis.
-          </p>
-          <dl className="mt-4 space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">Status</dt>
-              <dd className="font-semibold">PENDING</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">Scan ID</dt>
-              <dd className="max-w-[70%] truncate font-mono text-xs">
-                {queuedScan.scanId}
-              </dd>
-            </div>
-          )}
-        </div>
-      )}
 
       {result && (
         <div className="rounded-2xl border border-border bg-surface-elevated p-6">

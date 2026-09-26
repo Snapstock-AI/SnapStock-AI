@@ -54,6 +54,7 @@ describe("POST /detection/analyze", () => {
           freshness_confidence_percent: 80,
         },
       ],
+      inventoryChanges: [],
     };
 
     mockedService.analyze.mockResolvedValue(result);

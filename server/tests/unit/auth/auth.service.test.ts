@@ -4,10 +4,12 @@ import jwt from "jsonwebtoken";
 import { AuthService } from "../../../src/modules/auth/auth.service";
 import { AuthRepository } from "../../../src/modules/auth/auth.repository";
 import { BusinessRepository } from "../../../src/modules/business/business.repository";
+import { InvitationService } from "../../../src/modules/business/invitation.service";
 
 jest.mock("../../../src/modules/auth/auth.repository", () => ({
   AuthRepository: {
     findByEmail: jest.fn(),
+    findByEmailIncludingDeleted: jest.fn(),
     findById: jest.fn(),
     createUser: jest.fn(),
     createSession: jest.fn(),
@@ -37,8 +39,15 @@ jest.mock("../../../src/modules/business/business.repository", () => ({
   },
 }));
 
+jest.mock("../../../src/modules/business/invitation.service", () => ({
+  InvitationService: {
+    hasPendingInvitation: jest.fn(),
+  },
+}));
+
 const mockedRepository = AuthRepository as jest.Mocked<typeof AuthRepository>;
 const mockedBusinessRepository = BusinessRepository as jest.Mocked<typeof BusinessRepository>;
+const mockedInvitationService = InvitationService as jest.Mocked<typeof InvitationService>;
 
 describe("AuthService", () => {
   const password = "Secret123!";
@@ -52,11 +61,32 @@ describe("AuthService", () => {
     jest.clearAllMocks();
     process.env.JWT_SECRET = "test-secret";
     mockedBusinessRepository.findBusinessMembershipByUserId.mockResolvedValue(null as never);
+    mockedInvitationService.hasPendingInvitation.mockResolvedValue(false);
   });
 
   describe("login", () => {
+    it("rejects an invited employee who has not accepted the invitation yet", async () => {
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue({
+        id: "employee-1",
+        full_name: "Employee",
+        email: "employee@example.com",
+        password_hash: passwordHash,
+        system_role: "BUSINESS_USER",
+        email_verified: true,
+        must_change_password: true,
+      } as any);
+      mockedInvitationService.hasPendingInvitation.mockResolvedValue(true);
+
+      await expect(
+        AuthService.login({ email: "employee@example.com", password }),
+      ).rejects.toThrow(
+        "Please accept the invitation sent to your email before signing in.",
+      );
+      expect(mockedRepository.createSession).not.toHaveBeenCalled();
+    });
+
     it("should create a session and return access + refresh tokens", async () => {
-      mockedRepository.findByEmail.mockResolvedValue({
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue({
         id: "user-1",
         full_name: "Test User",
         email: "test@example.com",
@@ -105,8 +135,39 @@ describe("AuthService", () => {
       expect(decoded.system_role).toBe("BUSINESS_USER");
     });
 
+    it("rejects a removed (soft-deleted) employee", async () => {
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue({
+        id: "employee-1",
+        full_name: "Removed Employee",
+        email: "removed@example.com",
+        password_hash: passwordHash,
+        system_role: "BUSINESS_USER",
+        email_verified: true,
+        deleted_at: new Date(),
+      } as any);
+
+      await expect(
+        AuthService.login({ email: "removed@example.com", password }),
+      ).rejects.toThrow("This account has been removed");
+      expect(mockedRepository.createSession).not.toHaveBeenCalled();
+    });
+
+    it("does not reveal removal when the password is wrong", async () => {
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue({
+        id: "employee-1",
+        email: "removed@example.com",
+        password_hash: passwordHash,
+        email_verified: true,
+        deleted_at: new Date(),
+      } as any);
+
+      await expect(
+        AuthService.login({ email: "removed@example.com", password: "wrong" }),
+      ).rejects.toThrow("Invalid credentials");
+    });
+
     it("should reject invalid credentials", async () => {
-      mockedRepository.findByEmail.mockResolvedValue(null);
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue(null);
 
       await expect(
         AuthService.login({
@@ -119,7 +180,7 @@ describe("AuthService", () => {
     });
 
     it("should reject unverified users", async () => {
-      mockedRepository.findByEmail.mockResolvedValue({
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue({
         id: "user-1",
         full_name: "Test User",
         email: "test@example.com",

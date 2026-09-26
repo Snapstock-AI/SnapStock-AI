@@ -205,20 +205,20 @@ export const sendEmployeeInvitationEmail = async (
   businessName: string,
   temporaryPassword: string,
 ) => {
-  const link = `${clientUrl().replace(/\/$/, "")}${clientPath()}/verify-email?token=${token}`;
+  const link = `${clientUrl().replace(/\/$/, "")}${clientPath()}/accept-invitation?token=${token}`;
 
   await sendEmail("employee-invitation", email, {
     from: `"SnapStock AI" <${process.env.SMTP_USER}>`,
     to: email,
     subject: `You have been invited to join ${businessName} on SnapStock AI`,
-    text: `You have been invited to join ${businessName} on SnapStock AI.\n\nPlease verify your email to activate your account and join the team:\n${link}\n\nSign-in credentials (use after verification):\nEmail: ${email}\nTemporary password: ${temporaryPassword}\n\nFor security, please change your temporary password immediately after signing in.`,
+    text: `You have been invited to join ${businessName} on SnapStock AI.\n\nClick the link below to join the business:\n${link}\n\nSign-in credentials:\nEmail: ${email}\nTemporary password: ${temporaryPassword}\n\nFor security, please change your temporary password immediately after signing in.`,
     html: emailTemplate(
       "Team invitation",
       `Join ${businessName} on SnapStock AI`,
-      `You have been invited to join <strong>${businessName}</strong> on SnapStock AI.<br /><br />Please verify your email address to activate your employee account and join the team workspace.<br /><br /><strong>Sign-in credentials (use after email verification):</strong><br />Email: <strong>${email}</strong><br />Temporary password: <strong>${temporaryPassword}</strong>`,
-      "Verify Email & Join Team",
+      `You have been invited to join <strong>${businessName}</strong> on SnapStock AI.<br /><br />Click the button below to join the team, then sign in with these credentials.<br /><br /><strong>Sign-in credentials:</strong><br />Email: <strong>${email}</strong><br />Temporary password: <strong>${temporaryPassword}</strong>`,
+      "Join Team",
       link,
-      "For your security, verify your email first and change this temporary password immediately after signing in.",
+      `This invitation expires in 7 days. You'll be asked to change the temporary password after your first sign-in.`,
     ),
   });
 };
