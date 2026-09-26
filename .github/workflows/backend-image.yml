@@ -42,40 +42,39 @@ jobs:
           set -euo pipefail
 
           python3 - <<'PY' > /tmp/ssm-params.json
-          import json
-          script = r'''set -eux
+          import json, base64, textwrap
+
+          remote = textwrap.dedent(r'''
+          set -eux
           export KUBECONFIG=/home/ubuntu/.kube/config
           NS=dp-default-snapstock-development-9f3d29f9
           POD=$(kubectl -n "$NS" get pods --field-selector=status.phase=Running -o name | grep backend | head -1 | cut -d/ -f2)
           echo "POD=$POD"
           test -n "$POD"
-          cat > /tmp/ensure-mcp.js <<'EOF'
+          cat > /tmp/ensure-mcp.js <<'JSEOF'
           const { Client } = require("pg");
           (async () => {
             const c = new Client({ connectionString: process.env.DATABASE_URL });
             await c.connect();
-            await c.query(`CREATE TABLE IF NOT EXISTS migrations (
-              id SERIAL PRIMARY KEY,
-              filename VARCHAR(255) UNIQUE NOT NULL,
-              executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )`);
-            await c.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE`);
-            await c.query(
-              `INSERT INTO migrations (filename) SELECT $1 WHERE NOT EXISTS (SELECT 1 FROM migrations WHERE filename = $1)`,
-              ["019_add_temporary_password_flag.ts"]
-            );
-            const r = await c.query(
-              `SELECT column_name FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
-              ["users", "must_change_password"]
-            );
+            await c.query("CREATE TABLE IF NOT EXISTS migrations (id SERIAL PRIMARY KEY, filename VARCHAR(255) UNIQUE NOT NULL, executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+            await c.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE");
+            await c.query("INSERT INTO migrations (filename) SELECT $1 WHERE NOT EXISTS (SELECT 1 FROM migrations WHERE filename = $1)", ["019_add_temporary_password_flag.ts"]);
+            const r = await c.query("SELECT column_name FROM information_schema.columns WHERE table_name = $1 AND column_name = $2", ["users", "must_change_password"]);
             console.log(r.rows.length ? "column-ok" : "column-missing");
             await c.end();
           })().catch((e) => { console.error(e); process.exit(1); });
-          EOF
+          JSEOF
           kubectl -n "$NS" cp /tmp/ensure-mcp.js "$POD":/tmp/ensure-mcp.js
           kubectl -n "$NS" exec "$POD" -- node /tmp/ensure-mcp.js
-          '''
-          print(json.dumps({"commands": [f"bash -lc {json.dumps(script)}"]}))
+          ''').strip() + "\n"
+
+          b64 = base64.b64encode(remote.encode()).decode()
+          print(json.dumps({
+            "commands": [
+              f"echo {b64} | base64 -d > /tmp/ensure-mcp.sh",
+              "bash /tmp/ensure-mcp.sh",
+            ]
+          }))
           PY
 
           COMMAND_ID=$(aws ssm send-command \
