@@ -1,6 +1,7 @@
 import { AppDataSource } from "../../config/data-source";
 import { Business } from "../../entities/Business";
 import { BusinessUser } from "../../entities/BusinessUser";
+import { User } from "../../entities/User";
 
 export class BusinessRepository {
   static async findById(businessId: string) {
