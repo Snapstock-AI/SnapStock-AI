@@ -143,6 +143,9 @@ export default function GoogleContinueButton({
           cancel_on_tap_outside: true,
           locale: 'en_US',
           itp_support: true,
+          // FedCM often fails on custom domains / strict browsers with NetworkError.
+          // Fall back to the classic GIS popup/button flow.
+          use_fedcm_for_prompt: false,
         })
 
         // Keep a locale-forced GIS button off-screen as a reliable click target.
@@ -174,14 +177,19 @@ export default function GoogleContinueButton({
     if (!ready || disabled || busy) return
 
     const host = hiddenRef.current
-    const gisButton = host?.querySelector<HTMLElement>('div[role="button"]')
+    // GIS may render a role=button div and/or an iframe; try both click targets.
+    const gisButton =
+      host?.querySelector<HTMLElement>('div[role="button"]') ||
+      host?.querySelector<HTMLElement>('iframe') ||
+      host?.querySelector<HTMLElement>('div')
     if (gisButton) {
       gisButton.click()
       return
     }
 
-    // Fallback: One Tap / FedCM prompt when the hidden button is unavailable.
-    window.google?.accounts.id.prompt()
+    errorRef.current?.(
+      'Google Sign-In is not ready. Allow popups for this site, or use email/password.',
+    )
   }, [busy, disabled, ready])
 
   if (!clientId) return null
