@@ -64,8 +64,8 @@ jobs:
             await c.end();
           })().catch((e) => { console.error(e); process.exit(1); });
           JSEOF
-          kubectl -n "$NS" cp /tmp/ensure-mcp.js "$POD":/tmp/ensure-mcp.js
-          kubectl -n "$NS" exec "$POD" -- node /tmp/ensure-mcp.js
+          kubectl -n "$NS" cp /tmp/ensure-mcp.js "$POD":/app/ensure-mcp.js
+          kubectl -n "$NS" exec "$POD" -- node /app/ensure-mcp.js
           ''').strip() + "\n"
 
           b64 = base64.b64encode(remote.encode()).decode()
