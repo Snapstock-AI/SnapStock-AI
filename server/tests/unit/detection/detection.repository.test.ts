@@ -39,7 +39,7 @@ describe("DetectionRepository", () => {
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining("INSERT INTO scans"),
-        ["business-123", "shelf-123", "user-123"],
+        ["business-123", "shelf-123", "user-123", "STOCK_IN"],
       );
     });
 

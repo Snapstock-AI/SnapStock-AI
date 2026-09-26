@@ -10,6 +10,7 @@ jest.mock("../../../src/modules/detection/detection.repository", () => ({
     createScan: jest.fn(),
     updateScanStatus: jest.fn(),
     findProductByName: jest.fn(),
+    findOrCreateProduct: jest.fn(),
     createDetection: jest.fn(),
     applyInventoryChange: jest.fn(),
   },
@@ -131,7 +132,7 @@ describe("DetectionService", () => {
       });
 
       
-      mockedRepository.findProductByName
+      mockedRepository.findOrCreateProduct
         .mockResolvedValueOnce({
           id: "product-apple",
         })
@@ -234,7 +235,8 @@ describe("DetectionService", () => {
       ).toHaveBeenCalledWith(
         "business-123",
         "shelf-123",
-        "user-123"
+        "user-123",
+        "STOCK_IN"
       );
 
       
@@ -258,7 +260,7 @@ describe("DetectionService", () => {
 
       
       expect(
-        mockedRepository.findProductByName
+        mockedRepository.findOrCreateProduct
       ).toHaveBeenNthCalledWith(
         1,
         "business-123",
@@ -266,7 +268,7 @@ describe("DetectionService", () => {
       );
 
       expect(
-        mockedRepository.findProductByName
+        mockedRepository.findOrCreateProduct
       ).toHaveBeenNthCalledWith(
         2,
         "business-123",
@@ -428,7 +430,8 @@ describe("DetectionService", () => {
       ).toHaveBeenCalledWith(
         "business-123",
         "shelf-123",
-        "user-123"
+        "user-123",
+        "STOCK_IN"
       );
 
      
