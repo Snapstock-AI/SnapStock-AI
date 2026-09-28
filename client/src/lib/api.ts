@@ -20,17 +20,20 @@ function emitAuthSession(detail: AuthSessionDetail) {
 }
 
 function mergeAuthUser(next: AuthUser, previous: AuthUser | null): AuthUser {
+  // Honor explicit null from the server so a cleared workspace is not sticky.
+  const businessId =
+    next.businessId !== undefined
+      ? next.businessId
+      : (previous?.businessId ?? null)
+  const businessRole =
+    next.businessRole !== undefined
+      ? next.businessRole
+      : (previous?.businessRole ?? null)
   return {
     ...previous,
     ...next,
-    businessId:
-      next.businessId !== undefined && next.businessId !== null
-        ? next.businessId
-        : (previous?.businessId ?? null),
-    businessRole:
-      next.businessRole !== undefined && next.businessRole !== null
-        ? next.businessRole
-        : (previous?.businessRole ?? null),
+    businessId,
+    businessRole,
   }
 }
 

@@ -196,9 +196,21 @@ export default function DashboardHome() {
     return <div className="text-sm text-fd-muted">Loading your dashboard...</div>
   }
 
-  // Prefer live dashboard payload; business profile can catch up without blanking the page.
+  if (error && !data) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    )
+  }
+
   if (!data) {
-    return <div className="text-sm text-fd-muted">Loading your dashboard...</div>
+    return (
+      <EmptyState
+        title="Dashboard unavailable"
+        description="No dashboard data was returned for this workspace. Try switching workspace or refreshing."
+      />
+    )
   }
 
   const displayName = business?.business_name || 'Your business'

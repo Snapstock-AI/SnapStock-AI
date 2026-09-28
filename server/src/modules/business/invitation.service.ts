@@ -73,14 +73,35 @@ export class InvitationService {
         await manager.save(user);
       }
 
-      await manager.save(
-        manager.create(BusinessUser, {
-          business_id: invitation.business_id,
-          user_id: userId,
-          role: "EMPLOYEE",
-          joined_at: new Date(),
-        }),
-      );
+      try {
+        await manager.save(
+          manager.create(BusinessUser, {
+            business_id: invitation.business_id,
+            user_id: userId,
+            role: "EMPLOYEE",
+            joined_at: new Date(),
+          }),
+        );
+      } catch (err: unknown) {
+        const code = (err as { code?: string })?.code;
+        const detail = String((err as { detail?: string; message?: string })?.detail || (err as Error)?.message || "");
+        if (code === "23505" || detail.includes("business_users_pkey")) {
+          // Concurrent accept or already a member — treat as success if membership exists.
+          const membership = await manager.findOne(BusinessUser, {
+            where: { user_id: userId, business_id: invitation.business_id },
+          });
+          if (membership) {
+            invitation.status = "ACCEPTED";
+            invitation.accepted_at = new Date();
+            await manager.save(invitation);
+            return { businessId: invitation.business_id };
+          }
+          throw new Error(
+            "Could not join this business. If you already belong to another workspace, ask support to enable multi-workspace on the database, then try again.",
+          );
+        }
+        throw err;
+      }
 
       invitation.status = "ACCEPTED";
       invitation.accepted_at = new Date();

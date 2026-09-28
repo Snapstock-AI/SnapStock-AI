@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
+  Plus,
   Search,
   Settings,
   Users,
@@ -271,29 +272,33 @@ export default function DashboardLayout() {
               <ThemeToggle className="h-10 w-10 rounded-full border-0 bg-transparent shadow-none" />
             </div>
 
-            {workspaces.length > 0 ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    disabled={switchingWorkspace}
-                    className="hidden max-w-[220px] items-center gap-2 rounded-[60px] border border-border bg-white px-4 py-2 text-left text-sm transition hover:bg-muted/40 disabled:opacity-60 md:flex dark:bg-card"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-fd-ink">
-                        {activeWorkspace?.business_name || 'Workspace'}
-                      </p>
-                      <p className="truncate text-xs text-fd-muted">
-                        {activeWorkspace?.role || user?.businessRole || 'Member'}
-                      </p>
-                    </div>
-                    <ChevronDown className="h-4 w-4 shrink-0 text-fd-muted" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" className="w-[260px] border-0 fd-shadow">
-                  <DropdownMenuLabel>Switch workspace</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {workspaces.map((workspace) => (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  disabled={switchingWorkspace}
+                  className="hidden max-w-[220px] items-center gap-2 rounded-[60px] border border-border bg-white px-4 py-2 text-left text-sm transition hover:bg-muted/40 disabled:opacity-60 md:flex dark:bg-card"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-fd-ink">
+                      {activeWorkspace?.business_name || 'Workspace'}
+                    </p>
+                    <p className="truncate text-xs text-fd-muted">
+                      {activeWorkspace?.role || user?.businessRole || 'Member'}
+                    </p>
+                  </div>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-fd-muted" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-[260px] border-0 fd-shadow">
+                <DropdownMenuLabel>Switch workspace</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {workspaces.length === 0 ? (
+                  <DropdownMenuItem disabled className="text-muted-foreground">
+                    No workspaces yet
+                  </DropdownMenuItem>
+                ) : (
+                  workspaces.map((workspace) => (
                     <DropdownMenuItem
                       key={workspace.id}
                       onClick={() => handleSwitchWorkspace(workspace.id)}
@@ -306,12 +311,15 @@ export default function DashboardLayout() {
                         <p className="truncate text-xs text-muted-foreground">{workspace.role}</p>
                       </div>
                     </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="hidden flex-1 md:block" />
-            )}
+                  ))
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/onboarding/business')}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create new business
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <div ref={searchRef} className="relative hidden max-w-md flex-1 md:block lg:max-w-lg">
               <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-fd-muted" />

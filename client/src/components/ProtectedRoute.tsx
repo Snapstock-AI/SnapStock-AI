@@ -66,13 +66,5 @@ export default function ProtectedRoute() {
     return <Navigate to="/onboarding/business" replace />
   }
 
-  if (isEmployee && isBusinessOnboarding) {
-    return <Navigate to="/dashboard" replace />
-  }
-
-  if (hasBusiness && isBusinessOnboarding) {
-    return <Navigate to="/dashboard" replace />
-  }
-
   return <Outlet />
 }
