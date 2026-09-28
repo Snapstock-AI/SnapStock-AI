@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="31" failures="0" errors="0" time="1.1922414">
+    <testsuite name="tests/unit/api.test.ts" timestamp="2026-09-27T16:27:24.152Z" hostname="DESKTOP-HF6A2LL" tests="9" failures="0" errors="0" skipped="0" time="0.0169317">
+        <testcase classname="tests/unit/api.test.ts" name="apiRequest &gt; sends the bearer token only for authenticated calls" time="0.0053319">
+        </testcase>
+        <testcase classname="tests/unit/api.test.ts" name="apiRequest &gt; surfaces the server&apos;s message on failure so the UI can show it" time="0.0018245">
+        </testcase>
+        <testcase classname="tests/unit/api.test.ts" name="apiRequest &gt; falls back to a generic message when the error body is not JSON (never a raw parse error)" time="0.0007407">
+        </testcase>
+        <testcase classname="tests/unit/api.test.ts" name="apiRequest &gt; on 401 refreshes the session once and replays the original request with the new token" time="0.0019138">
+        </testcase>
+        <testcase classname="tests/unit/api.test.ts" name="apiRequest &gt; when the refresh token is rejected, clears the stored session and reports the failure" time="0.0012135">
+        </testcase>
+        <testcase classname="tests/unit/api.test.ts" name="apiRequest &gt; does not loop: a second 401 after a successful refresh is returned as an error" time="0.0016969">
+        </testcase>
+        <testcase classname="tests/unit/api.test.ts" name="apiRequest &gt; does not try to refresh when the caller has no refresh token" time="0.0007852">
+        </testcase>
+        <testcase classname="tests/unit/api.test.ts" name="stored session &gt; survives corrupt stored user JSON without throwing" time="0.0002448">
+        </testcase>
+        <testcase classname="tests/unit/api.test.ts" name="stored session &gt; clearAuth removes token, refresh token and user" time="0.000925">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/detection.test.ts" timestamp="2026-09-27T16:27:24.156Z" hostname="DESKTOP-HF6A2LL" tests="3" failures="0" errors="0" skipped="0" time="0.0089122">
+        <testcase classname="tests/unit/detection.test.ts" name="analyzeImage &gt; should send the image, shelf ID, business ID and token" time="0.0048275">
+        </testcase>
+        <testcase classname="tests/unit/detection.test.ts" name="analyzeImage &gt; should throw an error when the API returns an error" time="0.0017427">
+        </testcase>
+        <testcase classname="tests/unit/detection.test.ts" name="analyzeImage &gt; should use the default error message when API does not provide one" time="0.0007146">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/ProtectedRoute.test.tsx" timestamp="2026-09-27T16:27:24.157Z" hostname="DESKTOP-HF6A2LL" tests="7" failures="0" errors="0" skipped="0" time="0.0977785">
+        <testcase classname="tests/unit/ProtectedRoute.test.tsx" name="ProtectedRoute &gt; redirects an unauthenticated visitor to the login page" time="0.0386173">
+        </testcase>
+        <testcase classname="tests/unit/ProtectedRoute.test.tsx" name="ProtectedRoute &gt; does not ask the server about business membership for a visitor who is not signed in" time="0.0040452">
+        </testcase>
+        <testcase classname="tests/unit/ProtectedRoute.test.tsx" name="ProtectedRoute &gt; sends a signed-in user without a business to onboarding for pages that need one" time="0.0114576">
+        </testcase>
+        <testcase classname="tests/unit/ProtectedRoute.test.tsx" name="ProtectedRoute &gt; keeps settings reachable for a user without a business" time="0.0050698">
+        </testcase>
+        <testcase classname="tests/unit/ProtectedRoute.test.tsx" name="ProtectedRoute &gt; lets the dashboard workspace render for a user without a business (empty workspace state)" time="0.0109035">
+        </testcase>
+        <testcase classname="tests/unit/ProtectedRoute.test.tsx" name="ProtectedRoute &gt; redirects a user who already has a business away from onboarding" time="0.0079176">
+        </testcase>
+        <testcase classname="tests/unit/ProtectedRoute.test.tsx" name="ProtectedRoute &gt; renders the requested page for a member of a business" time="0.0161913">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/unit/ScansPage.test.tsx" timestamp="2026-09-27T16:27:24.159Z" hostname="DESKTOP-HF6A2LL" tests="12" failures="0" errors="0" skipped="0" time="1.068619">
+        <testcase classname="tests/unit/ScansPage.test.tsx" name="ScansPage &gt; should render the shelf scanning page" time="0.2395345">
+        </testcase>
+        <testcase classname="tests/unit/ScansPage.test.tsx" name="ScansPage &gt; should display available shelves" time="0.0619949">
+        </testcase>
+        <testcase classname="tests/unit/ScansPage.test.tsx" name="ScansPage &gt; should allow the user to select a shelf" time="0.0409414">
+        </testcase>
+        <testcase classname="tests/unit/ScansPage.test.tsx" name="ScansPage &gt; should show an error when opening the camera without selecting a shelf" time="0.062272">
+        </testcase>
+        <testcase classname="tests/unit/ScansPage.test.tsx" name="ScansPage &gt; should open the camera after selecting a shelf" time="0.0872272">
+        </testcase>
+        <testcase classname="tests/unit/ScansPage.test.tsx" name="ScansPage &gt; should close the camera when close is clicked" time="0.0748968">
+        </testcase>
+        <testcase classname="tests/unit/ScansPage.test.tsx" name="ScansPage &gt; should show the preview after capturing an image" time="0.09051">
+        </testcase>
+        <testcase classname="tests/unit/ScansPage.test.tsx" name="ScansPage &gt; should reopen the camera when retake is clicked" time="0.0921855">
+        </testcase>
+        <testcase classname="tests/unit/ScansPage.test.tsx" name="ScansPage &gt; should show the preview after uploading an image" time="0.0424353">
+        </testcase>
+        <testcase classname="tests/unit/ScansPage.test.tsx" name="ScansPage &gt; should analyze the selected image" time="0.0907719">
+        </testcase>
+        <testcase classname="tests/unit/ScansPage.test.tsx" name="ScansPage &gt; should display the scan result after successful analysis" time="0.1182519">
+        </testcase>
+        <testcase classname="tests/unit/ScansPage.test.tsx" name="ScansPage &gt; should display an error when image analysis fails" time="0.0641255">
+        </testcase>
+    </testsuite>
+</testsuites>
