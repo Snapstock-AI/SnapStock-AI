@@ -1,4 +1,4 @@
-import { useCallback, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import AuthLayout from '@/components/AuthLayout'
 import GoogleContinueButton from '@/components/GoogleContinueButton'
@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext'
 export default function Signup() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { register, loginWithGoogle } = useAuth()
+  const { register, loginWithGoogle, isAuthenticated, logout, user } = useAuth()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,6 +28,13 @@ export default function Signup() {
     redirectAfterAuth === '/dashboard'
       ? '/login'
       : `/login?from=${encodeURIComponent(redirectAfterAuth)}`
+
+  useEffect(() => {
+    // Creating a new account must not keep the previous session.
+    if (isAuthenticated) {
+      void logout()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGoogle = useCallback(
     async (credential: string) => {
@@ -70,6 +77,11 @@ export default function Signup() {
         <p className="mt-3 text-sm text-muted-foreground">
           Start monitoring inventory and freshness for your storefront in minutes.
         </p>
+        {user ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Signing out of {user.email} so you can create a new account…
+          </p>
+        ) : null}
 
         <div className="mt-8 space-y-4">
           <GoogleContinueButton

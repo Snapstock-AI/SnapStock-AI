@@ -134,6 +134,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ full_name, email, password }),
       })
 
+      // Registration does not issue a session. Clear any prior account so Login
+      // does not auto-redirect into the previous user's dashboard.
+      clearAuth()
+      setToken(null)
+      setUser(null)
+
       return result.data?.message || 'Registered successfully. Please verify your email.'
     },
     [],
@@ -281,6 +287,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         businessRole === currentUser.businessRole
       ) {
         return Boolean(businessId)
+      }
+
+      // Prefer rotating the JWT so API calls use the active workspace claim.
+      if (businessId) {
+        const switched = await apiRequest<{
+          token: string
+          refreshToken: string
+          user: AuthUser
+        }>(
+          '/businesses/switch',
+          {
+            method: 'POST',
+            body: JSON.stringify({ businessId }),
+          },
+          true,
+        )
+        if (switched.data?.token && switched.data.user) {
+          setAuth(switched.data.token, switched.data.user, switched.data.refreshToken)
+          setToken(switched.data.token)
+          setUser(switched.data.user)
+          return true
+        }
       }
 
       const nextUser = { ...currentUser, businessId, businessRole }
