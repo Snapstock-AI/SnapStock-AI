@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 declare global {
   interface Window {
@@ -104,7 +104,8 @@ export default function GoogleContinueButton({
   disabled = false,
   onError,
 }: GoogleContinueButtonProps) {
-  const hiddenRef = useRef<HTMLDivElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const gisRef = useRef<HTMLDivElement>(null)
   const callbackRef = useRef(onCredential)
   const errorRef = useRef(onError)
   const [ready, setReady] = useState(false)
@@ -123,7 +124,7 @@ export default function GoogleContinueButton({
     ;(async () => {
       try {
         await loadGisScript()
-        if (cancelled || !hiddenRef.current || !window.google?.accounts?.id) return
+        if (cancelled || !gisRef.current || !window.google?.accounts?.id) return
 
         window.google.accounts.id.initialize({
           client_id: clientId,
@@ -143,20 +144,25 @@ export default function GoogleContinueButton({
           cancel_on_tap_outside: true,
           locale: 'en_US',
           itp_support: true,
-          // FedCM often fails on custom domains / strict browsers with NetworkError.
-          // Fall back to the classic GIS popup/button flow.
+          // FedCM often fails on custom domains with NetworkError.
           use_fedcm_for_prompt: false,
         })
 
-        // Keep a locale-forced GIS button off-screen as a reliable click target.
-        hiddenRef.current.innerHTML = ''
-        hiddenRef.current.setAttribute('lang', 'en')
-        window.google.accounts.id.renderButton(hiddenRef.current, {
+        const width = Math.max(
+          240,
+          Math.round(wrapRef.current?.getBoundingClientRect().width || 320),
+        )
+
+        // Real GIS control must receive the user gesture. Overlay it on the
+        // styled button — programmatic .click() on a zero-size iframe is ignored.
+        gisRef.current.innerHTML = ''
+        gisRef.current.setAttribute('lang', 'en')
+        window.google.accounts.id.renderButton(gisRef.current, {
           theme: 'outline',
           size: 'large',
           text: label,
           shape: 'rectangular',
-          width: 320,
+          width,
           logo_alignment: 'left',
           locale: 'en_US',
         })
@@ -173,47 +179,30 @@ export default function GoogleContinueButton({
     }
   }, [clientId, disabled, label])
 
-  const handleClick = useCallback(() => {
-    if (!ready || disabled || busy) return
-
-    const host = hiddenRef.current
-    // GIS may render a role=button div and/or an iframe; try both click targets.
-    const gisButton =
-      host?.querySelector<HTMLElement>('div[role="button"]') ||
-      host?.querySelector<HTMLElement>('iframe') ||
-      host?.querySelector<HTMLElement>('div')
-    if (gisButton) {
-      gisButton.click()
-      return
-    }
-
-    errorRef.current?.(
-      'Google Sign-In is not ready. Allow popups for this site, or use email/password.',
-    )
-  }, [busy, disabled, ready])
-
   if (!clientId) return null
 
   return (
-    <div className={disabled || busy ? 'pointer-events-none opacity-60' : undefined}>
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={disabled || busy || !ready}
-        className="flex h-11 w-full items-center justify-center gap-3 rounded-md border border-border bg-white px-4 text-sm font-medium text-fd-ink shadow-sm transition hover:bg-muted/40 dark:bg-card"
-        aria-label={LABEL_TEXT[label]}
-        lang="en"
+    <div
+      ref={wrapRef}
+      className={`relative h-11 w-full ${disabled || busy ? 'pointer-events-none opacity-60' : ''}`}
+    >
+      <div
+        className="pointer-events-none flex h-11 w-full items-center justify-center gap-3 rounded-md border border-border bg-white px-4 text-sm font-medium text-fd-ink shadow-sm dark:bg-card"
+        aria-hidden="true"
       >
         <GoogleMark className="h-5 w-5 shrink-0" />
         <span>{busy ? 'Connecting…' : LABEL_TEXT[label]}</span>
-      </button>
+      </div>
       <div
-        ref={hiddenRef}
-        aria-hidden="true"
-        className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0"
+        ref={gisRef}
+        className="absolute inset-0 z-10 overflow-hidden opacity-[0.02] [&_iframe]:!h-full [&_iframe]:!min-h-full [&_iframe]:!w-full"
+        aria-label={LABEL_TEXT[label]}
+        lang="en"
       />
       {!ready && (
-        <p className="mt-2 text-center text-xs text-muted-foreground">Loading Google…</p>
+        <p className="pointer-events-none absolute inset-x-0 top-full mt-2 text-center text-xs text-muted-foreground">
+          Loading Google…
+        </p>
       )}
     </div>
   )
