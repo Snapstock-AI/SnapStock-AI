@@ -4,12 +4,15 @@ import jwt from "jsonwebtoken";
 import { AuthService } from "../../../src/modules/auth/auth.service";
 import { AuthRepository } from "../../../src/modules/auth/auth.repository";
 import { BusinessRepository } from "../../../src/modules/business/business.repository";
+import { sendVerificationEmail } from "../../../src/shared/utils/email";
 
 jest.mock("../../../src/modules/auth/auth.repository", () => ({
   AuthRepository: {
     findByEmail: jest.fn(),
+    findByEmailIncludingDeleted: jest.fn(),
     findById: jest.fn(),
     createUser: jest.fn(),
+    updateFullName: jest.fn(),
     createSession: jest.fn(),
     revokeSession: jest.fn(),
     revokeSessionsForUser: jest.fn(),
@@ -41,6 +44,7 @@ jest.mock("../../../src/modules/business/business.repository", () => ({
 
 const mockedRepository = AuthRepository as jest.Mocked<typeof AuthRepository>;
 const mockedBusinessRepository = BusinessRepository as jest.Mocked<typeof BusinessRepository>;
+const mockedSendVerificationEmail = sendVerificationEmail as jest.Mock;
 
 describe("AuthService", () => {
   const password = "Secret123!";
@@ -55,6 +59,93 @@ describe("AuthService", () => {
     process.env.JWT_SECRET = "test-secret";
     mockedBusinessRepository.findBusinessMembershipByUserId.mockResolvedValue(null as never);
     mockedBusinessRepository.findById.mockResolvedValue({ status: "ACTIVE" } as never);
+  });
+
+  describe("register", () => {
+    it("should create a new account when the email is unused", async () => {
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue(null);
+      mockedRepository.createUser.mockResolvedValue({
+        id: "user-1",
+        full_name: "New User",
+        email: "new@example.com",
+        system_role: "BUSINESS_USER",
+        email_verified: false,
+      } as any);
+
+      const result = await AuthService.register({
+        full_name: "New User",
+        email: "new@example.com",
+        password,
+      });
+
+      expect(mockedRepository.createUser).toHaveBeenCalled();
+      expect(mockedSendVerificationEmail).toHaveBeenCalledWith("new@example.com", expect.any(String));
+      expect(result.message).toContain("registered successfully");
+    });
+
+    it("should reject when the email belongs to an already-verified account", async () => {
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue({
+        id: "user-1",
+        email: "taken@example.com",
+        email_verified: true,
+        deleted_at: null,
+      } as any);
+
+      await expect(
+        AuthService.register({
+          full_name: "Someone",
+          email: "taken@example.com",
+          password,
+        }),
+      ).rejects.toThrow("User already exists");
+
+      expect(mockedRepository.createUser).not.toHaveBeenCalled();
+    });
+
+    it("should reject when the email belongs to a deleted account", async () => {
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue({
+        id: "user-1",
+        email: "gone@example.com",
+        email_verified: false,
+        deleted_at: new Date(),
+      } as any);
+
+      await expect(
+        AuthService.register({
+          full_name: "Someone",
+          email: "gone@example.com",
+          password,
+        }),
+      ).rejects.toThrow("This email is no longer available.");
+    });
+
+    it("should let an unverified account retry signup instead of blocking it", async () => {
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue({
+        id: "user-1",
+        email: "pending@example.com",
+        full_name: "Old Name",
+        email_verified: false,
+        deleted_at: null,
+      } as any);
+
+      const result = await AuthService.register({
+        full_name: "Updated Name",
+        email: "pending@example.com",
+        password,
+      });
+
+      expect(mockedRepository.createUser).not.toHaveBeenCalled();
+      expect(mockedRepository.updateFullName).toHaveBeenCalledWith("user-1", "Updated Name");
+      expect(mockedRepository.updatePassword).toHaveBeenCalledWith("user-1", expect.any(String));
+      expect(mockedRepository.deleteEmailTokensForUser).toHaveBeenCalledWith("user-1");
+      expect(mockedRepository.saveEmailToken).toHaveBeenCalledWith(
+        "user-1",
+        expect.any(String),
+        expect.any(Date),
+      );
+      expect(mockedSendVerificationEmail).toHaveBeenCalledWith("pending@example.com", expect.any(String));
+      expect(result.message).toContain("resent the verification email");
+    });
   });
 
   describe("login", () => {

@@ -149,7 +149,30 @@ export class AuthService {
       if (existingUser.deleted_at) {
         throw new Error("This email is no longer available.");
       }
-      throw new Error("User already exists");
+
+      if (existingUser.email_verified) {
+        throw new Error("User already exists");
+      }
+
+      // Unverified accounts never became usable — let the person retry
+      // signup with the same email instead of being stuck forever, since
+      // there's no way to reach that state on purpose.
+      const password_hash = await bcrypt.hash(data.password, 10);
+      await AuthRepository.updateFullName(existingUser.id, data.full_name);
+      await AuthRepository.updatePassword(existingUser.id, password_hash);
+
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 1);
+
+      await AuthRepository.deleteEmailTokensForUser(existingUser.id);
+      await AuthRepository.saveEmailToken(existingUser.id, token, expiresAt);
+      await sendVerificationEmail(existingUser.email, token);
+
+      return {
+        message: "This email was already pending verification — we've resent the verification email.",
+        user: existingUser,
+      };
     }
 
     const password_hash = await bcrypt.hash(data.password, 10);
