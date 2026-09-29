@@ -5,11 +5,14 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthProvider } from '../context/AuthContext';
+import { colors } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
+  const insets = useSafeAreaInsets();
   const [fontsLoaded] = useFonts({
     Poppins_600SemiBold,
     Poppins_700Bold,
@@ -31,7 +34,18 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          // Screens here have no header, so without this their content
+          // renders flush under the status bar. (app) and (admin) are each
+          // their own tab navigator and handle this themselves below.
+          contentStyle: { flex: 1, paddingTop: insets.top, backgroundColor: colors.background },
+        }}
+      >
+        <Stack.Screen name="(app)" options={{ contentStyle: { flex: 1 } }} />
+        <Stack.Screen name="(admin)" options={{ contentStyle: { flex: 1 } }} />
+      </Stack>
     </AuthProvider>
   );
 }

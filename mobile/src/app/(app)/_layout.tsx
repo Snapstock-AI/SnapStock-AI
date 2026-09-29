@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View, type ColorValue } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { colors, fonts } from '../../theme';
 
@@ -20,10 +21,11 @@ function tabIcon(filled: IoniconName, outline: IoniconName) {
  */
 export default function AppLayout() {
   const { isAuthenticated, isHydrating, user } = useAuth();
+  const insets = useSafeAreaInsets();
 
   if (isHydrating) {
     return (
-      <View style={styles.loading}>
+      <View style={[styles.loading, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
@@ -49,6 +51,7 @@ export default function AppLayout() {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: styles.tabLabel,
         tabBarStyle: styles.tabBar,
+        sceneStyle: { paddingTop: insets.top, backgroundColor: colors.background },
       }}
     >
       <Tabs.Screen
