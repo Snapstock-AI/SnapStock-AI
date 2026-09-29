@@ -1,0 +1,38 @@
+{
+  "image_width": 640,
+  "image_height": 480,
+  "total_count": 3,
+  "counts": {
+    "apple": { "fresh": 1, "rotten": 1, "total": 2 },
+    "orange": { "fresh": 1, "rotten": 0, "total": 1 }
+  },
+  "detections": [
+    {
+      "class_name": "apple",
+      "confidence": 0.94,
+      "bounding_box": { "x1": 12.0, "y1": 20.0, "x2": 118.0, "y2": 210.0 },
+      "freshness": "good",
+      "freshness_confidence": 0.91,
+      "freshness_confidence_percent": 91.0,
+      "explanation": null
+    },
+    {
+      "class_name": "apple",
+      "confidence": 0.88,
+      "bounding_box": { "x1": 140.0, "y1": 32.0, "x2": 240.0, "y2": 220.0 },
+      "freshness": "bad",
+      "freshness_confidence": 0.77,
+      "freshness_confidence_percent": 77.0,
+      "explanation": null
+    },
+    {
+      "class_name": "orange",
+      "confidence": 0.81,
+      "bounding_box": { "x1": 300.0, "y1": 60.0, "x2": 400.0, "y2": 180.0 },
+      "freshness": "good",
+      "freshness_confidence": 0.69,
+      "freshness_confidence_percent": 69.0,
+      "explanation": null
+    }
+  ]
+}
