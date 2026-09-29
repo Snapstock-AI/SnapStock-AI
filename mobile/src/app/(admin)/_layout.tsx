@@ -1,17 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { getPostAuthRoute } from '../../lib/routing';
+import { colors } from '../../theme';
 
 /** Route group for the SYSTEM_ADMIN-only platform area. */
 export default function AdminLayout() {
   const { isAuthenticated, isHydrating, user } = useAuth();
+  const insets = useSafeAreaInsets();
 
   if (isHydrating) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#16a34a" />
+      <View style={[styles.loading, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -25,7 +28,13 @@ export default function AdminLayout() {
   }
 
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: '#16a34a' }}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.accent,
+        sceneStyle: { paddingTop: insets.top, backgroundColor: colors.background },
+      }}
+    >
       <Tabs.Screen
         name="vendors"
         options={{
