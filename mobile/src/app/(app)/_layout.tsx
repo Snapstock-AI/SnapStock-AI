@@ -23,6 +23,10 @@ export default function AppLayout() {
     return <Redirect href="/login" />;
   }
 
+  if (user?.system_role === 'SYSTEM_ADMIN') {
+    return <Redirect href="/vendors" />;
+  }
+
   if (!user?.businessId) {
     return <Redirect href="/create-business" />;
   }

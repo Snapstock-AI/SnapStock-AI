@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { getPostAuthRoute } from '../lib/routing';
 
 export default function Index() {
   const { user, isAuthenticated, isHydrating } = useAuth();
@@ -14,7 +15,7 @@ export default function Index() {
   }
 
   if (!isAuthenticated) return <Redirect href="/login" />;
-  return <Redirect href={user?.businessId ? '/home' : '/create-business'} />;
+  return <Redirect href={getPostAuthRoute(user)} />;
 }
 
 const styles = StyleSheet.create({
