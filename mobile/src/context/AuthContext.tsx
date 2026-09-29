@@ -22,6 +22,8 @@ type AuthContextValue = {
   acceptInvitation: (token: string) => Promise<void>;
   changePassword: (password: string) => Promise<void>;
   updateProfile: (fullName: string) => Promise<void>;
+  /** Re-syncs businessId/businessRole from the backend after e.g. deleting the active business. */
+  refreshBusinessMembership: () => Promise<boolean>;
   logout: () => Promise<void>;
 };
 
@@ -194,6 +196,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user?.businessId, user?.businessRole],
   );
 
+  const refreshBusinessMembership = useCallback(async () => {
+    const currentToken = await getToken();
+    const currentUser = await getStoredUser();
+    if (!currentUser || !currentToken) return false;
+
+    try {
+      const result = await apiRequest<Business[]>('/businesses/mine', {}, true);
+      const memberships = result.data ?? [];
+      const preferred =
+        memberships.find((item) => item.id === currentUser.businessId) ?? memberships[0] ?? null;
+      const businessId = preferred?.id || null;
+      const businessRole = preferred?.role || null;
+
+      if (businessId === currentUser.businessId && businessRole === currentUser.businessRole) {
+        return Boolean(businessId);
+      }
+
+      // Prefer rotating the JWT so API calls use the active workspace claim.
+      if (businessId) {
+        const switched = await apiRequest<{
+          token: string;
+          refreshToken: string;
+          user: AuthUser;
+        }>(
+          '/businesses/switch',
+          {
+            method: 'POST',
+            body: JSON.stringify({ businessId }),
+          },
+          true,
+        );
+        if (switched.data?.token && switched.data.user) {
+          await setAuth(switched.data.token, switched.data.user, switched.data.refreshToken);
+          setToken(switched.data.token);
+          setUser(switched.data.user);
+          return true;
+        }
+      }
+
+      const nextUser = { ...currentUser, businessId, businessRole };
+      await setAuth(currentToken, nextUser);
+      setUser(nextUser);
+      return Boolean(businessId);
+    } catch {
+      // Keep the existing session; membership can sync on the next successful request.
+      return Boolean(currentUser.businessId);
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await apiRequest('/auth/logout', { method: 'POST' }, true);
@@ -217,6 +268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       acceptInvitation,
       changePassword,
       updateProfile,
+      refreshBusinessMembership,
       logout,
     }),
     [
@@ -229,6 +281,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       acceptInvitation,
       changePassword,
       updateProfile,
+      refreshBusinessMembership,
       logout,
     ],
   );
