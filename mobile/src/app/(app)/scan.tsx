@@ -15,18 +15,27 @@ import { useAuth } from '../../context/AuthContext';
 import {
   analyzeImage,
   compressForUpload,
+  formatHistoryDate,
+  getScanHistory,
   updateDetectionFreshness,
   type DetectionResult,
   type FreshnessStatus,
   type PickedImage,
+  type ScanHistoryItem,
   type ScanMode,
 } from '../../lib/detection';
 import { getShelves, type Shelf } from '../../lib/shelf';
+import { card, colors, fonts, radius, ripple, spacing, typography } from '../../theme';
 
 const SCAN_MODES: { value: ScanMode; label: string }[] = [
   { value: 'STOCK_IN', label: 'Stock in' },
   { value: 'STOCK_OUT', label: 'Stock out' },
 ];
+
+// Recent-scans summary on this screen shows only a glance — the full,
+// filterable history lives on the dedicated /scan-history screen.
+const RECENT_SCANS_LIMIT = 15;
+const RECENT_SCANS_WINDOW_DAYS = 90;
 
 export default function ScanScreen() {
   const { user } = useAuth();
@@ -43,6 +52,9 @@ export default function ScanScreen() {
   const [result, setResult] = useState<DetectionResult | null>(null);
   const [savingDetectionId, setSavingDetectionId] = useState<string | null>(null);
 
+  const [recentScans, setRecentScans] = useState<ScanHistoryItem[]>([]);
+  const [isLoadingRecent, setIsLoadingRecent] = useState(true);
+
   const loadShelves = useCallback(async () => {
     if (!businessId) return;
     try {
@@ -54,10 +66,28 @@ export default function ScanScreen() {
     }
   }, [businessId]);
 
+  const loadRecentScans = useCallback(async () => {
+    if (!businessId) return;
+    try {
+      const since = new Date();
+      since.setDate(since.getDate() - RECENT_SCANS_WINDOW_DAYS);
+      const data = await getScanHistory(businessId, since.toISOString());
+      setRecentScans(data.slice(0, RECENT_SCANS_LIMIT));
+    } catch {
+      // Non-critical widget — leave it empty rather than surfacing an error banner.
+      setRecentScans([]);
+    }
+  }, [businessId]);
+
   useEffect(() => {
     setIsLoadingShelves(true);
     loadShelves().finally(() => setIsLoadingShelves(false));
   }, [loadShelves]);
+
+  useEffect(() => {
+    setIsLoadingRecent(true);
+    loadRecentScans().finally(() => setIsLoadingRecent(false));
+  }, [loadRecentScans]);
 
   async function prepareAndSetImage(asset: ImagePicker.ImagePickerAsset) {
     setResult(null);
@@ -103,7 +133,12 @@ export default function ScanScreen() {
     setIsAnalyzing(true);
     try {
       const data = await analyzeImage(image, selectedShelf, businessId, scanMode);
+      // The captured photo and capture controls disappear once a result
+      // exists (see the render below) — only the result card shows until
+      // "Scan another" is tapped.
       setResult(data);
+      setImage(null);
+      loadRecentScans();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Image analysis failed');
     } finally {
@@ -148,7 +183,7 @@ export default function ScanScreen() {
   if (isLoadingShelves) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -158,7 +193,7 @@ export default function ScanScreen() {
       <View style={styles.center}>
         <Text style={styles.emptyTitle}>No shelves yet</Text>
         <Text style={styles.emptyText}>Add a shelf before scanning inventory.</Text>
-        <Pressable style={styles.primaryButton} onPress={() => router.push('/shelves')}>
+        <Pressable style={styles.primaryButton} onPress={() => router.push('/shelves')} android_ripple={{ color: 'rgba(255,255,255,0.2)' }}>
           <Text style={styles.primaryButtonText}>Go to Shelves</Text>
         </Pressable>
       </View>
@@ -169,83 +204,10 @@ export default function ScanScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>Scan shelf</Text>
-        <Pressable onPress={() => router.push('/scan-history')}>
-          <Text style={styles.historyLink}>History</Text>
+        <Pressable onPress={() => router.push('/scan-history')} hitSlop={8} android_ripple={ripple}>
+          <Text style={styles.historyLink}>Full history</Text>
         </Pressable>
       </View>
-
-      <Text style={styles.label}>Shelf</Text>
-      <View style={styles.chipRow}>
-        {shelves.map((shelf) => (
-          <Pressable
-            key={shelf.id}
-            style={[styles.chip, selectedShelf?.id === shelf.id && styles.chipActive]}
-            onPress={() => setSelectedShelf(shelf)}
-          >
-            <Text style={[styles.chipText, selectedShelf?.id === shelf.id && styles.chipTextActive]}>
-              {shelf.name}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Text style={styles.label}>Mode</Text>
-      <View style={styles.chipRow}>
-        {SCAN_MODES.map((mode) => (
-          <Pressable
-            key={mode.value}
-            style={[styles.chip, scanMode === mode.value && styles.chipActive]}
-            onPress={() => setScanMode(mode.value)}
-          >
-            <Text style={[styles.chipText, scanMode === mode.value && styles.chipTextActive]}>
-              {mode.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {isPreparingImage ? (
-        <View style={styles.preparingBox}>
-          <ActivityIndicator color="#16a34a" />
-          <Text style={styles.hint}>Preparing image…</Text>
-        </View>
-      ) : image ? (
-        <Image source={{ uri: image.uri }} style={styles.preview} />
-      ) : (
-        <View style={styles.pickerButtons}>
-          <Pressable style={styles.pickerButton} onPress={handleTakePhoto}>
-            <Text style={styles.pickerButtonText}>Take photo</Text>
-          </Pressable>
-          <Pressable style={styles.pickerButton} onPress={handlePickFromGallery}>
-            <Text style={styles.pickerButtonText}>Choose from gallery</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      {image && !result ? (
-        <View style={styles.actionsRow}>
-          <Pressable style={styles.secondaryButton} onPress={() => setImage(null)} disabled={isAnalyzing}>
-            <Text style={styles.secondaryButtonText}>Retake</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.primaryButton, isAnalyzing && styles.primaryButtonDisabled]}
-            onPress={handleAnalyze}
-            disabled={isAnalyzing || !selectedShelf}
-          >
-            {isAnalyzing ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Analyze</Text>
-            )}
-          </Pressable>
-        </View>
-      ) : null}
-
-      {isAnalyzing ? (
-        <Text style={styles.hint}>Analyzing image — this can take up to 15 seconds…</Text>
-      ) : null}
 
       {result ? (
         <ScanResult
@@ -254,7 +216,117 @@ export default function ScanScreen() {
           onFreshnessChange={handleFreshnessChange}
           savingDetectionId={savingDetectionId}
         />
-      ) : null}
+      ) : (
+        <>
+          <View style={styles.card}>
+            <Text style={styles.label}>Shelf</Text>
+            <View style={styles.chipRow}>
+              {shelves.map((shelf) => (
+                <Pressable
+                  key={shelf.id}
+                  style={[styles.chip, selectedShelf?.id === shelf.id && styles.chipActive]}
+                  onPress={() => setSelectedShelf(shelf)}
+                  android_ripple={ripple}
+                >
+                  <Text style={[styles.chipText, selectedShelf?.id === shelf.id && styles.chipTextActive]}>
+                    {shelf.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={styles.label}>Mode</Text>
+            <View style={styles.chipRow}>
+              {SCAN_MODES.map((mode) => (
+                <Pressable
+                  key={mode.value}
+                  style={[styles.chip, scanMode === mode.value && styles.chipActive]}
+                  onPress={() => setScanMode(mode.value)}
+                  android_ripple={ripple}
+                >
+                  <Text style={[styles.chipText, scanMode === mode.value && styles.chipTextActive]}>
+                    {mode.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.card}>
+            {isPreparingImage ? (
+              <View style={styles.preparingBox}>
+                <ActivityIndicator color={colors.accent} />
+                <Text style={styles.hint}>Preparing image…</Text>
+              </View>
+            ) : image ? (
+              <Image source={{ uri: image.uri }} style={styles.preview} />
+            ) : (
+              <View style={styles.pickerButtons}>
+                <Pressable style={styles.pickerButton} onPress={handleTakePhoto} android_ripple={ripple}>
+                  <Text style={styles.pickerButtonText}>Take photo</Text>
+                </Pressable>
+                <Pressable style={styles.pickerButton} onPress={handlePickFromGallery} android_ripple={ripple}>
+                  <Text style={styles.pickerButtonText}>Choose from gallery</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {image ? (
+              <View style={styles.actionsRow}>
+                <Pressable style={styles.secondaryButton} onPress={() => setImage(null)} disabled={isAnalyzing} android_ripple={ripple}>
+                  <Text style={styles.secondaryButtonText}>Retake</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.primaryButton, isAnalyzing && styles.primaryButtonDisabled]}
+                  onPress={handleAnalyze}
+                  disabled={isAnalyzing || !selectedShelf}
+                  android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+                >
+                  {isAnalyzing ? (
+                    <ActivityIndicator color={colors.onAccent} />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>Analyze</Text>
+                  )}
+                </Pressable>
+              </View>
+            ) : null}
+
+            {isAnalyzing ? (
+              <Text style={styles.hint}>Analyzing image — this can take up to 15 seconds…</Text>
+            ) : null}
+          </View>
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+        </>
+      )}
+
+      <View style={styles.card}>
+        <View style={styles.recentHeader}>
+          <Text style={styles.sectionTitle}>Recent scans</Text>
+          <Pressable onPress={() => router.push('/scan-history')} hitSlop={8} android_ripple={ripple}>
+            <Text style={styles.seeAllLink}>See all</Text>
+          </Pressable>
+        </View>
+
+        {isLoadingRecent ? (
+          <ActivityIndicator color={colors.accent} />
+        ) : recentScans.length === 0 ? (
+          <Text style={styles.hint}>No scans in the last {RECENT_SCANS_WINDOW_DAYS} days.</Text>
+        ) : (
+          recentScans.map((scan) => (
+            <View key={scan.id} style={styles.recentRow}>
+              <View style={styles.recentRowMain}>
+                <Text style={styles.recentRowTitle}>{scan.shelf_name}</Text>
+                <Text style={styles.recentRowMeta}>
+                  {scan.item_count} item{scan.item_count === 1 ? '' : 's'} · {scan.fresh_count} fresh ·{' '}
+                  {scan.spoiled_count} spoiled
+                </Text>
+              </View>
+              <Text style={styles.recentRowTime}>{formatHistoryDate(scan.created_at)}</Text>
+            </View>
+          ))
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -326,9 +398,10 @@ function ScanResult({
                       style={[styles.freshnessChip, isActive && styles.freshnessChipActive]}
                       onPress={() => onFreshnessChange(detection.id, option)}
                       disabled={!detection.id || isSaving}
+                      android_ripple={ripple}
                     >
                       {isSaving && isActive ? (
-                        <ActivityIndicator color="#fff" size="small" />
+                        <ActivityIndicator color={colors.onAccent} size="small" />
                       ) : (
                         <Text style={[styles.freshnessChipText, isActive && styles.freshnessChipTextActive]}>
                           {option}
@@ -343,7 +416,7 @@ function ScanResult({
         </View>
       ) : null}
 
-      <Pressable style={styles.primaryButton} onPress={onScanAnother}>
+      <Pressable style={styles.primaryButton} onPress={onScanAnother} android_ripple={{ color: 'rgba(255,255,255,0.2)' }}>
         <Text style={styles.primaryButtonText}>Scan another</Text>
       </Pressable>
     </View>
@@ -353,186 +426,240 @@ function ScanResult({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 20,
-    gap: 12,
+    padding: spacing.xl,
+    gap: spacing.lg,
   },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    gap: 8,
+    backgroundColor: colors.background,
+    gap: spacing.sm,
     paddingHorizontal: 24,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
+    ...typography.h2,
+    color: colors.textPrimary,
   },
   emptyText: {
+    fontFamily: fonts.body,
     fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 12,
+    color: colors.textMuted,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
+    ...typography.title,
+    fontSize: 21,
+    color: colors.textPrimary,
   },
   historyLink: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#16a34a',
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+    color: colors.accent,
+  },
+  card: {
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    ...card(),
   },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-    marginTop: 8,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
   },
   chip: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   chipActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   chipText: {
+    fontFamily: fonts.bodyMedium,
     fontSize: 13,
-    color: '#374151',
+    color: colors.textSecondary,
   },
   chipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
+    fontFamily: fonts.bodySemiBold,
+    color: colors.onAccent,
   },
   pickerButtons: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 8,
+    gap: spacing.md,
   },
   pickerButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#16a34a',
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderColor: colors.accent,
+    borderRadius: radius.md,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
   },
   pickerButtonText: {
-    color: '#16a34a',
-    fontWeight: '600',
+    fontFamily: fonts.bodySemiBold,
+    color: colors.accent,
+    fontSize: 14,
   },
   preview: {
     width: '100%',
     aspectRatio: 4 / 3,
-    borderRadius: 12,
-    marginTop: 8,
-    backgroundColor: '#f3f4f6',
+    borderRadius: radius.md,
+    backgroundColor: colors.muted,
   },
   preparingBox: {
     width: '100%',
     aspectRatio: 4 / 3,
-    borderRadius: 12,
-    marginTop: 8,
-    backgroundColor: '#f3f4f6',
+    borderRadius: radius.md,
+    backgroundColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 8,
+    gap: spacing.md,
   },
   secondaryButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
   },
   secondaryButtonText: {
-    color: '#374151',
-    fontWeight: '600',
+    fontFamily: fonts.bodySemiBold,
+    color: colors.textSecondary,
+    fontSize: 14,
   },
   primaryButton: {
     flex: 2,
-    backgroundColor: '#16a34a',
-    borderRadius: 10,
-    paddingVertical: 14,
+    backgroundColor: colors.accent,
+    borderRadius: radius.md,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
+    overflow: 'hidden',
   },
   primaryButtonDisabled: {
     opacity: 0.6,
   },
   primaryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    fontFamily: fonts.bodySemiBold,
+    color: colors.onAccent,
+    fontSize: 14,
   },
   hint: {
+    fontFamily: fonts.body,
     fontSize: 13,
-    color: '#6b7280',
+    color: colors.textMuted,
     textAlign: 'center',
-    marginTop: 4,
   },
   error: {
-    color: '#dc2626',
+    fontFamily: fonts.bodyMedium,
+    color: colors.danger,
     fontSize: 13,
+  },
+  sectionTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  recentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  seeAllLink: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
+    color: colors.accent,
+  },
+  recentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.background,
+  },
+  recentRowMain: {
+    flex: 1,
+    gap: 2,
+  },
+  recentRowTitle: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  recentRowMeta: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  recentRowTime: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.textMuted,
   },
   resultCard: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#f0fdf4',
+    padding: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.accentSoft,
     borderWidth: 1,
-    borderColor: '#bbf7d0',
-    gap: 12,
+    borderColor: colors.border,
+    gap: spacing.md,
   },
   resultTitle: {
+    ...typography.h2,
     fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
+    color: colors.textPrimary,
   },
   resultSection: {
-    gap: 4,
+    gap: spacing.xs,
   },
   resultSectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#15803d',
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
+    color: colors.accentDark,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   resultHint: {
+    fontFamily: fonts.body,
     fontSize: 12,
-    color: '#6b7280',
+    color: colors.textMuted,
     marginTop: -2,
   },
   detectionRow: {
-    gap: 6,
-    paddingVertical: 6,
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: '#dcfce7',
+    borderTopColor: colors.border,
   },
   resultRow: {
     flexDirection: 'row',
@@ -541,35 +668,35 @@ const styles = StyleSheet.create({
   },
   freshnessChipRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: spacing.xs,
   },
   freshnessChip: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#bbf7d0',
-    borderRadius: 8,
-    paddingVertical: 6,
+    borderColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.xs,
     alignItems: 'center',
   },
   freshnessChipActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
+    backgroundColor: colors.accent,
   },
   freshnessChipText: {
+    fontFamily: fonts.bodySemiBold,
     fontSize: 12,
-    fontWeight: '600',
-    color: '#15803d',
+    color: colors.accentDark,
   },
   freshnessChipTextActive: {
-    color: '#fff',
+    color: colors.onAccent,
   },
   resultRowLabel: {
+    fontFamily: fonts.bodyMedium,
     fontSize: 14,
-    color: '#111827',
-    fontWeight: '500',
+    color: colors.textPrimary,
   },
   resultRowValue: {
+    fontFamily: fonts.body,
     fontSize: 13,
-    color: '#374151',
+    color: colors.textSecondary,
   },
 });
