@@ -172,4 +172,84 @@ describe("InvitationService", () => {
     );
     expect(manager.save).toHaveBeenCalled();
   });
+
+  describe("cancel", () => {
+    it("cancels a pending invitation for the owner", async () => {
+      mockedBusinessService.getMembership.mockResolvedValue({
+        role: "OWNER",
+        business_name: "Fresh Mart",
+      } as never);
+
+      const invitation = {
+        id: "invite-1",
+        business_id: "business-1",
+        email: "employee@example.com",
+        role: "EMPLOYEE",
+        status: "PENDING",
+        expires_at: new Date(Date.now() + 60_000),
+        created_at: new Date(),
+        accepted_at: null,
+      };
+      const findOne = jest.fn().mockResolvedValue(invitation);
+      const save = jest.fn().mockImplementation(async (entity) => entity);
+      mockedDataSource.getRepository.mockReturnValue({ findOne, save } as never);
+
+      const result = await InvitationService.cancel(
+        "owner-1",
+        "business-1",
+        "invite-1",
+      );
+
+      expect(findOne).toHaveBeenCalledWith({
+        where: { id: "invite-1", business_id: "business-1" },
+      });
+      expect(save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "CANCELLED" }),
+      );
+      expect(result.status).toBe("CANCELLED");
+    });
+
+    it("rejects when the requester is not the owner", async () => {
+      mockedBusinessService.getMembership.mockResolvedValue({
+        role: "EMPLOYEE",
+        business_name: "Fresh Mart",
+      } as never);
+
+      await expect(
+        InvitationService.cancel("employee-1", "business-1", "invite-1"),
+      ).rejects.toThrow("Only the business owner can cancel invitations.");
+    });
+
+    it("rejects when the invitation is not found", async () => {
+      mockedBusinessService.getMembership.mockResolvedValue({
+        role: "OWNER",
+        business_name: "Fresh Mart",
+      } as never);
+      mockedDataSource.getRepository.mockReturnValue({
+        findOne: jest.fn().mockResolvedValue(null),
+      } as never);
+
+      await expect(
+        InvitationService.cancel("owner-1", "business-1", "invite-1"),
+      ).rejects.toThrow("Invitation not found.");
+    });
+
+    it("rejects when the invitation is no longer pending", async () => {
+      mockedBusinessService.getMembership.mockResolvedValue({
+        role: "OWNER",
+        business_name: "Fresh Mart",
+      } as never);
+      mockedDataSource.getRepository.mockReturnValue({
+        findOne: jest.fn().mockResolvedValue({
+          id: "invite-1",
+          business_id: "business-1",
+          status: "ACCEPTED",
+        }),
+      } as never);
+
+      await expect(
+        InvitationService.cancel("owner-1", "business-1", "invite-1"),
+      ).rejects.toThrow("Only pending invitations can be canceled.");
+    });
+  });
 });

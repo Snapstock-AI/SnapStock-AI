@@ -283,6 +283,41 @@ export class InvitationService {
     }));
   }
 
+  /** Owner cancels an invitation they no longer want to stay open. */
+  static async cancel(ownerId: string, businessId: string, invitationId: string) {
+    const membership = await BusinessService.getMembership(ownerId, businessId);
+
+    if (!membership || membership.role !== "OWNER") {
+      throw new Error("Only the business owner can cancel invitations.");
+    }
+
+    const repo = AppDataSource.getRepository(EmployeeInvitation);
+    const invitation = await repo.findOne({
+      where: { id: invitationId, business_id: businessId },
+    });
+
+    if (!invitation) {
+      throw new Error("Invitation not found.");
+    }
+
+    if (invitation.status !== "PENDING") {
+      throw new Error("Only pending invitations can be canceled.");
+    }
+
+    invitation.status = "CANCELLED";
+    await repo.save(invitation);
+
+    return {
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      status: invitation.status,
+      expires_at: invitation.expires_at,
+      created_at: invitation.created_at,
+      accepted_at: invitation.accepted_at,
+    };
+  }
+
   /**
    * Owner invites by email only. Does not create users or temporary passwords.
    * Recipient signs up or logs in normally, then accepts the invite link.
