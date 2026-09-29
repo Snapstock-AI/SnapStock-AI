@@ -1,20 +1,23 @@
 import { Link, Redirect } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { getPostAuthRoute } from '../lib/routing';
+import { makeAuthFormStyles } from '../styles/authForm';
 
 export default function LoginScreen() {
   const { user, login, isAuthenticated, isHydrating } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeAuthFormStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +52,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
@@ -59,7 +62,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           autoComplete="password"
           secureTextEntry
@@ -73,15 +76,16 @@ export default function LoginScreen() {
           style={[styles.button, isSubmitting && styles.buttonDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting || !email || !password}
+          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.onAccent} />
           ) : (
             <Text style={styles.buttonText}>Sign in</Text>
           )}
         </Pressable>
 
-        <Link href="/forgot-password" style={styles.link}>
+        <Link href="/forgot-password" style={[styles.link, { textAlign: 'center', marginTop: 16 }]}>
           Forgot password?
         </Link>
         <Text style={styles.footerText}>
@@ -94,67 +98,3 @@ export default function LoginScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-  },
-  form: {
-    paddingHorizontal: 24,
-    gap: 12,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#111827',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#111827',
-  },
-  error: {
-    color: '#dc2626',
-    fontSize: 13,
-  },
-  button: {
-    backgroundColor: '#16a34a',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  link: {
-    color: '#16a34a',
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 16,
-  },
-  footerText: {
-    textAlign: 'center',
-    fontSize: 13,
-    color: '#6b7280',
-    marginTop: 8,
-  },
-});

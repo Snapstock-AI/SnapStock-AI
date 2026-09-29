@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import { activateVendor, listVendors, suspendVendor, type Vendor } from '../../lib/admin';
+import { card, fonts, radius, spacing, typography, type ThemeColors } from '../../theme';
 
 export default function VendorsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -71,7 +75,7 @@ export default function VendorsScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -122,9 +126,10 @@ export default function VendorsScreen() {
               ]}
               onPress={() => confirmToggle(item)}
               disabled={pendingId === item.id}
+              android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
             >
               {pendingId === item.id ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={colors.onAccent} size="small" />
               ) : (
                 <Text style={styles.actionButtonText}>
                   {item.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
@@ -138,110 +143,114 @@ export default function VendorsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
-    gap: 2,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: '#6b7280',
-  },
-  error: {
-    color: '#dc2626',
-    fontSize: 13,
-    marginHorizontal: 20,
-    marginBottom: 8,
-  },
-  list: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    gap: 10,
-  },
-  emptyList: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    color: '#6b7280',
-    fontSize: 14,
-  },
-  row: {
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    gap: 4,
-  },
-  rowTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  rowName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  rowMeta: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  badge: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  badgeActive: {
-    backgroundColor: '#dcfce7',
-  },
-  badgeSuspended: {
-    backgroundColor: '#fee2e2',
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  badgeTextActive: {
-    color: '#15803d',
-  },
-  badgeTextSuspended: {
-    color: '#b91c1c',
-  },
-  actionButton: {
-    marginTop: 6,
-    alignSelf: 'flex-start',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  actionButtonSuspend: {
-    backgroundColor: '#dc2626',
-  },
-  actionButtonActivate: {
-    backgroundColor: '#16a34a',
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+      gap: 2,
+    },
+    headerTitle: {
+      ...typography.title,
+      color: colors.textPrimary,
+    },
+    headerSubtitle: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: colors.textMuted,
+    },
+    error: {
+      fontFamily: fonts.bodyMedium,
+      color: colors.danger,
+      fontSize: 13,
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.sm,
+    },
+    list: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: 24,
+      gap: spacing.sm,
+    },
+    emptyList: {
+      flexGrow: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyText: {
+      fontFamily: fonts.body,
+      color: colors.textMuted,
+      fontSize: 14,
+    },
+    row: {
+      padding: spacing.md,
+      borderRadius: radius.md,
+      gap: 4,
+      ...card(colors),
+    },
+    rowTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    rowName: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    rowMeta: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    badge: {
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3,
+    },
+    badgeActive: {
+      backgroundColor: colors.accentSoft,
+    },
+    badgeSuspended: {
+      backgroundColor: colors.dangerSoft,
+    },
+    badgeText: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 11,
+    },
+    badgeTextActive: {
+      color: colors.accentDark,
+    },
+    badgeTextSuspended: {
+      color: colors.danger,
+    },
+    actionButton: {
+      marginTop: spacing.xs,
+      alignSelf: 'flex-start',
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      overflow: 'hidden',
+    },
+    actionButtonSuspend: {
+      backgroundColor: colors.danger,
+    },
+    actionButtonActivate: {
+      backgroundColor: colors.accent,
+    },
+    actionButtonText: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.onAccent,
+      fontSize: 13,
+    },
+  });

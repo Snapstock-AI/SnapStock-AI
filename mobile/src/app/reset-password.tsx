@@ -1,14 +1,17 @@
 import { Link, router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 import { apiRequest } from '../lib/api';
-import { authFormStyles as s } from '../styles/authForm';
+import { makeAuthFormStyles } from '../styles/authForm';
 
 // The reset link emailed to the user carries the token as a URL query param
 // on the web app. Deep-linking that straight into the mobile app needs
 // server-side app-association config, so for now the user pastes the token
 // from the email link into this field.
 export default function ResetPasswordScreen() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeAuthFormStyles(colors), [colors]);
   const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +49,7 @@ export default function ResetPasswordScreen() {
         <TextInput
           style={s.input}
           placeholder="Reset token"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           value={token}
           onChangeText={setToken}
@@ -54,7 +57,7 @@ export default function ResetPasswordScreen() {
         <TextInput
           style={s.input}
           placeholder="New password (min 6 characters)"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           secureTextEntry
           value={password}
@@ -68,8 +71,9 @@ export default function ResetPasswordScreen() {
           style={[s.button, isSubmitting && s.buttonDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting || !token || password.length < 6}
+          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
         >
-          {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>Reset password</Text>}
+          {isSubmitting ? <ActivityIndicator color={colors.onAccent} /> : <Text style={s.buttonText}>Reset password</Text>}
         </Pressable>
 
         <Text style={s.footerText}>

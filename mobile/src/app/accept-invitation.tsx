@@ -1,14 +1,17 @@
 import { Link, router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { authFormStyles as s } from '../styles/authForm';
+import { useTheme } from '../context/ThemeContext';
+import { makeAuthFormStyles } from '../styles/authForm';
 
 // The invite link emailed to a new teammate carries the token as a URL query
 // param on the web app; see reset-password.tsx for why it's pasted in here
 // rather than deep-linked.
 export default function AcceptInvitationScreen() {
   const { isAuthenticated, acceptInvitation } = useAuth();
+  const { colors } = useTheme();
+  const s = useMemo(() => makeAuthFormStyles(colors), [colors]);
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(false);
@@ -56,7 +59,7 @@ export default function AcceptInvitationScreen() {
           <Text style={s.eyebrow}>Employee invitation</Text>
           <Text style={s.title}>Invitation accepted</Text>
           <Text style={s.subtitle}>You are now part of the business team.</Text>
-          <Pressable style={s.button} onPress={() => router.replace('/home')}>
+          <Pressable style={s.button} onPress={() => router.replace('/home')} android_ripple={{ color: 'rgba(255,255,255,0.2)' }}>
             <Text style={s.buttonText}>Open dashboard</Text>
           </Pressable>
         </View>
@@ -74,7 +77,7 @@ export default function AcceptInvitationScreen() {
         <TextInput
           style={s.input}
           placeholder="Invitation token"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           value={token}
           onChangeText={setToken}
@@ -86,8 +89,9 @@ export default function AcceptInvitationScreen() {
           style={[s.button, isSubmitting && s.buttonDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting || !token}
+          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
         >
-          {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>Accept invitation</Text>}
+          {isSubmitting ? <ActivityIndicator color={colors.onAccent} /> : <Text style={s.buttonText}>Accept invitation</Text>}
         </Pressable>
       </View>
     </View>

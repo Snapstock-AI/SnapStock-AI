@@ -1,5 +1,5 @@
 import { Link, router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -10,10 +10,13 @@ import {
   View,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { authFormStyles as s } from '../styles/authForm';
+import { useTheme } from '../context/ThemeContext';
+import { makeAuthFormStyles } from '../styles/authForm';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
+  const { colors } = useTheme();
+  const s = useMemo(() => makeAuthFormStyles(colors), [colors]);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,14 +50,14 @@ export default function RegisterScreen() {
         <TextInput
           style={s.input}
           placeholder="Full name"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           value={fullName}
           onChangeText={setFullName}
         />
         <TextInput
           style={s.input}
           placeholder="Email"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
@@ -64,7 +67,7 @@ export default function RegisterScreen() {
         <TextInput
           style={s.input}
           placeholder="Password (min 6 characters)"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           secureTextEntry
           value={password}
@@ -78,8 +81,9 @@ export default function RegisterScreen() {
           style={[s.button, isSubmitting && s.buttonDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting || !fullName || !email || password.length < 6}
+          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
         >
-          {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>Create account</Text>}
+          {isSubmitting ? <ActivityIndicator color={colors.onAccent} /> : <Text style={s.buttonText}>Create account</Text>}
         </Pressable>
 
         <Text style={s.footerText}>

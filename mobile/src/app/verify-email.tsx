@@ -1,11 +1,14 @@
 import { Link } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 import { apiRequest } from '../lib/api';
-import { authFormStyles as s } from '../styles/authForm';
+import { makeAuthFormStyles } from '../styles/authForm';
 
 // See reset-password.tsx for why the token is pasted in rather than deep-linked.
 export default function VerifyEmailScreen() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeAuthFormStyles(colors), [colors]);
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -38,7 +41,7 @@ export default function VerifyEmailScreen() {
         <TextInput
           style={s.input}
           placeholder="Verification token"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           value={token}
           onChangeText={setToken}
@@ -51,8 +54,9 @@ export default function VerifyEmailScreen() {
           style={[s.button, isSubmitting && s.buttonDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting || !token}
+          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
         >
-          {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>Verify email</Text>}
+          {isSubmitting ? <ActivityIndicator color={colors.onAccent} /> : <Text style={s.buttonText}>Verify email</Text>}
         </Pressable>
 
         {message ? (

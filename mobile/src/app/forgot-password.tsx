@@ -1,10 +1,13 @@
 import { Link } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 import { apiRequest } from '../lib/api';
-import { authFormStyles as s } from '../styles/authForm';
+import { makeAuthFormStyles } from '../styles/authForm';
 
 export default function ForgotPasswordScreen() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeAuthFormStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -38,7 +41,7 @@ export default function ForgotPasswordScreen() {
         <TextInput
           style={s.input}
           placeholder="Email"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
@@ -53,8 +56,9 @@ export default function ForgotPasswordScreen() {
           style={[s.button, isSubmitting && s.buttonDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting || !email}
+          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
         >
-          {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>Send reset link</Text>}
+          {isSubmitting ? <ActivityIndicator color={colors.onAccent} /> : <Text style={s.buttonText}>Send reset link</Text>}
         </Pressable>
 
         <Text style={s.footerText}>
