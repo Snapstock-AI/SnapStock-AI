@@ -136,7 +136,12 @@ export default function ScanScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Scan shelf</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>Scan shelf</Text>
+        <Pressable onPress={() => router.push('/scan-history')}>
+          <Text style={styles.historyLink}>History</Text>
+        </Pressable>
+      </View>
 
       <Text style={styles.label}>Shelf</Text>
       <View style={styles.chipRow}>
@@ -300,11 +305,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   title: {
     fontSize: 22,
     fontWeight: '700',
     color: '#111827',
-    marginBottom: 4,
+  },
+  historyLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#16a34a',
   },
   label: {
     fontSize: 13,

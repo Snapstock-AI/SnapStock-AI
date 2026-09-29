@@ -1,6 +1,7 @@
 import { File, UploadTask, UploadType } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { API_URL } from '../config';
+import { apiRequest } from './api';
 import { getToken } from './auth';
 import type { Shelf } from './shelf';
 
@@ -48,6 +49,78 @@ export type DetectionResult = {
 };
 
 export type ScanMode = 'STOCK_IN' | 'STOCK_OUT';
+
+// Mirrors client/src/lib/detection.ts's ScanHistoryItem/getScanHistory
+// against the same GET /detection/history endpoint.
+export type ScanHistoryItem = {
+  id: string;
+  shelf_id: string;
+  shelf_name: string;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  created_at: string;
+  completed_at: string | null;
+  item_count: number;
+  fresh_count: number;
+  medium_count: number;
+  spoiled_count: number;
+  scan_mode: ScanMode;
+  items: {
+    type: string;
+    freshness: string;
+  }[];
+};
+
+export function countHistoryItems(items: ScanHistoryItem['items']): Record<string, number> {
+  return items.reduce<Record<string, number>>((counts, item) => {
+    counts[item.type] = (counts[item.type] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+export function formatHistoryDate(value: string | null | undefined): string {
+  if (!value) return '';
+  const str = value.trim();
+  const isoStr = str.includes('T') ? str : str.replace(' ', 'T');
+  const date = new Date(isoStr);
+  if (isNaN(date.getTime())) return value;
+
+  const now = new Date();
+  const timeStr = date.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  const isSameDay = (a: Date, b: Date) =>
+    a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+
+  if (isSameDay(date, now)) return `Today, ${timeStr}`;
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (isSameDay(date, yesterday)) return `Yesterday, ${timeStr}`;
+
+  const isThisYear = date.getFullYear() === now.getFullYear();
+  const dateStr = date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(isThisYear ? {} : { year: 'numeric' }),
+  });
+  return `${dateStr}, ${timeStr}`;
+}
+
+export async function getScanHistory(
+  businessId: string,
+  startDate?: string,
+  endDate?: string,
+): Promise<ScanHistoryItem[]> {
+  const params = new URLSearchParams({ businessId });
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+
+  const result = await apiRequest<ScanHistoryItem[]>(`/detection/history?${params}`, {}, true);
+  return result.data || [];
+}
 
 /** A local image picked via expo-image-picker: its URI, plus name/mime type for multipart upload. */
 export type PickedImage = {

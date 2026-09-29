@@ -80,6 +80,11 @@ export default function AppLayout() {
         // Reachable from Settings (owners only) rather than the tab bar itself.
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="scan-history"
+        // Reachable from the Scan tab's "History" link rather than the tab bar itself.
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
