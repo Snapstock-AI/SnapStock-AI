@@ -8,6 +8,9 @@ export default function HomeScreen() {
   if (!isHydrating && !isAuthenticated) {
     return <Redirect href="/login" />;
   }
+  if (!isHydrating && isAuthenticated && !user?.businessId) {
+    return <Redirect href="/create-business" />;
+  }
 
   return (
     <View style={styles.container}>

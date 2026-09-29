@@ -18,7 +18,23 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (fullName: string, email: string, password: string) => Promise<string>;
+  createBusiness: (data: CreateBusinessInput) => Promise<Business>;
+  acceptInvitation: (token: string) => Promise<void>;
   logout: () => Promise<void>;
+};
+
+export type CreateBusinessInput = {
+  business_name: string;
+  business_email: string;
+  address: string;
+  contact_number: string;
+};
+
+export type Business = CreateBusinessInput & {
+  id: string;
+  role: 'OWNER' | 'EMPLOYEE';
+  freshness_alert_threshold?: number;
+  low_stock_threshold?: number;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -79,6 +95,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result.data?.message || 'Registered successfully. Please verify your email.';
   }, []);
 
+  const createBusiness = useCallback(async (data: CreateBusinessInput) => {
+    const result = await apiRequest<{
+      business: Business;
+      token: string;
+      refreshToken: string;
+      user: AuthUser;
+    }>(
+      '/businesses',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      true,
+    );
+
+    if (!result.data?.business || !result.data.token || !result.data.user) {
+      throw new Error('Business creation failed');
+    }
+
+    await setAuth(result.data.token, result.data.user, result.data.refreshToken);
+    setToken(result.data.token);
+    setUser(result.data.user);
+
+    return result.data.business;
+  }, []);
+
+  const acceptInvitation = useCallback(async (invitationToken: string) => {
+    const result = await apiRequest<{
+      token: string;
+      refreshToken: string;
+      user: AuthUser;
+    }>(
+      '/businesses/invitations/accept',
+      {
+        method: 'POST',
+        body: JSON.stringify({ token: invitationToken }),
+      },
+      true,
+    );
+
+    if (!result.data?.token || !result.data.user) {
+      throw new Error('Invitation acceptance failed');
+    }
+
+    await setAuth(result.data.token, result.data.user, result.data.refreshToken);
+    setToken(result.data.token);
+    setUser(result.data.user);
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await apiRequest('/auth/logout', { method: 'POST' }, true);
@@ -98,9 +163,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: Boolean(token && user),
       login,
       register,
+      createBusiness,
+      acceptInvitation,
       logout,
     }),
-    [user, token, isHydrating, login, register, logout],
+    [user, token, isHydrating, login, register, createBusiness, acceptInvitation, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

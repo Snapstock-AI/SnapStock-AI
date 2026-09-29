@@ -13,14 +13,14 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
-  const { login, isAuthenticated, isHydrating } = useAuth();
+  const { user, login, isAuthenticated, isHydrating } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isHydrating && isAuthenticated) {
-    return <Redirect href="/home" />;
+    return <Redirect href={user?.businessId ? '/home' : '/create-business'} />;
   }
 
   async function handleSubmit() {
