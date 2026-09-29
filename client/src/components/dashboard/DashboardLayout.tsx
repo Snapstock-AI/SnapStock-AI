@@ -252,34 +252,15 @@ export default function DashboardLayout() {
             <Logo />
           </div>
 
-          <div className="flex flex-1 items-center justify-between gap-4 px-4 lg:px-6">
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="relative h-10 w-10 text-fd-muted" asChild>
-                <NavLink to="/dashboard/alerts" viewTransition aria-label="Notifications">
-                  <Bell className="h-5 w-5" />
-                  {badge > 0 ? (
-                    <span className="absolute right-1 top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-white">
-                      {badge > 99 ? '99+' : badge}
-                    </span>
-                  ) : null}
-                </NavLink>
-              </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-fd-muted" asChild>
-                <NavLink to="/dashboard/settings" viewTransition aria-label="Settings">
-                  <Settings className="h-5 w-5" />
-                </NavLink>
-              </Button>
-              <ThemeToggle className="h-10 w-10 rounded-full border-0 bg-transparent shadow-none" />
-            </div>
-
-            <DropdownMenu>
+          <div className="grid min-w-0 flex-1 grid-cols-[minmax(max-content,1fr)_minmax(0,32rem)_minmax(max-content,1fr)] items-center gap-6 px-6 lg:px-[35px]">
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
                   disabled={switchingWorkspace}
-                  className="hidden max-w-[220px] items-center gap-2 rounded-[60px] border border-border bg-white px-4 py-2 text-left text-sm transition hover:bg-muted/40 disabled:opacity-60 md:flex dark:bg-card"
+                  className="flex h-11 max-w-[220px] items-center justify-self-start gap-2 rounded-[60px] border border-border bg-white px-4 text-left text-sm transition hover:bg-muted/40 disabled:opacity-60 dark:bg-card"
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 leading-tight">
                     <p className="truncate font-medium text-fd-ink">
                       {activeWorkspace?.business_name || 'Workspace'}
                     </p>
@@ -290,7 +271,7 @@ export default function DashboardLayout() {
                   <ChevronDown className="h-4 w-4 shrink-0 text-fd-muted" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" className="w-[260px] border-0 fd-shadow">
+              <DropdownMenuContent align="start" className="w-[260px] border-0 fd-shadow">
                 <DropdownMenuLabel>Switch workspace</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {workspaces.length === 0 ? (
@@ -321,7 +302,7 @@ export default function DashboardLayout() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <div ref={searchRef} className="relative hidden max-w-md flex-1 md:block lg:max-w-lg">
+            <div ref={searchRef} className="relative w-full">
               <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-fd-muted" />
               <input
                 value={query}
@@ -342,7 +323,7 @@ export default function DashboardLayout() {
                 }}
                 placeholder="Search pages…"
                 aria-label="Search dashboard pages"
-                className="h-[46px] w-full rounded-[60px] border border-border bg-white px-7 pr-11 text-sm text-fd-ink outline-none placeholder:text-fd-muted fd-shadow-input dark:bg-card"
+                className="h-11 w-full rounded-[60px] border border-border bg-white px-6 pr-11 text-sm text-fd-ink outline-none placeholder:text-fd-muted fd-shadow-input dark:bg-card"
               />
               {searchOpen && query.trim() && (
                 <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-border bg-white shadow-lg dark:bg-card">
@@ -367,55 +348,74 @@ export default function DashboardLayout() {
               )}
             </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex items-center gap-3 rounded-[60px] py-1.5 pl-1.5 pr-3 transition hover:bg-white dark:hover:bg-card"
-                >
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary text-sm font-medium text-white">
-                      {(user?.full_name || 'U').charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden text-base lg:inline">
-                    <span className="text-fd-body">Hello, </span>
-                    <span className="text-fd-ink">{user?.full_name || 'User'}</span>
-                  </span>
-                  <ChevronDown className="hidden h-4 w-4 text-fd-muted lg:block" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[280px] border-0 fd-shadow">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-fd-ink">{user?.full_name}</span>
-                    <span className="text-xs font-normal text-fd-muted">{user?.email}</span>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>
-                  <Settings className="h-4 w-4" />
-                  Account Setting
-                </DropdownMenuItem>
-                {isOwner && (
-                  <DropdownMenuItem onClick={() => navigate('/dashboard/invitations')}>
-                    <Users className="h-4 w-4" />
-                    Invite team
+            <div className="flex items-center justify-self-end gap-3">
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full text-fd-muted" asChild>
+                  <NavLink to="/dashboard/alerts" viewTransition aria-label="Notifications">
+                    <Bell className="h-5 w-5" />
+                    {badge > 0 ? (
+                      <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-white">
+                        {badge > 99 ? '99+' : badge}
+                      </span>
+                    ) : null}
+                  </NavLink>
+                </Button>
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-fd-muted" asChild>
+                  <NavLink to="/dashboard/settings" viewTransition aria-label="Settings">
+                    <Settings className="h-5 w-5" />
+                  </NavLink>
+                </Button>
+                <ThemeToggle className="h-10 w-10 rounded-full border-0 bg-transparent shadow-none" />
+              </div>
+
+              <div className="h-6 w-px bg-border" />
+
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Account menu"
+                    className="rounded-full ring-offset-2 ring-offset-background transition hover:ring-2 hover:ring-primary/30"
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary text-sm font-medium text-white">
+                        {(user?.full_name || 'U').charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[280px] border-0 fd-shadow">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-fd-ink">{user?.full_name}</span>
+                      <span className="text-xs font-normal text-fd-muted">{user?.email}</span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>
+                    <Settings className="h-4 w-4" />
+                    Account Setting
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  {isOwner && (
+                    <DropdownMenuItem onClick={() => navigate('/dashboard/invitations')}>
+                      <Users className="h-4 w-4" />
+                      Invite team
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </header>
 
       <aside className="fixed bottom-0 left-0 top-20 z-30 hidden w-[260px] bg-white fd-shadow dark:bg-sidebar md:block">
-        <nav className="h-full overflow-y-auto pb-8 pt-[30px]">
+        <nav className="flex h-full flex-col overflow-y-auto pb-6 pt-[30px]">
           <ul>
             <SidebarLink to="/dashboard" label="Dashboard" icon={LayoutDashboard} end />
           </ul>
@@ -440,6 +440,18 @@ export default function DashboardLayout() {
                 <SidebarLink key={link.to} {...link} />
               ))}
           </ul>
+
+          <div className="mt-auto pt-5">
+            <div className="mx-[30px] mb-3 h-px bg-border" />
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="group mr-[17px] flex w-[calc(100%-17px)] items-center gap-2 rounded-r-[60px] py-3 pl-[30px] pr-[30px] text-base leading-[27px] text-fd-body transition-all duration-200 hover:translate-x-0.5 hover:bg-destructive/10 hover:text-destructive"
+            >
+              <LogOut className="h-5 w-5 shrink-0 text-fd-muted transition-transform duration-200 group-hover:scale-110 group-hover:text-destructive" />
+              <span className="truncate">Logout</span>
+            </button>
+          </div>
         </nav>
       </aside>
 
