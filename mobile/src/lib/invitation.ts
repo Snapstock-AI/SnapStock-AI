@@ -33,6 +33,10 @@ export async function listEmployeeInvitations(businessId: string): Promise<Invit
   return response.data || [];
 }
 
+export async function cancelInvitation(businessId: string, invitationId: string): Promise<void> {
+  await apiRequest(`/businesses/${businessId}/invitations/${invitationId}`, { method: 'DELETE' }, true);
+}
+
 export async function sendEmployeeInvitation(
   businessId: string,
   details: { email: string; full_name?: string },
