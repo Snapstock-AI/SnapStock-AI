@@ -1,9 +1,11 @@
+import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { AppDataSource } from "../../config/data-source";
 import { EmployeeInvitation } from "../../entities/EmployeeInvitation";
 import { User } from "../../entities/User";
 import { BusinessUser } from "../../entities/BusinessUser";
 import { BusinessService } from "./business.service";
+import { BusinessRepository } from "./business.repository";
 import { AuthRepository } from "../auth/auth.repository";
 import { sendEmployeeInvitationEmail } from "../../shared/utils/email";
 
@@ -109,6 +111,101 @@ export class InvitationService {
 
       return { businessId: invitation.business_id };
     });
+  }
+
+  /**
+   * Read-only lookup for the self-contained invitation page (see
+   * business.routes.ts's public /invitations/confirm routes). Tells the page
+   * whether to show a "create your account" form or a plain "accept" button,
+   * without mutating anything — accept()/completeViaPage() do the real work.
+   */
+  static async resolveForPage(token: string) {
+    const normalizedToken = token.trim();
+    if (!normalizedToken) {
+      throw new Error("This invitation link is missing its token.");
+    }
+
+    const invitation = await AppDataSource.getRepository(
+      EmployeeInvitation,
+    ).findOne({ where: { invitation_token: normalizedToken } });
+
+    if (!invitation) {
+      throw new Error("Invitation not found. Ask the owner to send a new invitation.");
+    }
+
+    if (invitation.status !== "PENDING") {
+      throw new Error(
+        invitation.status === "ACCEPTED"
+          ? "This invitation has already been accepted."
+          : "This invitation is no longer valid. Ask the owner to send a new one.",
+      );
+    }
+
+    if (invitation.expires_at <= new Date()) {
+      throw new Error("This invitation has expired. Ask the owner to send a new one.");
+    }
+
+    const business = await BusinessRepository.findById(invitation.business_id);
+    const existingUser = await AuthRepository.findByEmailIncludingDeleted(
+      invitation.email,
+    );
+
+    if (existingUser?.deleted_at) {
+      throw new Error("This email is no longer available.");
+    }
+
+    return {
+      email: invitation.email,
+      businessName: business?.business_name || "this business",
+      hasAccount: Boolean(existingUser),
+    };
+  }
+
+  /**
+   * Completes the invitation from the self-contained page: creates the
+   * account if one doesn't exist yet (opts.password/full_name required in
+   * that case), or simply verifies+joins an existing one. Clicking a link
+   * mailed only to invitation.email is treated as proof of ownership, the
+   * same trust level the normal email-verification link relies on — so no
+   * separate password check is needed for an account that already exists.
+   */
+  static async completeViaPage(
+    token: string,
+    opts: { full_name?: string; password?: string },
+  ) {
+    const info = await InvitationService.resolveForPage(token);
+
+    const existingUser = await AuthRepository.findByEmailIncludingDeleted(info.email);
+    let userId: string;
+
+    if (!existingUser) {
+      const fullName = opts.full_name?.trim();
+      const password = opts.password || "";
+      if (!fullName) {
+        throw new Error("Your name is required to create an account.");
+      }
+      if (password.length < 8) {
+        throw new Error("Password must be at least 8 characters long.");
+      }
+
+      const password_hash = await bcrypt.hash(password, 10);
+      const created = await AuthRepository.createUser({
+        full_name: fullName,
+        email: info.email,
+        password,
+        password_hash,
+        email_verified: true,
+      });
+      userId = created.id;
+    } else {
+      userId = existingUser.id;
+      if (!existingUser.email_verified) {
+        await AuthRepository.verifyUser(existingUser.id);
+      }
+    }
+
+    const accepted = await InvitationService.accept(userId, token);
+    return { businessName: info.businessName, businessId: accepted.businessId };
   }
 
   /**

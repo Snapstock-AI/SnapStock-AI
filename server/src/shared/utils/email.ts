@@ -107,17 +107,11 @@ const sendEmail = async (
   }
 };
 
-const clientUrl = () =>
-  process.env.CLIENT_URL ||
-  process.env.VITE_API_URL?.replace(":5000", ":5173") ||
-  "http://localhost:5173";
-
-const clientPath = () => process.env.CLIENT_BASE_PATH ?? "";
-
-// Verification and password-reset links point at the backend's own
-// self-contained pages (see shared/utils/authPages.ts) rather than the web
-// client, so those flows work off just the backend being reachable — no
-// separate dev server to keep running and in sync with the current IP.
+// Verification, password-reset, and invitation-accept links all point at the
+// backend's own self-contained pages (see shared/utils/authPages.ts) rather
+// than the web client, so those flows work off just the backend being
+// reachable — no separate dev server to keep running and in sync with the
+// current IP.
 const serverUrl = () =>
   process.env.SERVER_PUBLIC_URL ||
   process.env.VITE_API_URL ||
@@ -214,7 +208,7 @@ export const sendEmployeeInvitationEmail = async (
   businessName: string,
   inviteeName?: string,
 ) => {
-  const link = `${clientUrl().replace(/\/$/, "")}${clientPath()}/accept-invitation?token=${token}`;
+  const link = `${serverUrl()}/businesses/invitations/confirm?token=${token}`;
   const greeting = inviteeName ? `Hi ${inviteeName},` : "Hi,";
 
   await sendEmail("employee-invitation", email, {
