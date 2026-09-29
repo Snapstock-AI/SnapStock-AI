@@ -75,6 +75,11 @@ export default function AppLayout() {
           tabBarIcon: ({ color, size }) => <Ionicons name="settings" color={color} size={size} />,
         }}
       />
+      <Tabs.Screen
+        name="employees"
+        // Reachable from Settings (owners only) rather than the tab bar itself.
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

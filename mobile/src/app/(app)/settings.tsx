@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
 import {
   ActivityIndicator,
   Pressable,
@@ -12,6 +13,7 @@ import { useAuth, type Business } from '../../context/AuthContext';
 import { getMyBusinesses, updateBusiness } from '../../lib/business';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { user, updateProfile, changePassword, logout } = useAuth();
 
   const [business, setBusiness] = useState<Business | null>(null);
@@ -186,6 +188,16 @@ export default function SettingsScreen() {
           <Text style={styles.muted}>No business connected to this account.</Text>
         )}
       </View>
+
+      {business?.role === 'OWNER' ? (
+        <Pressable style={styles.card} onPress={() => router.push('/employees')}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Team</Text>
+            <Text style={styles.editLink}>Manage</Text>
+          </View>
+          <Text style={styles.muted}>Invite employees and manage who has access to this business.</Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Alert thresholds</Text>
