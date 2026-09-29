@@ -20,6 +20,7 @@ type AuthContextValue = {
   register: (fullName: string, email: string, password: string) => Promise<string>;
   createBusiness: (data: CreateBusinessInput) => Promise<Business>;
   acceptInvitation: (token: string) => Promise<void>;
+  switchBusiness: (businessId: string) => Promise<void>;
   changePassword: (password: string) => Promise<void>;
   updateProfile: (fullName: string) => Promise<void>;
   /** Re-syncs businessId/businessRole from the backend after e.g. deleting the active business. */
@@ -148,6 +149,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.data.user);
   }, []);
 
+  const switchBusiness = useCallback(async (businessId: string) => {
+    const result = await apiRequest<{
+      token: string;
+      refreshToken: string;
+      user: AuthUser;
+    }>(
+      '/businesses/switch',
+      {
+        method: 'POST',
+        body: JSON.stringify({ businessId }),
+      },
+      true,
+    );
+
+    if (!result.data?.token || !result.data.user) {
+      throw new Error('Unable to switch workspace');
+    }
+
+    await setAuth(result.data.token, result.data.user, result.data.refreshToken);
+    setToken(result.data.token);
+    setUser(result.data.user);
+  }, []);
+
   const changePassword = useCallback(
     async (password: string) => {
       const result = await apiRequest<{ message: string }>(
@@ -266,6 +290,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       createBusiness,
       acceptInvitation,
+      switchBusiness,
       changePassword,
       updateProfile,
       refreshBusinessMembership,
@@ -279,6 +304,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       createBusiness,
       acceptInvitation,
+      switchBusiness,
       changePassword,
       updateProfile,
       refreshBusinessMembership,
