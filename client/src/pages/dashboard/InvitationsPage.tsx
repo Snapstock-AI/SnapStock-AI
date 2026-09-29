@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { useAuth, type Business } from '@/context/AuthContext'
 import { apiRequest } from '@/lib/api'
 import {
+  cancelInvitation,
   listEmployees,
   listEmployeeInvitations,
   removeEmployee,
@@ -44,6 +45,7 @@ export default function InvitationsPage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [removingEmployee, setRemovingEmployee] = useState<string | null>(null)
+  const [cancelingInvitation, setCancelingInvitation] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
@@ -97,6 +99,27 @@ export default function InvitationsPage() {
       setError(sendError instanceof Error ? sendError.message : 'Unable to send invitation.')
     } finally {
       setSending(false)
+    }
+  }
+
+  async function handleCancelInvitation(invitation: Invitation) {
+    if (!user?.businessId) return
+    if (!window.confirm(`Cancel the invitation sent to ${invitation.email}?`)) return
+
+    setCancelingInvitation(invitation.id)
+    setError('')
+    try {
+      await cancelInvitation(user.businessId, invitation.id)
+      setInvitations((current) =>
+        current.map((item) =>
+          item.id === invitation.id ? { ...item, status: 'CANCELLED' } : item,
+        ),
+      )
+      setMessage(`Invitation to ${invitation.email} was canceled.`)
+    } catch (cancelError: unknown) {
+      setError(cancelError instanceof Error ? cancelError.message : 'Unable to cancel invitation.')
+    } finally {
+      setCancelingInvitation(null)
     }
   }
 
@@ -220,14 +243,14 @@ export default function InvitationsPage() {
         {!loading && invitations.length > 0 && (
           <Card>
             <CardContent className="p-0">
-              <div className="hidden grid-cols-[minmax(0,1fr)_auto_auto] gap-4 border-b border-border px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
-                <span>Recipient</span><span>Status</span><span>Sent</span>
+              <div className="hidden grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-4 border-b border-border px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
+                <span>Recipient</span><span>Status</span><span>Sent</span><span></span>
               </div>
               <div className="divide-y divide-border">
                 {invitations.map((invitation) => (
                   <div
                     key={invitation.id}
-                    className="grid gap-2 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center sm:gap-4"
+                    className="grid gap-2 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto] sm:items-center sm:gap-4"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{invitation.email}</p>
@@ -239,6 +262,20 @@ export default function InvitationsPage() {
                     <span className="hidden text-sm text-muted-foreground sm:block">
                       {formatDate(invitation.created_at)}
                     </span>
+                    {invitation.status === 'PENDING' ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCancelInvitation(invitation)}
+                        disabled={cancelingInvitation === invitation.id}
+                        className="justify-self-start border-destructive/30 text-destructive hover:bg-destructive/10 sm:justify-self-auto"
+                      >
+                        {cancelingInvitation === invitation.id ? 'Canceling...' : 'Cancel'}
+                      </Button>
+                    ) : (
+                      <span className="hidden sm:block" />
+                    )}
                   </div>
                 ))}
               </div>
