@@ -35,6 +35,7 @@ jest.mock("../../../src/modules/business/business.repository", () => ({
   BusinessRepository: {
     findBusinessMembershipByUserId: jest.fn(),
     findMembership: jest.fn(),
+    findById: jest.fn(),
   },
 }));
 
@@ -53,6 +54,7 @@ describe("AuthService", () => {
     jest.clearAllMocks();
     process.env.JWT_SECRET = "test-secret";
     mockedBusinessRepository.findBusinessMembershipByUserId.mockResolvedValue(null as never);
+    mockedBusinessRepository.findById.mockResolvedValue({ status: "ACTIVE" } as never);
   });
 
   describe("login", () => {
@@ -140,6 +142,42 @@ describe("AuthService", () => {
       ).rejects.toThrow("Please verify your email first");
 
       expect(mockedRepository.createSession).not.toHaveBeenCalled();
+    });
+
+    it("should reject login when the user's business is suspended", async () => {
+      mockedRepository.findByEmail.mockResolvedValue({
+        id: "user-1",
+        full_name: "Test User",
+        email: "test@example.com",
+        password_hash: passwordHash,
+        system_role: "BUSINESS_USER",
+        email_verified: true,
+      } as any);
+
+      mockedRepository.createSession.mockResolvedValue({
+        id: "session-1",
+        user_id: "user-1",
+        refresh_token: "unused",
+        expires_at: new Date(Date.now() + 86400000),
+        revoked_at: null,
+        created_at: new Date(),
+      } as any);
+
+      mockedBusinessRepository.findBusinessMembershipByUserId.mockResolvedValue({
+        businessId: "business-1",
+        role: "OWNER",
+      } as never);
+      mockedBusinessRepository.findById.mockResolvedValue({
+        id: "business-1",
+        status: "SUSPENDED",
+      } as never);
+
+      await expect(
+        AuthService.login({
+          email: "test@example.com",
+          password,
+        })
+      ).rejects.toThrow("Your business account has been suspended");
     });
   });
 
