@@ -20,6 +20,8 @@ type AuthContextValue = {
   register: (fullName: string, email: string, password: string) => Promise<string>;
   createBusiness: (data: CreateBusinessInput) => Promise<Business>;
   acceptInvitation: (token: string) => Promise<void>;
+  changePassword: (password: string) => Promise<void>;
+  updateProfile: (fullName: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -144,6 +146,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.data.user);
   }, []);
 
+  const changePassword = useCallback(
+    async (password: string) => {
+      const result = await apiRequest<{ message: string }>(
+        '/auth/password',
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ password }),
+        },
+        true,
+      );
+
+      if (!result.data) throw new Error('Password update failed');
+      if (!user) return;
+
+      const nextUser: AuthUser = { ...user, must_change_password: false };
+      const currentToken = await getToken();
+      if (currentToken) await setAuth(currentToken, nextUser);
+      setUser(nextUser);
+    },
+    [user],
+  );
+
+  const updateProfile = useCallback(
+    async (fullName: string) => {
+      const result = await apiRequest<AuthUser>(
+        '/auth/profile',
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ full_name: fullName }),
+        },
+        true,
+      );
+
+      if (!result.data) throw new Error('Profile update failed');
+
+      const currentToken = await getToken();
+      const previous = await getStoredUser();
+      const nextUser: AuthUser = {
+        ...result.data,
+        businessId: previous?.businessId ?? user?.businessId ?? null,
+        businessRole: previous?.businessRole ?? user?.businessRole ?? null,
+      };
+      if (currentToken) await setAuth(currentToken, nextUser);
+      setUser(nextUser);
+    },
+    [user?.businessId, user?.businessRole],
+  );
+
   const logout = useCallback(async () => {
     try {
       await apiRequest('/auth/logout', { method: 'POST' }, true);
@@ -165,9 +215,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       createBusiness,
       acceptInvitation,
+      changePassword,
+      updateProfile,
       logout,
     }),
-    [user, token, isHydrating, login, register, createBusiness, acceptInvitation, logout],
+    [
+      user,
+      token,
+      isHydrating,
+      login,
+      register,
+      createBusiness,
+      acceptInvitation,
+      changePassword,
+      updateProfile,
+      logout,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
