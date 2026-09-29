@@ -112,6 +112,26 @@ export class InvitationController {
     }
   }
 
+  static async cancel(req: AuthRequest, res: Response) {
+    try {
+      await InvitationService.cancel(
+        req.user!.userId,
+        String(req.params.businessId),
+        String(req.params.invitationId),
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Invitation canceled.",
+      });
+    } catch (error: any) {
+      return res.status(400).json({
+        success: false,
+        message: error.message || "Unable to cancel invitation.",
+      });
+    }
+  }
+
   static async send(req: AuthRequest, res: Response) {
     try {
       const { email, full_name } = req.body;

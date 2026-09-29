@@ -25,6 +25,10 @@ router.delete(
 );
 router.get("/:businessId/invitations", InvitationController.list);
 router.post("/:businessId/invitations", InvitationController.send);
+router.delete(
+  "/:businessId/invitations/:invitationId",
+  InvitationController.cancel,
+);
 
 router.get("/:businessId/dashboard", DashboardController.dashboard);
 router.get("/:businessId/analytics", DashboardController.analytics);
