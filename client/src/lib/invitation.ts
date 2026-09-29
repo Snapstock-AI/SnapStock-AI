@@ -51,6 +51,17 @@ export async function listEmployeeInvitations(
   return response.data || [];
 }
 
+export async function cancelInvitation(
+  businessId: string,
+  invitationId: string,
+): Promise<void> {
+  await apiRequest(
+    `/businesses/${businessId}/invitations/${invitationId}`,
+    { method: "DELETE" },
+    true,
+  );
+}
+
 export async function sendEmployeeInvitation(
   businessId: string,
   details: {
