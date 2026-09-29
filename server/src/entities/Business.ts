@@ -7,6 +7,8 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 
+export type BusinessStatus = "ACTIVE" | "SUSPENDED";
+
 @Entity("businesses")
 export class Business {
   @PrimaryGeneratedColumn("uuid")
@@ -31,6 +33,14 @@ export class Business {
   /** Minimum detection count below which a product is considered low stock. */
   @Column({ type: "int", default: 25 })
   low_stock_threshold!: number;
+
+  @Column({
+    type: "enum",
+    enum: ["ACTIVE", "SUSPENDED"],
+    enumName: "business_status",
+    default: "ACTIVE",
+  })
+  status!: BusinessStatus;
 
   @CreateDateColumn({ type: "timestamp" })
   created_at!: Date;
