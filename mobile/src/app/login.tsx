@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { getPostAuthRoute } from '../lib/routing';
 
 export default function LoginScreen() {
   const { user, login, isAuthenticated, isHydrating } = useAuth();
@@ -20,7 +21,7 @@ export default function LoginScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isHydrating && isAuthenticated) {
-    return <Redirect href={user?.businessId ? '/home' : '/create-business'} />;
+    return <Redirect href={getPostAuthRoute(user)} />;
   }
 
   async function handleSubmit() {
