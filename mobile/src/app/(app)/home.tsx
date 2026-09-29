@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { getDashboard, type DashboardData } from '../../lib/dashboard';
+import { card, colors, radius, ripple, spacing, typography } from '../../theme';
 
 const RANGE_OPTIONS = [
   { days: 7, label: '7 days' },
@@ -61,7 +62,7 @@ export default function HomeScreen() {
         <View style={styles.headerRowTop}>
           <Text style={styles.greeting}>Welcome, {user?.full_name?.split(' ')[0] ?? 'vendor'}</Text>
           {user?.businessRole === 'OWNER' ? (
-            <Pressable onPress={() => router.push('/analytics')}>
+            <Pressable onPress={() => router.push('/analytics')} hitSlop={8} android_ripple={ripple}>
               <Text style={styles.analyticsLink}>Analytics</Text>
             </Pressable>
           ) : null}
@@ -75,6 +76,7 @@ export default function HomeScreen() {
             key={option.days}
             style={[styles.chip, windowDays === option.days && styles.chipActive]}
             onPress={() => setWindowDays(option.days)}
+            android_ripple={ripple}
           >
             <Text style={[styles.chipText, windowDays === option.days && styles.chipTextActive]}>
               {option.label}
@@ -85,7 +87,7 @@ export default function HomeScreen() {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#16a34a" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <>
@@ -110,7 +112,11 @@ export default function HomeScreen() {
                 </View>
               ) : null}
 
-              <Pressable style={styles.scanButton} onPress={() => router.push('/scan')}>
+              <Pressable
+                style={styles.scanButton}
+                onPress={() => router.push('/scan')}
+                android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+              >
                 <Text style={styles.scanButtonText}>Scan a shelf</Text>
               </Pressable>
 
@@ -168,11 +174,11 @@ function KpiTile({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 20,
-    gap: 16,
+    padding: spacing.xl,
+    gap: spacing.lg,
   },
   center: {
     paddingVertical: 40,
@@ -187,79 +193,79 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   greeting: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
+    ...typography.title,
+    fontSize: 21,
+    color: colors.textPrimary,
   },
   analyticsLink: {
+    ...typography.caption,
     fontSize: 14,
     fontWeight: '600',
-    color: '#16a34a',
+    color: colors.primary,
   },
   email: {
-    fontSize: 13,
-    color: '#6b7280',
+    ...typography.caption,
+    color: colors.textMuted,
   },
   chipRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
   chip: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   chipActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   chipText: {
-    fontSize: 13,
-    color: '#374151',
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   chipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
+    color: colors.textOnPrimary,
+    fontWeight: '700',
   },
   error: {
-    color: '#dc2626',
+    color: colors.danger,
     fontSize: 13,
   },
   kpiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: spacing.md,
   },
   kpiTile: {
     flexBasis: '47%',
     flexGrow: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    padding: 14,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    ...card(1),
   },
   kpiValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
+    ...typography.h2,
+    fontSize: 24,
+    color: colors.textPrimary,
   },
   kpiLabel: {
-    fontSize: 12,
-    color: '#6b7280',
+    ...typography.caption,
+    color: colors.textMuted,
     marginTop: 2,
   },
   topAlert: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#fecaca',
+    borderRadius: radius.md,
     backgroundColor: '#fef2f2',
-    padding: 12,
+    padding: spacing.md,
     gap: 2,
   },
   topAlertTitle: {
-    fontSize: 13,
+    ...typography.caption,
     fontWeight: '700',
     color: '#b91c1c',
   },
@@ -268,39 +274,46 @@ const styles = StyleSheet.create({
     color: '#7f1d1d',
   },
   scanButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 10,
-    paddingVertical: 14,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
+    overflow: 'hidden',
+    ...card(2),
   },
   scanButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: colors.textOnPrimary,
+    fontWeight: '700',
+    fontSize: 15,
   },
   section: {
-    gap: 6,
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    ...card(1),
   },
   sectionTitle: {
-    fontSize: 13,
+    ...typography.caption,
     fontWeight: '700',
-    color: '#374151',
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   listRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: colors.background,
   },
   listRowLabel: {
     fontSize: 14,
-    color: '#111827',
+    color: colors.textPrimary,
   },
   listRowValue: {
     fontSize: 13,
-    color: '#6b7280',
+    color: colors.textMuted,
   },
   emptyState: {
     alignItems: 'center',
@@ -308,13 +321,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   emptyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
+    ...typography.h3,
+    color: colors.textPrimary,
   },
   emptyText: {
     fontSize: 13,
-    color: '#6b7280',
+    color: colors.textMuted,
     textAlign: 'center',
   },
 });

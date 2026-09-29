@@ -1,7 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View, type ColorValue } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { colors } from '../../theme';
+
+type IoniconName = keyof typeof Ionicons.glyphMap;
+
+/** Filled icon when the tab is active, outline otherwise — standard iOS/Android tab bar convention. */
+function tabIcon(filled: IoniconName, outline: IoniconName) {
+  return ({ color, size, focused }: { color: ColorValue; size: number; focused: boolean }) => (
+    <Ionicons name={focused ? filled : outline} color={color as string} size={size} />
+  );
+}
 
 /**
  * Route group for the authenticated app shell (bottom tab navigator).
@@ -14,7 +24,7 @@ export default function AppLayout() {
   if (isHydrating) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -32,48 +42,38 @@ export default function AppLayout() {
   }
 
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: '#16a34a' }}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarStyle: styles.tabBar,
+      }}
+    >
       <Tabs.Screen
         name="home"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
-        }}
+        options={{ title: 'Home', tabBarIcon: tabIcon('home', 'home-outline') }}
       />
       <Tabs.Screen
         name="shelves"
-        options={{
-          title: 'Shelves',
-          tabBarIcon: ({ color, size }) => <Ionicons name="layers" color={color} size={size} />,
-        }}
+        options={{ title: 'Shelves', tabBarIcon: tabIcon('layers', 'layers-outline') }}
       />
       <Tabs.Screen
         name="scan"
-        options={{
-          title: 'Scan',
-          tabBarIcon: ({ color, size }) => <Ionicons name="camera" color={color} size={size} />,
-        }}
+        options={{ title: 'Scan', tabBarIcon: tabIcon('camera', 'camera-outline') }}
       />
       <Tabs.Screen
         name="inventory"
-        options={{
-          title: 'Inventory',
-          tabBarIcon: ({ color, size }) => <Ionicons name="cube" color={color} size={size} />,
-        }}
+        options={{ title: 'Inventory', tabBarIcon: tabIcon('cube', 'cube-outline') }}
       />
       <Tabs.Screen
         name="alerts"
-        options={{
-          title: 'Alerts',
-          tabBarIcon: ({ color, size }) => <Ionicons name="notifications" color={color} size={size} />,
-        }}
+        options={{ title: 'Alerts', tabBarIcon: tabIcon('notifications', 'notifications-outline') }}
       />
       <Tabs.Screen
         name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => <Ionicons name="settings" color={color} size={size} />,
-        }}
+        options={{ title: 'Settings', tabBarIcon: tabIcon('settings', 'settings-outline') }}
       />
       <Tabs.Screen
         name="employees"
@@ -99,6 +99,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
+  },
+  tabBar: Platform.select({
+    ios: { borderTopColor: colors.border },
+    android: { elevation: 8, borderTopWidth: 0 },
+    default: {},
+  }),
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });
