@@ -50,6 +50,25 @@ export type DetectionResult = {
 
 export type ScanMode = 'STOCK_IN' | 'STOCK_OUT';
 
+export type FreshnessStatus = 'Fresh' | 'Medium' | 'Spoiled';
+
+/** Manually corrects a detection's AI-predicted freshness (PATCH /detection/:id/freshness). */
+export async function updateDetectionFreshness(
+  detectionId: string,
+  freshness: FreshnessStatus,
+): Promise<{ id: string; freshness: FreshnessStatus }> {
+  const result = await apiRequest<{ id: string; freshness: FreshnessStatus }>(
+    `/detection/${detectionId}/freshness`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ freshness }),
+    },
+    true,
+  );
+  if (!result.data) throw new Error('Unable to update freshness.');
+  return result.data;
+}
+
 // Mirrors client/src/lib/detection.ts's ScanHistoryItem/getScanHistory
 // against the same GET /detection/history endpoint.
 export type ScanHistoryItem = {
