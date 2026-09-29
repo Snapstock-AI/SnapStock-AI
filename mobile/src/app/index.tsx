@@ -1,28 +1,24 @@
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { getPostAuthRoute } from '../lib/routing';
 
 export default function Index() {
   const { user, isAuthenticated, isHydrating } = useAuth();
+  const { colors } = useTheme();
 
   if (isHydrating) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#16a34a" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
 
-  if (!isAuthenticated) return <Redirect href="/login" />;
+  // Signed-out users land on the marketing/landing page first, not login
+  // directly (see app/welcome.tsx). A user who explicitly logs out is sent
+  // straight to /login instead, by the (app)/(admin) layout guards.
+  if (!isAuthenticated) return <Redirect href="/welcome" />;
   return <Redirect href={getPostAuthRoute(user)} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-});
