@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 export default function Index() {
-  const { isAuthenticated, isHydrating } = useAuth();
+  const { user, isAuthenticated, isHydrating } = useAuth();
 
   if (isHydrating) {
     return (
@@ -13,7 +13,8 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={isAuthenticated ? '/home' : '/login'} />;
+  if (!isAuthenticated) return <Redirect href="/login" />;
+  return <Redirect href={user?.businessId ? '/home' : '/create-business'} />;
 }
 
 const styles = StyleSheet.create({
