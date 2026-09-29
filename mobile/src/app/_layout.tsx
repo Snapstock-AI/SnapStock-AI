@@ -7,12 +7,11 @@ import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthProvider } from '../context/AuthContext';
-import { colors } from '../theme';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
-  const insets = useSafeAreaInsets();
   const [fontsLoaded] = useFonts({
     Poppins_600SemiBold,
     Poppins_700Bold,
@@ -32,8 +31,21 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <StatusBar style="auto" />
+    <ThemeProvider>
+      <AuthProvider>
+        <RootNavigation />
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+function RootNavigation() {
+  const insets = useSafeAreaInsets();
+  const { scheme, colors } = useTheme();
+
+  return (
+    <>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -46,6 +58,6 @@ export default function RootLayout() {
         <Stack.Screen name="(app)" options={{ contentStyle: { flex: 1 } }} />
         <Stack.Screen name="(admin)" options={{ contentStyle: { flex: 1 } }} />
       </Stack>
-    </AuthProvider>
+    </>
   );
 }

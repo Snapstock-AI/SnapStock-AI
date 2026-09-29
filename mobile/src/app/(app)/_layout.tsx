@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
+import { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { colors, fonts } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
+import { fonts, type ThemeColors } from '../../theme';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -22,6 +24,8 @@ function tabIcon(filled: IoniconName, outline: IoniconName) {
 export default function AppLayout() {
   const { isAuthenticated, isHydrating, user } = useAuth();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   if (isHydrating) {
     return (
@@ -97,21 +101,22 @@ export default function AppLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-  tabBar: {
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    elevation: 0,
-  },
-  tabLabel: {
-    fontSize: 11,
-    fontFamily: fonts.bodySemiBold,
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    loading: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+    },
+    tabBar: {
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      elevation: 0,
+    },
+    tabLabel: {
+      fontSize: 11,
+      fontFamily: fonts.bodySemiBold,
+    },
+  });
