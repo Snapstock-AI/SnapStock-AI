@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { getAdminStats, type AdminStats } from '../../lib/admin';
+import { card, fonts, radius, spacing, typography, type ThemeColors } from '../../theme';
 
 export default function StatsScreen() {
   const { user, logout } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -42,14 +46,14 @@ export default function StatsScreen() {
           <Text style={styles.title}>System stats</Text>
           <Text style={styles.subtitle}>{user?.full_name ?? 'Admin'}</Text>
         </View>
-        <Pressable onPress={() => logout()}>
+        <Pressable onPress={() => logout()} hitSlop={8}>
           <Text style={styles.signOut}>Sign out</Text>
         </Pressable>
       </View>
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#16a34a" />
+          <ActivityIndicator size="large" color={colors.accent} />
         </View>
       ) : (
         <>
@@ -58,19 +62,19 @@ export default function StatsScreen() {
           {stats ? (
             <>
               <View style={styles.grid}>
-                <StatTile label="Businesses" value={String(stats.totalBusinesses)} />
-                <StatTile label="Active" value={String(stats.activeBusinesses)} />
-                <StatTile label="Suspended" value={String(stats.suspendedBusinesses)} />
-                <StatTile label="Users" value={String(stats.totalUsers)} />
-                <StatTile label="Scans" value={String(stats.totalScans)} />
-                <StatTile label="Detections" value={String(stats.totalDetections)} />
-                <StatTile label="Active alerts" value={String(stats.activeAlerts)} />
+                <StatTile styles={styles} label="Businesses" value={String(stats.totalBusinesses)} />
+                <StatTile styles={styles} label="Active" value={String(stats.activeBusinesses)} />
+                <StatTile styles={styles} label="Suspended" value={String(stats.suspendedBusinesses)} />
+                <StatTile styles={styles} label="Users" value={String(stats.totalUsers)} />
+                <StatTile styles={styles} label="Scans" value={String(stats.totalScans)} />
+                <StatTile styles={styles} label="Detections" value={String(stats.totalDetections)} />
+                <StatTile styles={styles} label="Active alerts" value={String(stats.activeAlerts)} />
               </View>
 
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>System health</Text>
-                <HealthRow label="Database" status={stats.health.database} />
-                <HealthRow label="AI service" status={stats.health.aiService} />
+                <HealthRow styles={styles} colors={colors} label="Database" status={stats.health.database} />
+                <HealthRow styles={styles} colors={colors} label="AI service" status={stats.health.aiService} />
               </View>
             </>
           ) : null}
@@ -80,7 +84,7 @@ export default function StatsScreen() {
   );
 }
 
-function StatTile({ label, value }: { label: string; value: string }) {
+function StatTile({ label, value, styles }: { label: string; value: string; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={styles.tile}>
       <Text style={styles.tileValue}>{value}</Text>
@@ -89,121 +93,120 @@ function StatTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-function HealthRow({ label, status }: { label: string; status: string }) {
+function HealthRow({
+  label,
+  status,
+  styles,
+  colors,
+}: {
+  label: string;
+  status: string;
+  styles: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
+}) {
   const ok = status === 'ok';
   return (
     <View style={styles.healthRow}>
       <Text style={styles.healthLabel}>{label}</Text>
-      <View style={[styles.healthBadge, ok ? styles.healthBadgeOk : styles.healthBadgeError]}>
-        <Text style={[styles.healthBadgeText, ok ? styles.healthBadgeTextOk : styles.healthBadgeTextError]}>
-          {status}
-        </Text>
+      <View style={[styles.healthBadge, { backgroundColor: ok ? colors.accentSoft : colors.dangerSoft }]}>
+        <Text style={[styles.healthBadgeText, { color: ok ? colors.accentDark : colors.danger }]}>{status}</Text>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  content: {
-    padding: 20,
-    gap: 16,
-  },
-  center: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#6b7280',
-  },
-  signOut: {
-    color: '#dc2626',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  error: {
-    color: '#dc2626',
-    fontSize: 13,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  tile: {
-    flexBasis: '31%',
-    flexGrow: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    padding: 12,
-  },
-  tileValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  tileLabel: {
-    fontSize: 11,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  section: {
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#374151',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  healthRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  healthLabel: {
-    fontSize: 14,
-    color: '#111827',
-  },
-  healthBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  healthBadgeOk: {
-    backgroundColor: '#dcfce7',
-  },
-  healthBadgeError: {
-    backgroundColor: '#fee2e2',
-  },
-  healthBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  healthBadgeTextOk: {
-    color: '#15803d',
-  },
-  healthBadgeTextError: {
-    color: '#b91c1c',
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: spacing.xl,
+      gap: spacing.lg,
+    },
+    center: {
+      paddingVertical: 40,
+      alignItems: 'center',
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+    },
+    title: {
+      ...typography.title,
+      color: colors.textPrimary,
+    },
+    subtitle: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: colors.textMuted,
+    },
+    signOut: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.danger,
+      fontSize: 13,
+    },
+    error: {
+      fontFamily: fonts.bodyMedium,
+      color: colors.danger,
+      fontSize: 13,
+    },
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    tile: {
+      flexBasis: '31%',
+      flexGrow: 1,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      ...card(colors),
+    },
+    tileValue: {
+      ...typography.h2,
+      fontSize: 20,
+      color: colors.textPrimary,
+    },
+    tileLabel: {
+      fontFamily: fonts.body,
+      fontSize: 11,
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    section: {
+      gap: spacing.sm,
+    },
+    sectionTitle: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 13,
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    healthRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    healthLabel: {
+      fontFamily: fonts.body,
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    healthBadge: {
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3,
+    },
+    healthBadgeText: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 11,
+      textTransform: 'uppercase',
+    },
+  });

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -10,7 +10,8 @@ import {
   View,
 } from 'react-native';
 import { useAuth, type CreateBusinessInput } from '../context/AuthContext';
-import { authFormStyles as s } from '../styles/authForm';
+import { useTheme } from '../context/ThemeContext';
+import { makeAuthFormStyles } from '../styles/authForm';
 
 const initialForm: CreateBusinessInput = {
   business_name: '',
@@ -21,6 +22,8 @@ const initialForm: CreateBusinessInput = {
 
 export default function CreateBusinessScreen() {
   const { user, createBusiness, logout } = useAuth();
+  const { colors } = useTheme();
+  const s = useMemo(() => makeAuthFormStyles(colors), [colors]);
   const [form, setForm] = useState(initialForm);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,7 +65,7 @@ export default function CreateBusinessScreen() {
         <TextInput
           style={s.input}
           placeholder="Business name"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           maxLength={150}
           value={form.business_name}
           onChangeText={(value) => updateField('business_name', value)}
@@ -70,7 +73,7 @@ export default function CreateBusinessScreen() {
         <TextInput
           style={s.input}
           placeholder="Business email"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           keyboardType="email-address"
           value={form.business_email}
@@ -79,14 +82,14 @@ export default function CreateBusinessScreen() {
         <TextInput
           style={s.input}
           placeholder="Business address"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           value={form.address}
           onChangeText={(value) => updateField('address', value)}
         />
         <TextInput
           style={s.input}
           placeholder="Contact number"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           keyboardType="phone-pad"
           maxLength={20}
           value={form.contact_number}
@@ -99,15 +102,16 @@ export default function CreateBusinessScreen() {
           style={[s.button, isSubmitting && s.buttonDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting || !isValid}
+          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.onAccent} />
           ) : (
             <Text style={s.buttonText}>Create business and continue</Text>
           )}
         </Pressable>
 
-        <Pressable onPress={() => logout()}>
+        <Pressable onPress={() => logout()} hitSlop={8}>
           <Text style={s.footerText}>Sign out</Text>
         </Pressable>
       </View>
