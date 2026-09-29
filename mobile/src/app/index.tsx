@@ -16,9 +16,9 @@ export default function Index() {
     );
   }
 
-  // Signed-out users land on the marketing/landing page first, not login
-  // directly (see app/welcome.tsx). A user who explicitly logs out is sent
-  // straight to /login instead, by the (app)/(admin) layout guards.
+  // Signed-out users land on the marketing/landing page (see app/welcome.tsx)
+  // — both a cold start and an explicit sign-out end up here, since the
+  // (app)/(admin) layout guards also redirect to /welcome now.
   if (!isAuthenticated) return <Redirect href="/welcome" />;
   return <Redirect href={getPostAuthRoute(user)} />;
 }
