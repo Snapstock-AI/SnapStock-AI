@@ -17,6 +17,7 @@ type AuthContextValue = {
   isHydrating: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (fullName: string, email: string, password: string) => Promise<string>;
   logout: () => Promise<void>;
 };
 
@@ -63,6 +64,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.data.user);
   }, []);
 
+  const register = useCallback(async (fullName: string, email: string, password: string) => {
+    const result = await apiRequest<{ message: string }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ full_name: fullName, email, password }),
+    });
+
+    // Registration does not issue a session. Clear any prior account so Login
+    // does not auto-redirect into the previous user's dashboard.
+    await clearAuth();
+    setToken(null);
+    setUser(null);
+
+    return result.data?.message || 'Registered successfully. Please verify your email.';
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await apiRequest('/auth/logout', { method: 'POST' }, true);
@@ -81,9 +97,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isHydrating,
       isAuthenticated: Boolean(token && user),
       login,
+      register,
       logout,
     }),
-    [user, token, isHydrating, login, logout],
+    [user, token, isHydrating, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

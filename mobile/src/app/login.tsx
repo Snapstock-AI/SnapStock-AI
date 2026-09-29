@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { Link, Redirect } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -79,6 +79,16 @@ export default function LoginScreen() {
             <Text style={styles.buttonText}>Sign in</Text>
           )}
         </Pressable>
+
+        <Link href="/forgot-password" style={styles.link}>
+          Forgot password?
+        </Link>
+        <Text style={styles.footerText}>
+          New here?{' '}
+          <Link href="/register" style={styles.link}>
+            Create an account
+          </Link>
+        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -133,5 +143,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  link: {
+    color: '#16a34a',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  footerText: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 8,
   },
 });
