@@ -107,17 +107,11 @@ const sendEmail = async (
   }
 };
 
-const clientUrl = () =>
-  process.env.CLIENT_URL ||
-  process.env.VITE_API_URL?.replace(":5000", ":5173") ||
-  "http://localhost:5173";
-
-const clientPath = () => process.env.CLIENT_BASE_PATH ?? "";
-
-// Verification and password-reset links point at the backend's own
-// self-contained pages (see shared/utils/authPages.ts) rather than the web
-// client, so those flows work off just the backend being reachable — no
-// separate dev server to keep running and in sync with the current IP.
+// Verification, password-reset, and invitation-accept links all point at the
+// backend's own self-contained pages (see shared/utils/authPages.ts) rather
+// than the web client, so those flows work off just the backend being
+// reachable — no separate dev server to keep running and in sync with the
+// current IP.
 const serverUrl = () =>
   process.env.SERVER_PUBLIC_URL ||
   process.env.VITE_API_URL ||
@@ -214,18 +208,18 @@ export const sendEmployeeInvitationEmail = async (
   businessName: string,
   inviteeName?: string,
 ) => {
-  const link = `${clientUrl().replace(/\/$/, "")}${clientPath()}/accept-invitation?token=${token}`;
+  const link = `${serverUrl()}/businesses/invitations/confirm?token=${token}`;
   const greeting = inviteeName ? `Hi ${inviteeName},` : "Hi,";
 
   await sendEmail("employee-invitation", email, {
     from: `"SnapStock AI" <${process.env.SMTP_USER}>`,
     to: email,
     subject: `You have been invited to join ${businessName} on SnapStock AI`,
-    text: `${greeting}\n\nYou have been invited to join ${businessName} on SnapStock AI as a team member.\n\nIf you already have an account, sign in and open this link:\n${link}\n\nIf you are new, create an account with this email address, then open the same link to join the workspace.\n\nThis invitation expires in 7 days.`,
+    text: `${greeting}\n\nYou have been invited to join ${businessName} on SnapStock AI as a team member.\n\nOpen this link to accept. If you are new to SnapStock AI, you will set your name and password there (no sign-in needed):\n${link}\n\nThis invitation expires in 7 days.`,
     html: emailTemplate(
       "Team invitation",
       `Join ${businessName} on SnapStock AI`,
-      `${greeting}<br /><br />You have been invited to join <strong>${businessName}</strong> on SnapStock AI as a team member.<br /><br />Sign in with this email if you already have an account, or create one first — then use the button below to join the workspace. No temporary password is required.`,
+      `${greeting}<br /><br />You have been invited to join <strong>${businessName}</strong> on SnapStock AI as a team member.<br /><br />Click the button below to accept. If you are new, you will create your password on that page — no sign-in needed.`,
       "Accept invitation",
       link,
       "This invitation expires in 7 days. If you did not expect this email, you can ignore it.",
