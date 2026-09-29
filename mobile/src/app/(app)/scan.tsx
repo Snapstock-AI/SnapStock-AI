@@ -12,7 +12,13 @@ import {
   View,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import { analyzeImage, type DetectionResult, type PickedImage, type ScanMode } from '../../lib/detection';
+import {
+  analyzeImage,
+  compressForUpload,
+  type DetectionResult,
+  type PickedImage,
+  type ScanMode,
+} from '../../lib/detection';
 import { getShelves, type Shelf } from '../../lib/shelf';
 
 const SCAN_MODES: { value: ScanMode; label: string }[] = [
@@ -29,6 +35,7 @@ export default function ScanScreen() {
   const [selectedShelf, setSelectedShelf] = useState<Shelf | null>(null);
   const [scanMode, setScanMode] = useState<ScanMode>('STOCK_IN');
   const [image, setImage] = useState<PickedImage | null>(null);
+  const [isPreparingImage, setIsPreparingImage] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DetectionResult | null>(null);
@@ -49,12 +56,18 @@ export default function ScanScreen() {
     loadShelves().finally(() => setIsLoadingShelves(false));
   }, [loadShelves]);
 
-  function assetToPickedImage(asset: ImagePicker.ImagePickerAsset): PickedImage {
-    return {
-      uri: asset.uri,
-      name: asset.fileName ?? asset.uri.split('/').pop() ?? `scan-${Date.now()}.jpg`,
-      type: asset.mimeType ?? 'image/jpeg',
-    };
+  async function prepareAndSetImage(asset: ImagePicker.ImagePickerAsset) {
+    setResult(null);
+    setError(null);
+    setIsPreparingImage(true);
+    try {
+      const prepared = await compressForUpload(asset.uri);
+      setImage(prepared);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to prepare the image');
+    } finally {
+      setIsPreparingImage(false);
+    }
   }
 
   async function handleTakePhoto() {
@@ -63,14 +76,9 @@ export default function ScanScreen() {
       Alert.alert('Camera permission needed', 'Enable camera access to scan a shelf.');
       return;
     }
-    const picked = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      quality: 0.6,
-    });
+    const picked = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'] });
     if (!picked.canceled && picked.assets[0]) {
-      setResult(null);
-      setError(null);
-      setImage(assetToPickedImage(picked.assets[0]));
+      await prepareAndSetImage(picked.assets[0]);
     }
   }
 
@@ -80,14 +88,9 @@ export default function ScanScreen() {
       Alert.alert('Photo library permission needed', 'Enable photo access to select a shelf image.');
       return;
     }
-    const picked = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.6,
-    });
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'] });
     if (!picked.canceled && picked.assets[0]) {
-      setResult(null);
-      setError(null);
-      setImage(assetToPickedImage(picked.assets[0]));
+      await prepareAndSetImage(picked.assets[0]);
     }
   }
 
@@ -165,7 +168,12 @@ export default function ScanScreen() {
         ))}
       </View>
 
-      {image ? (
+      {isPreparingImage ? (
+        <View style={styles.preparingBox}>
+          <ActivityIndicator color="#16a34a" />
+          <Text style={styles.hint}>Preparing image…</Text>
+        </View>
+      ) : image ? (
         <Image source={{ uri: image.uri }} style={styles.preview} />
       ) : (
         <View style={styles.pickerButtons}>
@@ -351,6 +359,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 8,
     backgroundColor: '#f3f4f6',
+  },
+  preparingBox: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+    borderRadius: 12,
+    marginTop: 8,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   actionsRow: {
     flexDirection: 'row',

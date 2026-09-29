@@ -1,3 +1,4 @@
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { API_URL } from '../config';
 import { getToken } from './auth';
 import type { Shelf } from './shelf';
@@ -54,6 +55,29 @@ export type PickedImage = {
   type: string;
 };
 
+/** Max width to downscale a scan photo to before upload — see compressForUpload(). */
+const MAX_UPLOAD_WIDTH = 1600;
+
+/**
+ * Downscales and JPEG-compresses a picked image before upload. Raw camera
+ * photos can be many megapixels (several MB even after quality-only
+ * compression), which is slow and unreliable to upload over a weak or
+ * congested connection (e.g. a phone hotspot). Matches the SAD's
+ * client-side image compression requirement (section 10.4).
+ */
+export async function compressForUpload(uri: string): Promise<PickedImage> {
+  const context = ImageManipulator.manipulate(uri);
+  context.resize({ width: MAX_UPLOAD_WIDTH });
+  const rendered = await context.renderAsync();
+  const result = await rendered.saveAsync({ compress: 0.7, format: SaveFormat.JPEG });
+
+  return {
+    uri: result.uri,
+    name: `scan-${Date.now()}.jpg`,
+    type: 'image/jpeg',
+  };
+}
+
 export async function analyzeImage(
   image: PickedImage,
   shelf: Shelf,
@@ -78,8 +102,12 @@ export async function analyzeImage(
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
-  } catch {
-    throw new Error('Unable to reach the server. Check your connection and try again.');
+  } catch (err) {
+    // Surface the real cause instead of a generic message — this can be a
+    // true network failure, but also a local file-read error, a timeout, or
+    // anything else fetch() rejects with, and those need different fixes.
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new Error(`Unable to reach the server (${detail}). Check your connection and try again.`);
   }
 
   const body = (await response.json().catch(() => ({}))) as {
