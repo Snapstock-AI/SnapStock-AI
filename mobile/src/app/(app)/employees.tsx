@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { getMyBusinesses } from '../../lib/business';
 import {
+  cancelInvitation,
   listEmployeeInvitations,
   listEmployees,
   removeEmployee,
@@ -46,6 +47,7 @@ export default function EmployeesScreen() {
   const [email, setEmail] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!businessId) {
@@ -120,6 +122,38 @@ export default function EmployeesScreen() {
               setError(err instanceof Error ? err.message : 'Unable to remove employee.');
             } finally {
               setRemovingId(null);
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  function confirmCancelInvitation(invitation: Invitation) {
+    Alert.alert(
+      'Cancel invitation',
+      `Cancel the invitation sent to ${invitation.email}?`,
+      [
+        { text: 'Keep it', style: 'cancel' },
+        {
+          text: 'Cancel invitation',
+          style: 'destructive',
+          onPress: async () => {
+            if (!businessId) return;
+            setCancelingId(invitation.id);
+            setError(null);
+            try {
+              await cancelInvitation(businessId, invitation.id);
+              setInvitations((current) =>
+                current.map((item) =>
+                  item.id === invitation.id ? { ...item, status: 'CANCELLED' } : item,
+                ),
+              );
+              setMessage(`Invitation to ${invitation.email} was canceled.`);
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'Unable to cancel invitation.');
+            } finally {
+              setCancelingId(null);
             }
           },
         },
@@ -202,10 +236,25 @@ export default function EmployeesScreen() {
                 <Text style={styles.rowTitle}>{invitation.email}</Text>
                 <Text style={styles.rowMeta}>Sent {formatDate(invitation.created_at)}</Text>
               </View>
-              <View style={[styles.badge, { backgroundColor: statusColors[invitation.status].bg }]}>
-                <Text style={[styles.badgeText, { color: statusColors[invitation.status].text }]}>
-                  {invitation.status}
-                </Text>
+              <View style={styles.rowEnd}>
+                <View style={[styles.badge, { backgroundColor: statusColors[invitation.status].bg }]}>
+                  <Text style={[styles.badgeText, { color: statusColors[invitation.status].text }]}>
+                    {invitation.status}
+                  </Text>
+                </View>
+                {invitation.status === 'PENDING' ? (
+                  <Pressable
+                    style={styles.removeButton}
+                    onPress={() => confirmCancelInvitation(invitation)}
+                    disabled={cancelingId === invitation.id}
+                  >
+                    {cancelingId === invitation.id ? (
+                      <ActivityIndicator color="#dc2626" size="small" />
+                    ) : (
+                      <Text style={styles.removeButtonText}>Cancel</Text>
+                    )}
+                  </Pressable>
+                ) : null}
               </View>
             </View>
           ))
@@ -336,6 +385,10 @@ const styles = StyleSheet.create({
   rowMeta: {
     fontSize: 12,
     color: '#6b7280',
+  },
+  rowEnd: {
+    alignItems: 'flex-end',
+    gap: 6,
   },
   badge: {
     borderRadius: 12,
