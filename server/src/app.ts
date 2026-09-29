@@ -30,6 +30,8 @@ app.use(helmet());
 app.use(cors(corsOptions()));
 app.use(express.json());
 app.use(metricsMiddleware);
+// Needed for the plain-HTML reset-password form served from auth.routes.ts.
+app.use(express.urlencoded({ extended: true }));
 
 app.get("/health", (_req, res) => {
   res.status(200).json({
