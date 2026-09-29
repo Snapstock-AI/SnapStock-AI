@@ -6,6 +6,11 @@ import { DashboardController } from "../dashboard/dashboard.controller";
 
 const router = Router();
 
+// Public: the invitation email links here directly, so joining a business
+// works without an authenticated session or the web client dev server.
+router.get("/invitations/confirm", InvitationController.confirmPage);
+router.post("/invitations/confirm", InvitationController.confirmSubmit);
+
 router.use(authMiddleware);
 router.get("/mine", BusinessController.listMine);
 router.post("/", BusinessController.create);

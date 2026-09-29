@@ -91,7 +91,7 @@ describe("AuthService.register (FR-AUTH-001)", () => {
   });
 
   it("rejects an already registered email without creating a user or sending mail", async () => {
-    repo.findByEmailIncludingDeleted.mockResolvedValue({ id: "existing" } as any);
+    repo.findByEmailIncludingDeleted.mockResolvedValue({ id: "existing", email_verified: true } as any);
 
     await expect(AuthService.register(validInput)).rejects.toThrow(/already exists/i);
     expect(repo.createUser).not.toHaveBeenCalled();

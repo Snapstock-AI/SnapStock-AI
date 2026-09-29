@@ -26,7 +26,17 @@ function corsOptions(): cors.CorsOptions {
 
 const app = express();
 
-app.use(helmet());
+// CSP_UPGRADE_INSECURE=false drops helmet's upgrade-insecure-requests for HTTP-only
+// deployments (no TLS yet); otherwise browsers rewrite the HTML form posts to https.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        upgradeInsecureRequests: process.env.CSP_UPGRADE_INSECURE === "false" ? null : [],
+      },
+    },
+  }),
+);
 app.use(cors(corsOptions()));
 app.use(express.json());
 app.use(metricsMiddleware);
