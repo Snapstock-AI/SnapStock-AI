@@ -1,3 +1,4 @@
+import { File, UploadTask, UploadType } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { API_URL } from '../config';
 import { getToken } from './auth';
@@ -87,36 +88,46 @@ export async function analyzeImage(
   const token = await getToken();
   if (!token) throw new Error('Session expired. Please sign in again.');
 
-  const formData = new FormData();
-  // React Native's FormData accepts { uri, name, type } for file fields;
-  // this doesn't match the DOM Blob type FormData.append expects.
-  formData.append('file', { uri: image.uri, name: image.name, type: image.type } as unknown as Blob);
-  formData.append('shelfId', shelf.id);
-  formData.append('businessId', businessId);
-  formData.append('scanMode', scanMode);
+  // Plain fetch() + FormData.append(name, { uri, name, type }) throws
+  // "Unsupported FormDataPart implementation" on React Native's New
+  // Architecture (the only architecture as of RN 0.76+) — the native
+  // networking layer no longer accepts a plain object as a file part.
+  // expo-file-system's UploadTask is Expo's supported replacement for
+  // exactly this: uploading a local file as one part of a multipart
+  // request, with the other fields as `parameters`.
+  const file = new File(image.uri);
+  const task = new UploadTask(file, `${API_URL}/detection/analyze`, {
+    httpMethod: 'POST',
+    uploadType: UploadType.MULTIPART,
+    fieldName: 'file',
+    mimeType: image.type,
+    parameters: {
+      shelfId: shelf.id,
+      businessId,
+      scanMode,
+    },
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
-  let response: Response;
+  let uploadResult: { body: string; status: number };
   try {
-    response = await fetch(`${API_URL}/detection/analyze`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
+    uploadResult = await task.uploadAsync();
   } catch (err) {
     // Surface the real cause instead of a generic message — this can be a
     // true network failure, but also a local file-read error, a timeout, or
-    // anything else fetch() rejects with, and those need different fixes.
+    // anything else the upload rejects with, and those need different fixes.
     const detail = err instanceof Error ? err.message : String(err);
     throw new Error(`Unable to reach the server (${detail}). Check your connection and try again.`);
   }
 
-  const body = (await response.json().catch(() => ({}))) as {
-    success?: boolean;
-    data?: DetectionResult;
-    message?: string;
-  };
+  let body: { success?: boolean; data?: DetectionResult; message?: string };
+  try {
+    body = JSON.parse(uploadResult.body);
+  } catch {
+    body = {};
+  }
 
-  if (!response.ok || body.success === false || !body.data) {
+  if (uploadResult.status < 200 || uploadResult.status >= 300 || body.success === false || !body.data) {
     throw new Error(body.message || 'Image analysis failed');
   }
 
