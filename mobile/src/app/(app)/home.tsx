@@ -58,7 +58,14 @@ export default function HomeScreen() {
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
     >
       <View style={styles.headerRow}>
-        <Text style={styles.greeting}>Welcome, {user?.full_name?.split(' ')[0] ?? 'vendor'}</Text>
+        <View style={styles.headerRowTop}>
+          <Text style={styles.greeting}>Welcome, {user?.full_name?.split(' ')[0] ?? 'vendor'}</Text>
+          {user?.businessRole === 'OWNER' ? (
+            <Pressable onPress={() => router.push('/analytics')}>
+              <Text style={styles.analyticsLink}>Analytics</Text>
+            </Pressable>
+          ) : null}
+        </View>
         <Text style={styles.email}>{user?.email}</Text>
       </View>
 
@@ -174,10 +181,20 @@ const styles = StyleSheet.create({
   headerRow: {
     gap: 2,
   },
+  headerRowTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   greeting: {
     fontSize: 20,
     fontWeight: '700',
     color: '#111827',
+  },
+  analyticsLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#16a34a',
   },
   email: {
     fontSize: 13,

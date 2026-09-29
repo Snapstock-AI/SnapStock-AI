@@ -85,6 +85,11 @@ export default function AppLayout() {
         // Reachable from the Scan tab's "History" link rather than the tab bar itself.
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="analytics"
+        // Reachable from Home (owners only) rather than the tab bar itself.
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
