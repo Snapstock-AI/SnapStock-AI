@@ -114,6 +114,15 @@ const clientUrl = () =>
 
 const clientPath = () => process.env.CLIENT_BASE_PATH ?? "";
 
+// Verification and password-reset links point at the backend's own
+// self-contained pages (see shared/utils/authPages.ts) rather than the web
+// client, so those flows work off just the backend being reachable — no
+// separate dev server to keep running and in sync with the current IP.
+const serverUrl = () =>
+  process.env.SERVER_PUBLIC_URL ||
+  process.env.VITE_API_URL ||
+  "http://localhost:5000";
+
 const emailTemplate = (
   eyebrow: string,
   heading: string,
@@ -162,7 +171,7 @@ const emailTemplate = (
 `;
 
 export const sendVerificationEmail = async (email: string, token: string) => {
-  const link = `${clientUrl()}/verify-email?token=${token}`;
+  const link = `${serverUrl()}/auth/verify-email/confirm?token=${token}`;
 
   await sendEmail("verification", email, {
     from: `"SnapStock AI" <${process.env.SMTP_USER}>`,
@@ -181,7 +190,7 @@ export const sendVerificationEmail = async (email: string, token: string) => {
 };
 
 export const sendPasswordResetEmail = async (email: string, token: string) => {
-  const link = `${clientUrl()}/reset-password?token=${token}`;
+  const link = `${serverUrl()}/auth/reset-password/confirm?token=${token}`;
 
   await sendEmail("password-reset", email, {
     from: `"SnapStock AI" <${process.env.SMTP_USER}>`,

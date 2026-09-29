@@ -16,4 +16,9 @@ router.post("/resend-verification", AuthController.resendVerification);
 router.post("/forgot-password", AuthController.forgotPassword);
 router.post("/reset-password", AuthController.resetPassword);
 
+// Browser-facing pages linked from emails — self-contained, no web client needed.
+router.get("/verify-email/confirm", AuthController.verifyEmailPage);
+router.get("/reset-password/confirm", AuthController.resetPasswordPage);
+router.post("/reset-password/confirm", AuthController.resetPasswordConfirm);
+
 export default router;

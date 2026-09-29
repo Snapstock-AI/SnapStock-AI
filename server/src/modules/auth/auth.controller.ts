@@ -2,6 +2,7 @@ import { errorMessage, errorStatus } from "../../shared/utils/errors";
 import { Request, Response } from "express";
 import { AuthService } from "./auth.service";
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
+import { renderResetPasswordForm, renderStatusPage } from "../../shared/utils/authPages";
 
 export class AuthController {
   static async updateProfile(req: AuthRequest, res: Response) {
@@ -126,6 +127,71 @@ export class AuthController {
         success: false,
         message: errorMessage(error),
       });
+    }
+  }
+
+  /**
+   * Browser-facing counterpart to verifyEmail(): the link inside the
+   * verification email points here so the flow works without the separate
+   * web client dev server running or being reachable.
+   */
+  static async verifyEmailPage(req: Request, res: Response) {
+    const token = String(req.query.token || "");
+    try {
+      const result = await AuthService.verifyEmail(token);
+      return res.status(200).send(
+        renderStatusPage({
+          success: true,
+          heading: "Email verified",
+          message: `${result.message} You can now sign in from the SnapStock app.`,
+        }),
+      );
+    } catch (error: any) {
+      return res.status(400).send(
+        renderStatusPage({
+          success: false,
+          heading: "Verification failed",
+          message: error.message || "This verification link is invalid or has expired.",
+        }),
+      );
+    }
+  }
+
+  /** Renders the reset-password form; see verifyEmailPage() for why this exists. */
+  static async resetPasswordPage(req: Request, res: Response) {
+    const token = String(req.query.token || "");
+    if (!token) {
+      return res.status(400).send(
+        renderStatusPage({
+          success: false,
+          heading: "Invalid link",
+          message: "This reset-password link is missing its token.",
+        }),
+      );
+    }
+    return res.status(200).send(renderResetPasswordForm({ token }));
+  }
+
+  /** Handles the plain HTML form submitted by resetPasswordPage(). */
+  static async resetPasswordConfirm(req: Request, res: Response) {
+    const token = String(req.body.token || "");
+    const password = String(req.body.password || "");
+    try {
+      const result = await AuthService.resetPassword({ token, password });
+      return res.status(200).send(
+        renderStatusPage({
+          success: true,
+          heading: "Password updated",
+          message: `${result.message} You can now sign in from the SnapStock app with your new password.`,
+        }),
+      );
+    } catch (error: any) {
+      return res.status(400).send(
+        renderResetPasswordForm({
+          token,
+          error: error.message || "Unable to reset password.",
+        }),
+      );
     }
   }
 
