@@ -19,7 +19,7 @@ const RANGE_OPTIONS = [
 ] as const;
 
 export default function HomeScreen() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const businessId = user?.businessId ?? null;
 
   const [windowDays, setWindowDays] = useState<number>(7);
@@ -58,13 +58,8 @@ export default function HomeScreen() {
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
     >
       <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.greeting}>Welcome, {user?.full_name?.split(' ')[0] ?? 'vendor'}</Text>
-          <Text style={styles.email}>{user?.email}</Text>
-        </View>
-        <Pressable onPress={() => logout()}>
-          <Text style={styles.signOut}>Sign out</Text>
-        </Pressable>
+        <Text style={styles.greeting}>Welcome, {user?.full_name?.split(' ')[0] ?? 'vendor'}</Text>
+        <Text style={styles.email}>{user?.email}</Text>
       </View>
 
       <View style={styles.chipRow}>
@@ -177,9 +172,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    gap: 2,
   },
   greeting: {
     fontSize: 20,
@@ -189,11 +182,6 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 13,
     color: '#6b7280',
-  },
-  signOut: {
-    color: '#dc2626',
-    fontWeight: '600',
-    fontSize: 13,
   },
   chipRow: {
     flexDirection: 'row',
