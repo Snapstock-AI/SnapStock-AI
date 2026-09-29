@@ -15,11 +15,13 @@ import { deleteBusiness, getMyBusinesses, updateBusiness } from '../../lib/busin
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, updateProfile, changePassword, refreshBusinessMembership, logout } = useAuth();
+  const { user, updateProfile, changePassword, switchBusiness, refreshBusinessMembership, logout } = useAuth();
 
   const [business, setBusiness] = useState<Business | null>(null);
+  const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [isLoadingBusiness, setIsLoadingBusiness] = useState(true);
   const [businessError, setBusinessError] = useState<string | null>(null);
+  const [switchingBusinessId, setSwitchingBusinessId] = useState<string | null>(null);
 
   const [profileName, setProfileName] = useState(user?.full_name ?? '');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -46,6 +48,7 @@ export default function SettingsScreen() {
     getMyBusinesses()
       .then((businesses) => {
         if (!active) return;
+        setAllBusinesses(businesses);
         const current = businesses.find((item) => item.id === user.businessId) ?? null;
         setBusiness(current);
         if (current) {
@@ -112,6 +115,20 @@ export default function SettingsScreen() {
       setError(err instanceof Error ? err.message : 'Unable to change password.');
     } finally {
       setIsSavingPassword(false);
+    }
+  }
+
+  async function handleSwitchBusiness(businessId: string) {
+    if (!businessId || businessId === user?.businessId || switchingBusinessId) return;
+    setMessage(null);
+    setError(null);
+    setSwitchingBusinessId(businessId);
+    try {
+      await switchBusiness(businessId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to switch workspace.');
+    } finally {
+      setSwitchingBusinessId(null);
     }
   }
 
@@ -201,6 +218,37 @@ export default function SettingsScreen() {
           </>
         )}
       </View>
+
+      {allBusinesses.length > 1 ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Workspaces</Text>
+          {allBusinesses.map((item) => {
+            const isCurrent = item.id === user?.businessId;
+            const isSwitching = switchingBusinessId === item.id;
+            return (
+              <Pressable
+                key={item.id}
+                style={[styles.workspaceRow, isCurrent && styles.workspaceRowActive]}
+                onPress={() => handleSwitchBusiness(item.id)}
+                disabled={isCurrent || Boolean(switchingBusinessId)}
+              >
+                <View style={styles.rowMain}>
+                  <Text style={styles.rowTitle}>{item.business_name}</Text>
+                  <Text style={styles.rowMeta}>{item.role}</Text>
+                </View>
+                {isSwitching ? (
+                  <ActivityIndicator color="#16a34a" size="small" />
+                ) : isCurrent ? (
+                  <Text style={styles.currentBadge}>Current</Text>
+                ) : null}
+              </Pressable>
+            );
+          })}
+          <Pressable onPress={() => router.push('/create-business')}>
+            <Text style={styles.editLink}>+ Create new business</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -378,6 +426,39 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontWeight: '600',
     fontSize: 13,
+  },
+  workspaceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  workspaceRowActive: {
+    borderColor: '#16a34a',
+    backgroundColor: '#f0fdf4',
+  },
+  rowMain: {
+    flex: 1,
+    gap: 2,
+  },
+  rowTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  rowMeta: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  currentBadge: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803d',
   },
   infoRow: {
     gap: 2,
