@@ -94,4 +94,70 @@ export const makeAuthFormStyles = (colors: ThemeColors) =>
       fontFamily: fonts.bodySemiBold,
       color: colors.accent,
     },
+
+    // Richer layout for login/register: a brand block up top instead of pure
+    // vertical centering (which leaves a lot of dead space on tall phones),
+    // and the fields sit inside a bordered card instead of floating loose.
+    scroll: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      padding: spacing.xl,
+      gap: spacing.xl,
+    },
+    brandRow: {
+      alignItems: 'center',
+    },
+    logoMark: {
+      width: 56,
+      height: 56,
+      borderRadius: radius.lg,
+      backgroundColor: colors.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.md,
+    },
+    logoMarkText: {
+      fontFamily: fonts.headingBold,
+      fontSize: 22,
+      color: colors.onAccent,
+    },
+    brandTitle: {
+      fontFamily: fonts.headingBold,
+      fontSize: 22,
+      color: colors.textPrimary,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.lg,
+      padding: spacing.xl,
+      gap: spacing.md,
+    },
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.md,
+    },
+    inputIcon: {
+      marginRight: spacing.sm,
+    },
+    inputFlex: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      fontFamily: fonts.body,
+      fontSize: 16,
+      color: colors.textPrimary,
+    },
+    eyeButton: {
+      padding: spacing.xs,
+    },
   });

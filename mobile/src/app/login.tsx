@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Link, Redirect } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -5,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -17,9 +19,10 @@ import { makeAuthFormStyles } from '../styles/authForm';
 export default function LoginScreen() {
   const { user, login, isAuthenticated, isHydrating } = useAuth();
   const { colors } = useTheme();
-  const styles = useMemo(() => makeAuthFormStyles(colors), [colors]);
+  const s = useMemo(() => makeAuthFormStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,60 +44,81 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.form}>
-        <Text style={styles.title}>SnapStock</Text>
-        <Text style={styles.subtitle}>Sign in to your business</Text>
+    <KeyboardAvoidingView style={s.scroll} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled">
+        <View style={s.brandRow}>
+          <View style={s.logoMark}>
+            <Text style={s.logoMarkText}>S</Text>
+          </View>
+          <Text style={s.brandTitle}>SnapStock-AI</Text>
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor={colors.textMuted}
-          autoCapitalize="none"
-          autoComplete="email"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor={colors.textMuted}
-          autoCapitalize="none"
-          autoComplete="password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        <View style={s.card}>
+          <Text style={s.title}>Welcome back</Text>
+          <Text style={s.subtitle}>Sign in to your business</Text>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+          <View style={s.inputRow}>
+            <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={s.inputIcon} />
+            <TextInput
+              style={s.inputFlex}
+              placeholder="Email"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
 
-        <Pressable
-          style={[styles.button, isSubmitting && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={isSubmitting || !email || !password}
-          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={colors.onAccent} />
-          ) : (
-            <Text style={styles.buttonText}>Sign in</Text>
-          )}
-        </Pressable>
+          <View style={s.inputRow}>
+            <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} style={s.inputIcon} />
+            <TextInput
+              style={s.inputFlex}
+              placeholder="Password"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoComplete="password"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <Pressable
+              onPress={() => setShowPassword((current) => !current)}
+              hitSlop={8}
+              style={s.eyeButton}
+            >
+              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.textMuted} />
+            </Pressable>
+          </View>
 
-        <Link href="/forgot-password" style={[styles.link, { textAlign: 'center', marginTop: 16 }]}>
-          Forgot password?
-        </Link>
-        <Text style={styles.footerText}>
+          {error ? <Text style={s.error}>{error}</Text> : null}
+
+          <Pressable
+            style={[s.button, isSubmitting && s.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={isSubmitting || !email || !password}
+            android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color={colors.onAccent} />
+            ) : (
+              <Text style={s.buttonText}>Sign in</Text>
+            )}
+          </Pressable>
+
+          <Link href="/forgot-password" style={[s.link, { textAlign: 'center' }]}>
+            Forgot password?
+          </Link>
+        </View>
+
+        <Text style={[s.footerText, { marginTop: 0 }]}>
           New here?{' '}
-          <Link href="/register" style={styles.link}>
+          <Link href="/register" style={s.link}>
             Create an account
           </Link>
         </Text>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
