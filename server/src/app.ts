@@ -12,6 +12,8 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+// Needed for the plain-HTML reset-password form served from auth.routes.ts.
+app.use(express.urlencoded({ extended: true }));
 
 app.get("/health", (_req, res) => {
   res.status(200).json({
