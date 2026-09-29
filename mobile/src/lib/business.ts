@@ -29,3 +29,7 @@ export async function updateBusiness(businessId: string, patch: BusinessUpdateIn
   if (!result.data) throw new Error('Failed to update business');
   return result.data;
 }
+
+export async function deleteBusiness(businessId: string): Promise<void> {
+  await apiRequest(`/businesses/${businessId}`, { method: 'DELETE' }, true);
+}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,11 +11,11 @@ import {
   View,
 } from 'react-native';
 import { useAuth, type Business } from '../../context/AuthContext';
-import { getMyBusinesses, updateBusiness } from '../../lib/business';
+import { deleteBusiness, getMyBusinesses, updateBusiness } from '../../lib/business';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, updateProfile, changePassword, logout } = useAuth();
+  const { user, updateProfile, changePassword, refreshBusinessMembership, logout } = useAuth();
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [isLoadingBusiness, setIsLoadingBusiness] = useState(true);
@@ -30,6 +31,8 @@ export default function SettingsScreen() {
 
   const [newPassword, setNewPassword] = useState('');
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+
+  const [isDeletingBusiness, setIsDeletingBusiness] = useState(false);
 
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +115,35 @@ export default function SettingsScreen() {
     }
   }
 
+  function confirmDeleteBusiness() {
+    if (!user?.businessId || isDeletingBusiness) return;
+    Alert.alert(
+      'Delete business',
+      'Delete this business and all of its inventory, shelves, scans, and memberships? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setMessage(null);
+            setError(null);
+            setIsDeletingBusiness(true);
+            try {
+              await deleteBusiness(user.businessId!);
+              await refreshBusinessMembership();
+              router.replace('/');
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'Unable to delete business.');
+            } finally {
+              setIsDeletingBusiness(false);
+            }
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Settings</Text>
@@ -171,7 +203,18 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Business</Text>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Business</Text>
+          {business?.role === 'OWNER' ? (
+            <Pressable onPress={confirmDeleteBusiness} disabled={isDeletingBusiness}>
+              {isDeletingBusiness ? (
+                <ActivityIndicator color="#dc2626" size="small" />
+              ) : (
+                <Text style={styles.deleteLink}>Delete business</Text>
+              )}
+            </Pressable>
+          ) : null}
+        </View>
         {isLoadingBusiness ? (
           <ActivityIndicator color="#16a34a" />
         ) : businessError ? (
@@ -328,6 +371,11 @@ const styles = StyleSheet.create({
   },
   editLink: {
     color: '#2563eb',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  deleteLink: {
+    color: '#dc2626',
     fontWeight: '600',
     fontSize: 13,
   },
