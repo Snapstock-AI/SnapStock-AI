@@ -1,15 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { getAlerts, type DashboardAlert } from '../../lib/dashboard';
+import { fonts, radius, ripple, spacing, typography, type ThemeColors } from '../../theme';
 
-const SEVERITY_STYLE: Record<DashboardAlert['severity'], { border: string; bg: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  critical: { border: '#fecaca', bg: '#fef2f2', icon: 'warning' },
-  warning: { border: '#fde68a', bg: '#fffbeb', icon: 'cube' },
-  info: { border: '#e5e7eb', bg: '#fff', icon: 'notifications' },
-};
+function severityStyle(
+  colors: ThemeColors,
+): Record<DashboardAlert['severity'], { border: string; bg: string; icon: keyof typeof Ionicons.glyphMap }> {
+  return {
+    critical: { border: colors.dangerBorder, bg: colors.dangerSoft, icon: 'warning' },
+    warning: { border: colors.warningSoft, bg: colors.warningSoft, icon: 'cube' },
+    info: { border: colors.border, bg: colors.surface, icon: 'notifications' },
+  };
+}
 
 function formatRelative(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -23,6 +29,9 @@ function formatRelative(iso: string): string {
 
 export default function AlertsScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const severity = useMemo(() => severityStyle(colors), [colors]);
   const businessId = user?.businessId ?? null;
 
   const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
@@ -55,7 +64,7 @@ export default function AlertsScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -76,19 +85,19 @@ export default function AlertsScreen() {
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="checkmark-circle" size={40} color="#16a34a" />
+            <Ionicons name="checkmark-circle" size={40} color={colors.accent} />
             <Text style={styles.emptyTitle}>All clear</Text>
             <Text style={styles.emptyText}>No active alerts. Keep scanning shelves to stay ahead of spoilage.</Text>
-            <Pressable style={styles.scanButton} onPress={() => router.push('/scan')}>
+            <Pressable style={styles.scanButton} onPress={() => router.push('/scan')} android_ripple={{ color: 'rgba(255,255,255,0.2)' }}>
               <Text style={styles.scanButtonText}>Scan a shelf</Text>
             </Pressable>
           </View>
         }
         renderItem={({ item }) => {
-          const style = SEVERITY_STYLE[item.severity] ?? SEVERITY_STYLE.info;
+          const style = severity[item.severity] ?? severity.info;
           return (
             <View style={[styles.card, { borderColor: style.border, backgroundColor: style.bg }]}>
-              <Ionicons name={style.icon} size={20} color="#6b7280" style={styles.cardIcon} />
+              <Ionicons name={style.icon} size={20} color={colors.textMuted} style={styles.cardIcon} />
               <View style={styles.cardBody}>
                 <Text style={styles.cardTitle}>{item.title}</Text>
                 <Text style={styles.cardMessage}>{item.message}</Text>
@@ -102,102 +111,107 @@ export default function AlertsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
-    gap: 4,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: '#6b7280',
-  },
-  error: {
-    color: '#dc2626',
-    fontSize: 13,
-    marginHorizontal: 20,
-    marginBottom: 8,
-  },
-  list: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    gap: 10,
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  empty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 60,
-    gap: 6,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    marginTop: 4,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  scanButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  scanButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  cardIcon: {
-    marginTop: 2,
-  },
-  cardBody: {
-    flex: 1,
-    gap: 2,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  cardMessage: {
-    fontSize: 13,
-    color: '#4b5563',
-  },
-  cardTime: {
-    fontSize: 11,
-    color: '#9ca3af',
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+      gap: 4,
+    },
+    headerTitle: {
+      ...typography.title,
+      color: colors.textPrimary,
+    },
+    headerSubtitle: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: colors.textMuted,
+    },
+    error: {
+      fontFamily: fonts.bodyMedium,
+      color: colors.danger,
+      fontSize: 13,
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.sm,
+    },
+    list: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: 24,
+      gap: spacing.sm,
+    },
+    emptyList: {
+      flexGrow: 1,
+    },
+    empty: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 32,
+      paddingTop: 60,
+      gap: 6,
+    },
+    emptyTitle: {
+      ...typography.h2,
+      color: colors.textPrimary,
+      marginTop: 4,
+    },
+    emptyText: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginBottom: 12,
+    },
+    scanButton: {
+      backgroundColor: colors.accent,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      overflow: 'hidden',
+    },
+    scanButtonText: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.onAccent,
+    },
+    card: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.md,
+      padding: spacing.md,
+      borderRadius: radius.md,
+      borderWidth: 1,
+    },
+    cardIcon: {
+      marginTop: 2,
+    },
+    cardBody: {
+      flex: 1,
+      gap: 2,
+    },
+    cardTitle: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    cardMessage: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    cardTime: {
+      fontFamily: fonts.body,
+      fontSize: 11,
+      color: colors.textMuted,
+    },
+  });

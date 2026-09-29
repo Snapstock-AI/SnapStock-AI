@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { getMyBusinesses } from '../../lib/business';
 import {
   cancelInvitation,
@@ -20,13 +21,16 @@ import {
   type Employee,
   type Invitation,
 } from '../../lib/invitation';
+import { card, fonts, radius, spacing, typography, type ThemeColors } from '../../theme';
 
-const statusColors: Record<Invitation['status'], { bg: string; text: string }> = {
-  PENDING: { bg: '#fef3c7', text: '#92400e' },
-  ACCEPTED: { bg: '#dcfce7', text: '#15803d' },
-  EXPIRED: { bg: '#f3f4f6', text: '#4b5563' },
-  CANCELLED: { bg: '#fee2e2', text: '#b91c1c' },
-};
+function statusColors(colors: ThemeColors): Record<Invitation['status'], { bg: string; text: string }> {
+  return {
+    PENDING: { bg: colors.warningSoft, text: colors.warning },
+    ACCEPTED: { bg: colors.accentSoft, text: colors.accentDark },
+    EXPIRED: { bg: colors.muted, text: colors.textSecondary },
+    CANCELLED: { bg: colors.dangerSoft, text: colors.danger },
+  };
+}
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString(undefined, { dateStyle: 'medium' } as Intl.DateTimeFormatOptions);
@@ -34,6 +38,9 @@ function formatDate(value: string) {
 
 export default function EmployeesScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const statuses = useMemo(() => statusColors(colors), [colors]);
   const businessId = user?.businessId ?? null;
 
   const [isOwner, setIsOwner] = useState<boolean | null>(null);
@@ -164,7 +171,7 @@ export default function EmployeesScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -201,14 +208,14 @@ export default function EmployeesScreen() {
           value={fullName}
           onChangeText={setFullName}
           placeholder="Display name (optional)"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
         />
         <TextInput
           style={styles.input}
           value={email}
           onChangeText={setEmail}
           placeholder="employee@example.com"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           keyboardType="email-address"
           autoCapitalize="none"
         />
@@ -216,9 +223,10 @@ export default function EmployeesScreen() {
           style={[styles.primaryButton, (isSending || !email.trim()) && styles.buttonDisabled]}
           onPress={handleSendInvitation}
           disabled={isSending || !email.trim()}
+          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
         >
           {isSending ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.onAccent} />
           ) : (
             <Text style={styles.primaryButtonText}>Send invitation</Text>
           )}
@@ -237,8 +245,8 @@ export default function EmployeesScreen() {
                 <Text style={styles.rowMeta}>Sent {formatDate(invitation.created_at)}</Text>
               </View>
               <View style={styles.rowEnd}>
-                <View style={[styles.badge, { backgroundColor: statusColors[invitation.status].bg }]}>
-                  <Text style={[styles.badgeText, { color: statusColors[invitation.status].text }]}>
+                <View style={[styles.badge, { backgroundColor: statuses[invitation.status].bg }]}>
+                  <Text style={[styles.badgeText, { color: statuses[invitation.status].text }]}>
                     {invitation.status}
                   </Text>
                 </View>
@@ -247,9 +255,10 @@ export default function EmployeesScreen() {
                     style={styles.removeButton}
                     onPress={() => confirmCancelInvitation(invitation)}
                     disabled={cancelingId === invitation.id}
+                    android_ripple={{ color: 'rgba(220,38,38,0.12)' }}
                   >
                     {cancelingId === invitation.id ? (
-                      <ActivityIndicator color="#dc2626" size="small" />
+                      <ActivityIndicator color={colors.danger} size="small" />
                     ) : (
                       <Text style={styles.removeButtonText}>Cancel</Text>
                     )}
@@ -276,9 +285,10 @@ export default function EmployeesScreen() {
                 style={styles.removeButton}
                 onPress={() => confirmRemove(employee)}
                 disabled={removingId === employee.user_id}
+                android_ripple={{ color: 'rgba(220,38,38,0.12)' }}
               >
                 {removingId === employee.user_id ? (
-                  <ActivityIndicator color="#dc2626" size="small" />
+                  <ActivityIndicator color={colors.danger} size="small" />
                 ) : (
                   <Text style={styles.removeButtonText}>Remove</Text>
                 )}
@@ -291,124 +301,130 @@ export default function EmployeesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  content: {
-    padding: 20,
-    gap: 16,
-    paddingBottom: 40,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  success: {
-    color: '#15803d',
-    fontSize: 13,
-  },
-  error: {
-    color: '#dc2626',
-    fontSize: 13,
-  },
-  muted: {
-    color: '#6b7280',
-    fontSize: 13,
-  },
-  card: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 16,
-    gap: 10,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  cardSubtitle: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: -6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: '#111827',
-  },
-  primaryButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-  },
-  rowMain: {
-    flex: 1,
-    gap: 2,
-  },
-  rowTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  rowMeta: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  rowEnd: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  badge: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  removeButton: {
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  removeButtonText: {
-    color: '#dc2626',
-    fontWeight: '600',
-    fontSize: 12,
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+      padding: spacing.xl,
+    },
+    content: {
+      padding: spacing.xl,
+      gap: spacing.lg,
+      paddingBottom: 40,
+    },
+    title: {
+      ...typography.title,
+      color: colors.textPrimary,
+    },
+    success: {
+      fontFamily: fonts.bodyMedium,
+      color: colors.accentDark,
+      fontSize: 13,
+    },
+    error: {
+      fontFamily: fonts.bodyMedium,
+      color: colors.danger,
+      fontSize: 13,
+    },
+    muted: {
+      fontFamily: fonts.body,
+      color: colors.textMuted,
+      fontSize: 13,
+    },
+    card: {
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      gap: spacing.sm,
+      ...card(colors),
+    },
+    cardTitle: {
+      ...typography.h3,
+      color: colors.textPrimary,
+    },
+    cardSubtitle: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: -6,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      fontFamily: fonts.body,
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    primaryButton: {
+      backgroundColor: colors.accent,
+      borderRadius: radius.sm,
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    primaryButtonText: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.onAccent,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+      paddingVertical: spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.background,
+    },
+    rowMain: {
+      flex: 1,
+      gap: 2,
+    },
+    rowTitle: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    rowMeta: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    rowEnd: {
+      alignItems: 'flex-end',
+      gap: spacing.xs,
+    },
+    badge: {
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3,
+    },
+    badgeText: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 11,
+    },
+    removeButton: {
+      borderWidth: 1,
+      borderColor: colors.dangerBorder,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+    },
+    removeButtonText: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.danger,
+      fontSize: 12,
+    },
+  });
