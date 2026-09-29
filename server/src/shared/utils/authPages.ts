@@ -59,6 +59,41 @@ export function renderStatusPage(opts: {
   `);
 }
 
+export function renderInvitationJoinPage(opts: {
+  token: string;
+  businessName: string;
+  email: string;
+  hasAccount: boolean;
+  error?: string;
+}): string {
+  const safeToken = escapeHtml(opts.token);
+  const safeBusiness = escapeHtml(opts.businessName);
+  const safeEmail = escapeHtml(opts.email);
+
+  const fields = opts.hasAccount
+    ? ""
+    : `
+      <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">Your name</label>
+      <input type="text" name="full_name" required maxlength="100" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;margin-bottom:16px;" />
+      <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">Create a password</label>
+      <input type="password" name="password" required minlength="8" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;margin-bottom:16px;" />
+    `;
+
+  return pageShell(`
+    <div style="font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#15803d;">Team invitation</div>
+    <h1 style="margin:12px 0 8px;font-size:24px;line-height:1.3;color:#18352b;">Join ${safeBusiness}</h1>
+    <p style="margin:0 0 20px;font-size:14px;color:#52645d;">Invited as <strong>${safeEmail}</strong></p>
+    ${opts.error ? `<p style="margin:0 0 16px;font-size:14px;color:#b91c1c;">${escapeHtml(opts.error)}</p>` : ""}
+    <form method="POST" action="/businesses/invitations/confirm">
+      <input type="hidden" name="token" value="${safeToken}" />
+      ${fields}
+      <button type="submit" style="width:100%;background:#15803d;color:#fff;border:none;border-radius:999px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;">
+        ${opts.hasAccount ? "Accept invitation" : "Create account &amp; join"}
+      </button>
+    </form>
+  `);
+}
+
 export function renderResetPasswordForm(opts: { token: string; error?: string }): string {
   const safeToken = escapeHtml(opts.token);
   return pageShell(`
