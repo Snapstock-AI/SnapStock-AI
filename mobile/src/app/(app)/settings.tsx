@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
   ActivityIndicator,
@@ -11,11 +11,21 @@ import {
   View,
 } from 'react-native';
 import { useAuth, type Business } from '../../context/AuthContext';
+import { useTheme, type ThemePreference } from '../../context/ThemeContext';
 import { deleteBusiness, getMyBusinesses, updateBusiness } from '../../lib/business';
+import { fonts, radius, ripple, spacing, typography, type ThemeColors } from '../../theme';
+
+const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
+];
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, updateProfile, changePassword, switchBusiness, refreshBusinessMembership, logout } = useAuth();
+  const { colors, preference, setPreference } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
@@ -169,10 +179,28 @@ export default function SettingsScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <View style={styles.card}>
+        <Text style={styles.cardTitle}>Appearance</Text>
+        <View style={styles.chipRow}>
+          {THEME_OPTIONS.map((option) => (
+            <Pressable
+              key={option.value}
+              style={[styles.chip, preference === option.value && styles.chipActive]}
+              onPress={() => setPreference(option.value)}
+              android_ripple={ripple}
+            >
+              <Text style={[styles.chipText, preference === option.value && styles.chipTextActive]}>
+                {option.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Profile</Text>
           {!isEditingProfile ? (
-            <Pressable onPress={() => setIsEditingProfile(true)}>
+            <Pressable onPress={() => setIsEditingProfile(true)} hitSlop={8}>
               <Text style={styles.editLink}>Edit</Text>
             </Pressable>
           ) : null}
@@ -185,6 +213,7 @@ export default function SettingsScreen() {
               value={profileName}
               onChangeText={setProfileName}
               placeholder="Full name"
+              placeholderTextColor={colors.textMuted}
             />
             <View style={styles.actionsRow}>
               <Pressable
@@ -194,6 +223,7 @@ export default function SettingsScreen() {
                   setIsEditingProfile(false);
                 }}
                 disabled={isSavingProfile}
+                android_ripple={ripple}
               >
                 <Text style={styles.secondaryButtonText}>Cancel</Text>
               </Pressable>
@@ -201,9 +231,10 @@ export default function SettingsScreen() {
                 style={[styles.primaryButton, isSavingProfile && styles.buttonDisabled]}
                 onPress={handleSaveProfile}
                 disabled={isSavingProfile || !profileName.trim()}
+                android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
               >
                 {isSavingProfile ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={colors.onAccent} />
                 ) : (
                   <Text style={styles.primaryButtonText}>Save</Text>
                 )}
@@ -212,9 +243,9 @@ export default function SettingsScreen() {
           </View>
         ) : (
           <>
-            <InfoRow label="Full name" value={user?.full_name ?? 'Not available'} />
-            <InfoRow label="Email" value={user?.email ?? 'Not available'} />
-            <InfoRow label="Account role" value={user?.system_role ?? 'Not available'} />
+            <InfoRow styles={styles} label="Full name" value={user?.full_name ?? 'Not available'} />
+            <InfoRow styles={styles} label="Email" value={user?.email ?? 'Not available'} />
+            <InfoRow styles={styles} label="Account role" value={user?.system_role ?? 'Not available'} />
           </>
         )}
       </View>
@@ -231,20 +262,21 @@ export default function SettingsScreen() {
                 style={[styles.workspaceRow, isCurrent && styles.workspaceRowActive]}
                 onPress={() => handleSwitchBusiness(item.id)}
                 disabled={isCurrent || Boolean(switchingBusinessId)}
+                android_ripple={ripple}
               >
                 <View style={styles.rowMain}>
                   <Text style={styles.rowTitle}>{item.business_name}</Text>
                   <Text style={styles.rowMeta}>{item.role}</Text>
                 </View>
                 {isSwitching ? (
-                  <ActivityIndicator color="#16a34a" size="small" />
+                  <ActivityIndicator color={colors.accent} size="small" />
                 ) : isCurrent ? (
                   <Text style={styles.currentBadge}>Current</Text>
                 ) : null}
               </Pressable>
             );
           })}
-          <Pressable onPress={() => router.push('/create-business')}>
+          <Pressable onPress={() => router.push('/create-business')} hitSlop={8}>
             <Text style={styles.editLink}>+ Create new business</Text>
           </Pressable>
         </View>
@@ -254,9 +286,9 @@ export default function SettingsScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Business</Text>
           {business?.role === 'OWNER' ? (
-            <Pressable onPress={confirmDeleteBusiness} disabled={isDeletingBusiness}>
+            <Pressable onPress={confirmDeleteBusiness} disabled={isDeletingBusiness} hitSlop={8}>
               {isDeletingBusiness ? (
-                <ActivityIndicator color="#dc2626" size="small" />
+                <ActivityIndicator color={colors.danger} size="small" />
               ) : (
                 <Text style={styles.deleteLink}>Delete business</Text>
               )}
@@ -264,16 +296,16 @@ export default function SettingsScreen() {
           ) : null}
         </View>
         {isLoadingBusiness ? (
-          <ActivityIndicator color="#16a34a" />
+          <ActivityIndicator color={colors.accent} />
         ) : businessError ? (
           <Text style={styles.error}>{businessError}</Text>
         ) : business ? (
           <>
-            <InfoRow label="Business name" value={business.business_name} />
-            <InfoRow label="Business email" value={business.business_email} />
-            <InfoRow label="Contact number" value={business.contact_number} />
-            <InfoRow label="Address" value={business.address} />
-            <InfoRow label="Your role" value={business.role} />
+            <InfoRow styles={styles} label="Business name" value={business.business_name} />
+            <InfoRow styles={styles} label="Business email" value={business.business_email} />
+            <InfoRow styles={styles} label="Contact number" value={business.contact_number} />
+            <InfoRow styles={styles} label="Address" value={business.address} />
+            <InfoRow styles={styles} label="Your role" value={business.role} />
           </>
         ) : (
           <Text style={styles.muted}>No business connected to this account.</Text>
@@ -281,7 +313,7 @@ export default function SettingsScreen() {
       </View>
 
       {business?.role === 'OWNER' ? (
-        <Pressable style={styles.card} onPress={() => router.push('/employees')}>
+        <Pressable style={styles.card} onPress={() => router.push('/employees')} android_ripple={ripple}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Team</Text>
             <Text style={styles.editLink}>Manage</Text>
@@ -301,6 +333,7 @@ export default function SettingsScreen() {
           onChangeText={setLowStockThreshold}
           keyboardType="number-pad"
           editable={business?.role === 'OWNER'}
+          placeholderTextColor={colors.textMuted}
         />
 
         <Text style={styles.label}>Freshness risk alert at / above (%)</Text>
@@ -310,6 +343,7 @@ export default function SettingsScreen() {
           onChangeText={setFreshnessThreshold}
           keyboardType="number-pad"
           editable={business?.role === 'OWNER'}
+          placeholderTextColor={colors.textMuted}
         />
 
         {business?.role === 'OWNER' ? (
@@ -317,9 +351,10 @@ export default function SettingsScreen() {
             style={[styles.primaryButton, isSavingThresholds && styles.buttonDisabled]}
             onPress={handleSaveThresholds}
             disabled={isSavingThresholds}
+            android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
           >
             {isSavingThresholds ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.onAccent} />
             ) : (
               <Text style={styles.primaryButtonText}>Save thresholds</Text>
             )}
@@ -336,30 +371,31 @@ export default function SettingsScreen() {
           value={newPassword}
           onChangeText={setNewPassword}
           placeholder="New password (min 6 characters)"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textMuted}
           secureTextEntry
         />
         <Pressable
           style={[styles.primaryButton, isSavingPassword && styles.buttonDisabled]}
           onPress={handleChangePassword}
           disabled={isSavingPassword || newPassword.length < 6}
+          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
         >
           {isSavingPassword ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.onAccent} />
           ) : (
             <Text style={styles.primaryButtonText}>Change password</Text>
           )}
         </Pressable>
       </View>
 
-      <Pressable style={styles.signOutButton} onPress={() => logout()}>
+      <Pressable style={styles.signOutButton} onPress={() => logout()} android_ripple={{ color: 'rgba(220,38,38,0.12)' }}>
         <Text style={styles.signOutButtonText}>Sign out</Text>
       </Pressable>
     </ScrollView>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value, styles }: { label: string; value: string; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
@@ -368,166 +404,205 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  content: {
-    padding: 20,
-    gap: 16,
-    paddingBottom: 40,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  success: {
-    color: '#15803d',
-    fontSize: 13,
-  },
-  error: {
-    color: '#dc2626',
-    fontSize: 13,
-  },
-  muted: {
-    color: '#6b7280',
-    fontSize: 13,
-  },
-  card: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 16,
-    gap: 10,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  cardSubtitle: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: -6,
-  },
-  editLink: {
-    color: '#2563eb',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  deleteLink: {
-    color: '#dc2626',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  workspaceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  workspaceRowActive: {
-    borderColor: '#16a34a',
-    backgroundColor: '#f0fdf4',
-  },
-  rowMain: {
-    flex: 1,
-    gap: 2,
-  },
-  rowTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  rowMeta: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  currentBadge: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#15803d',
-  },
-  infoRow: {
-    gap: 2,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  infoValue: {
-    fontSize: 14,
-    color: '#111827',
-    fontWeight: '500',
-  },
-  field: {
-    gap: 10,
-  },
-  label: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: '#111827',
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  primaryButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-    flex: 1,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-    flex: 1,
-  },
-  secondaryButtonText: {
-    color: '#374151',
-    fontWeight: '600',
-  },
-  signOutButton: {
-    borderWidth: 1,
-    borderColor: '#dc2626',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  signOutButtonText: {
-    color: '#dc2626',
-    fontWeight: '600',
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: spacing.xl,
+      gap: spacing.lg,
+      paddingBottom: 40,
+    },
+    title: {
+      ...typography.title,
+      color: colors.textPrimary,
+    },
+    success: {
+      fontFamily: fonts.bodyMedium,
+      color: colors.accentDark,
+      fontSize: 13,
+    },
+    error: {
+      fontFamily: fonts.bodyMedium,
+      color: colors.danger,
+      fontSize: 13,
+    },
+    muted: {
+      fontFamily: fonts.body,
+      color: colors.textMuted,
+      fontSize: 13,
+    },
+    card: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      gap: spacing.sm,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    cardTitle: {
+      ...typography.h3,
+      color: colors.textPrimary,
+    },
+    cardSubtitle: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: -6,
+    },
+    editLink: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.info,
+      fontSize: 13,
+    },
+    deleteLink: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.danger,
+      fontSize: 13,
+    },
+    chipRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    chip: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.full,
+      paddingVertical: spacing.sm,
+      alignItems: 'center',
+    },
+    chipActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    chipText: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    chipTextActive: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.onAccent,
+    },
+    workspaceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    workspaceRowActive: {
+      borderColor: colors.accent,
+      backgroundColor: colors.accentSoft,
+    },
+    rowMain: {
+      flex: 1,
+      gap: 2,
+    },
+    rowTitle: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    rowMeta: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    currentBadge: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 12,
+      color: colors.accentDark,
+    },
+    infoRow: {
+      gap: 2,
+    },
+    infoLabel: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    infoValue: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    field: {
+      gap: spacing.sm,
+    },
+    label: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: spacing.xs,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      fontFamily: fonts.body,
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    actionsRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    primaryButton: {
+      backgroundColor: colors.accent,
+      borderRadius: radius.sm,
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+      flex: 1,
+      overflow: 'hidden',
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    primaryButtonText: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.onAccent,
+      fontSize: 14,
+    },
+    secondaryButton: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+      flex: 1,
+    },
+    secondaryButtonText: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.textSecondary,
+      fontSize: 14,
+    },
+    signOutButton: {
+      borderWidth: 1,
+      borderColor: colors.danger,
+      borderRadius: radius.md,
+      paddingVertical: spacing.lg,
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    signOutButtonText: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.danger,
+      fontSize: 14,
+    },
+  });

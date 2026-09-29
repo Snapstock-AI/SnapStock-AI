@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -10,8 +10,9 @@ import {
   View,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { getDashboard, type DashboardData } from '../../lib/dashboard';
-import { card, colors, fonts, radius, ripple, spacing, typography } from '../../theme';
+import { card, fonts, radius, ripple, spacing, typography, type ThemeColors } from '../../theme';
 
 const RANGE_OPTIONS = [
   { days: 7, label: '7 days' },
@@ -21,6 +22,8 @@ const RANGE_OPTIONS = [
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const businessId = user?.businessId ?? null;
 
   const [windowDays, setWindowDays] = useState<number>(7);
@@ -96,13 +99,14 @@ export default function HomeScreen() {
           {data ? (
             <>
               <View style={styles.kpiGrid}>
-                <KpiTile label="Total SKUs" value={String(data.kpis.totalSkus)} />
+                <KpiTile styles={styles} label="Total SKUs" value={String(data.kpis.totalSkus)} />
                 <KpiTile
+                  styles={styles}
                   label="Avg freshness"
                   value={data.kpis.avgFreshness !== null ? `${Math.round(data.kpis.avgFreshness)}%` : '—'}
                 />
-                <KpiTile label="Active alerts" value={String(data.kpis.activeAlerts)} />
-                <KpiTile label="Scans today" value={String(data.kpis.scansToday)} />
+                <KpiTile styles={styles} label="Active alerts" value={String(data.kpis.activeAlerts)} />
+                <KpiTile styles={styles} label="Scans today" value={String(data.kpis.scansToday)} />
               </View>
 
               {data.topAlert ? (
@@ -162,7 +166,15 @@ export default function HomeScreen() {
   );
 }
 
-function KpiTile({ label, value }: { label: string; value: string }) {
+function KpiTile({
+  label,
+  value,
+  styles,
+}: {
+  label: string;
+  value: string;
+  styles: ReturnType<typeof makeStyles>;
+}) {
   return (
     <View style={styles.kpiTile}>
       <Text style={styles.kpiValue}>{value}</Text>
@@ -171,165 +183,166 @@ function KpiTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.xl,
-    gap: spacing.lg,
-  },
-  center: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  headerRow: {
-    gap: 2,
-  },
-  headerRowTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  greeting: {
-    ...typography.title,
-    fontSize: 21,
-    color: colors.textPrimary,
-  },
-  analyticsLink: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 14,
-    color: colors.accent,
-  },
-  email: {
-    ...typography.caption,
-    color: colors.textMuted,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  chipActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  chipText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  chipTextActive: {
-    fontFamily: fonts.bodySemiBold,
-    color: colors.onAccent,
-  },
-  error: {
-    fontFamily: fonts.bodyMedium,
-    color: colors.danger,
-    fontSize: 13,
-  },
-  kpiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  kpiTile: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    ...card(),
-  },
-  kpiValue: {
-    ...typography.title,
-    fontSize: 22,
-    color: colors.textPrimary,
-  },
-  kpiLabel: {
-    ...typography.caption,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  topAlert: {
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.dangerBorder,
-    backgroundColor: colors.dangerSoft,
-    padding: spacing.md,
-    gap: 2,
-  },
-  topAlertTitle: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 13,
-    color: colors.danger,
-  },
-  topAlertMessage: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: '#991b1b',
-  },
-  scanButton: {
-    backgroundColor: colors.accent,
-    borderRadius: radius.md,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  scanButtonText: {
-    fontFamily: fonts.bodySemiBold,
-    color: colors.onAccent,
-    fontSize: 15,
-  },
-  section: {
-    gap: spacing.sm,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    ...card(),
-  },
-  sectionTitle: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 12,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  listRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.background,
-  },
-  listRowLabel: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 14,
-    color: colors.textPrimary,
-  },
-  listRowValue: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.textMuted,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    gap: 4,
-  },
-  emptyTitle: {
-    ...typography.h3,
-    color: colors.textPrimary,
-  },
-  emptyText: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: spacing.xl,
+      gap: spacing.lg,
+    },
+    center: {
+      paddingVertical: 40,
+      alignItems: 'center',
+    },
+    headerRow: {
+      gap: 2,
+    },
+    headerRowTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    greeting: {
+      ...typography.title,
+      fontSize: 21,
+      color: colors.textPrimary,
+    },
+    analyticsLink: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 14,
+      color: colors.accent,
+    },
+    email: {
+      ...typography.caption,
+      color: colors.textMuted,
+    },
+    chipRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    chip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+    },
+    chipActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    chipText: {
+      ...typography.caption,
+      color: colors.textSecondary,
+    },
+    chipTextActive: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.onAccent,
+    },
+    error: {
+      fontFamily: fonts.bodyMedium,
+      color: colors.danger,
+      fontSize: 13,
+    },
+    kpiGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.md,
+    },
+    kpiTile: {
+      flexBasis: '47%',
+      flexGrow: 1,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      ...card(colors),
+    },
+    kpiValue: {
+      ...typography.title,
+      fontSize: 22,
+      color: colors.textPrimary,
+    },
+    kpiLabel: {
+      ...typography.caption,
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    topAlert: {
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.dangerBorder,
+      backgroundColor: colors.dangerSoft,
+      padding: spacing.md,
+      gap: 2,
+    },
+    topAlertTitle: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 13,
+      color: colors.danger,
+    },
+    topAlertMessage: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.danger,
+    },
+    scanButton: {
+      backgroundColor: colors.accent,
+      borderRadius: radius.md,
+      paddingVertical: spacing.lg,
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    scanButtonText: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.onAccent,
+      fontSize: 15,
+    },
+    section: {
+      gap: spacing.sm,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      ...card(colors),
+    },
+    sectionTitle: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 12,
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    listRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.background,
+    },
+    listRowLabel: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    listRowValue: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: colors.textMuted,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 24,
+      gap: 4,
+    },
+    emptyTitle: {
+      ...typography.h3,
+      color: colors.textPrimary,
+    },
+    emptyText: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: colors.textMuted,
+      textAlign: 'center',
+    },
+  });

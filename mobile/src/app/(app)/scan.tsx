@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import {
   analyzeImage,
   compressForUpload,
@@ -25,7 +26,7 @@ import {
   type ScanMode,
 } from '../../lib/detection';
 import { getShelves, type Shelf } from '../../lib/shelf';
-import { card, colors, fonts, radius, ripple, spacing, typography } from '../../theme';
+import { card, fonts, radius, ripple, spacing, typography, type ThemeColors } from '../../theme';
 
 const SCAN_MODES: { value: ScanMode; label: string }[] = [
   { value: 'STOCK_IN', label: 'Stock in' },
@@ -39,6 +40,8 @@ const RECENT_SCANS_WINDOW_DAYS = 90;
 
 export default function ScanScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const businessId = user?.businessId ?? null;
 
   const [shelves, setShelves] = useState<Shelf[]>([]);
@@ -215,6 +218,8 @@ export default function ScanScreen() {
           onScanAnother={handleScanAnother}
           onFreshnessChange={handleFreshnessChange}
           savingDetectionId={savingDetectionId}
+          styles={styles}
+          colors={colors}
         />
       ) : (
         <>
@@ -338,11 +343,15 @@ function ScanResult({
   onScanAnother,
   onFreshnessChange,
   savingDetectionId,
+  styles,
+  colors,
 }: {
   result: DetectionResult;
   onScanAnother: () => void;
   onFreshnessChange: (detectionId: string | undefined, freshness: FreshnessStatus) => void;
   savingDetectionId: string | null;
+  styles: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
 }) {
   const classEntries = Object.entries(result.counts);
 
@@ -423,7 +432,8 @@ function ScanResult({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -470,7 +480,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.lg,
     gap: spacing.sm,
-    ...card(),
+    ...card(colors),
   },
   label: {
     fontFamily: fonts.bodySemiBold,
@@ -699,4 +709,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
   },
-});
+  });

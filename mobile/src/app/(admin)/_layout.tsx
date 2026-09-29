@@ -1,15 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
+import { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { getPostAuthRoute } from '../../lib/routing';
-import { colors } from '../../theme';
+import type { ThemeColors } from '../../theme';
 
 /** Route group for the SYSTEM_ADMIN-only platform area. */
 export default function AdminLayout() {
   const { isAuthenticated, isHydrating, user } = useAuth();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   if (isHydrating) {
     return (
@@ -53,11 +57,12 @@ export default function AdminLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    loading: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+    },
+  });
