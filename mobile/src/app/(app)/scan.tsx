@@ -15,7 +15,9 @@ import { useAuth } from '../../context/AuthContext';
 import {
   analyzeImage,
   compressForUpload,
+  updateDetectionFreshness,
   type DetectionResult,
+  type FreshnessStatus,
   type PickedImage,
   type ScanMode,
 } from '../../lib/detection';
@@ -39,6 +41,7 @@ export default function ScanScreen() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DetectionResult | null>(null);
+  const [savingDetectionId, setSavingDetectionId] = useState<string | null>(null);
 
   const loadShelves = useCallback(async () => {
     if (!businessId) return;
@@ -105,6 +108,34 @@ export default function ScanScreen() {
       setError(err instanceof Error ? err.message : 'Image analysis failed');
     } finally {
       setIsAnalyzing(false);
+    }
+  }
+
+  async function handleFreshnessChange(detectionId: string | undefined, freshness: FreshnessStatus) {
+    if (!detectionId || !result || savingDetectionId) return;
+    setSavingDetectionId(detectionId);
+    setError(null);
+    try {
+      await updateDetectionFreshness(detectionId, freshness);
+      const detections = result.detections.map((detection) =>
+        detection.id === detectionId ? { ...detection, freshness } : detection,
+      );
+      const counts = detections.reduce<DetectionResult['counts']>((summary, detection) => {
+        const key = detection.class_name;
+        summary[key] ||= { fresh: 0, rotten: 0, total: 0 };
+        summary[key].total += 1;
+        if (detection.freshness === 'Fresh') {
+          summary[key].fresh += 1;
+        } else {
+          summary[key].rotten += 1;
+        }
+        return summary;
+      }, {});
+      setResult({ ...result, detections, counts });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to update freshness.');
+    } finally {
+      setSavingDetectionId(null);
     }
   }
 
@@ -216,12 +247,31 @@ export default function ScanScreen() {
         <Text style={styles.hint}>Analyzing image — this can take up to 15 seconds…</Text>
       ) : null}
 
-      {result ? <ScanResult result={result} onScanAnother={handleScanAnother} /> : null}
+      {result ? (
+        <ScanResult
+          result={result}
+          onScanAnother={handleScanAnother}
+          onFreshnessChange={handleFreshnessChange}
+          savingDetectionId={savingDetectionId}
+        />
+      ) : null}
     </ScrollView>
   );
 }
 
-function ScanResult({ result, onScanAnother }: { result: DetectionResult; onScanAnother: () => void }) {
+const FRESHNESS_OPTIONS: FreshnessStatus[] = ['Fresh', 'Medium', 'Spoiled'];
+
+function ScanResult({
+  result,
+  onScanAnother,
+  onFreshnessChange,
+  savingDetectionId,
+}: {
+  result: DetectionResult;
+  onScanAnother: () => void;
+  onFreshnessChange: (detectionId: string | undefined, freshness: FreshnessStatus) => void;
+  savingDetectionId: string | null;
+}) {
   const classEntries = Object.entries(result.counts);
 
   return (
@@ -259,12 +309,35 @@ function ScanResult({ result, onScanAnother }: { result: DetectionResult; onScan
       {result.detections.length > 0 ? (
         <View style={styles.resultSection}>
           <Text style={styles.resultSectionTitle}>Detections</Text>
+          <Text style={styles.resultHint}>Tap a freshness label to correct it.</Text>
           {result.detections.map((detection, index) => (
-            <View key={detection.id ?? index} style={styles.resultRow}>
-              <Text style={styles.resultRowLabel}>{detection.class_name}</Text>
-              <Text style={styles.resultRowValue}>
-                {detection.freshness} · {detection.freshness_confidence_percent}%
-              </Text>
+            <View key={detection.id ?? index} style={styles.detectionRow}>
+              <View style={styles.resultRow}>
+                <Text style={styles.resultRowLabel}>{detection.class_name}</Text>
+                <Text style={styles.resultRowValue}>{detection.freshness_confidence_percent}% confidence</Text>
+              </View>
+              <View style={styles.freshnessChipRow}>
+                {FRESHNESS_OPTIONS.map((option) => {
+                  const isActive = detection.freshness === option;
+                  const isSaving = savingDetectionId === detection.id;
+                  return (
+                    <Pressable
+                      key={option}
+                      style={[styles.freshnessChip, isActive && styles.freshnessChipActive]}
+                      onPress={() => onFreshnessChange(detection.id, option)}
+                      disabled={!detection.id || isSaving}
+                    >
+                      {isSaving && isActive ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                      ) : (
+                        <Text style={[styles.freshnessChipText, isActive && styles.freshnessChipTextActive]}>
+                          {option}
+                        </Text>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
           ))}
         </View>
@@ -450,10 +523,45 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  resultHint: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: -2,
+  },
+  detectionRow: {
+    gap: 6,
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#dcfce7',
+  },
   resultRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 4,
+  },
+  freshnessChipRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  freshnessChip: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    borderRadius: 8,
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  freshnessChipActive: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+  freshnessChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#15803d',
+  },
+  freshnessChipTextActive: {
+    color: '#fff',
   },
   resultRowLabel: {
     fontSize: 14,
