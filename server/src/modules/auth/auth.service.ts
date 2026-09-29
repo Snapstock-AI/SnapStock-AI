@@ -108,6 +108,15 @@ export class AuthService {
       businessRole = membership?.role ?? null;
     }
 
+    if (businessId) {
+      const business = await BusinessRepository.findById(businessId);
+      if (business?.status === "SUSPENDED") {
+        throw new Error(
+          "Your business account has been suspended. Contact support for assistance.",
+        );
+      }
+    }
+
     const token = AuthService.signAccessToken(
       user,
       session.id,
