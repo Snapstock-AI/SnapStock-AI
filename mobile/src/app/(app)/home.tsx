@@ -1,16 +1,10 @@
-import { Redirect } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
+// Auth/business guards live in (app)/_layout.tsx, so this screen only
+// renders once a session with a business is confirmed.
 export default function HomeScreen() {
-  const { user, isAuthenticated, isHydrating, logout } = useAuth();
-
-  if (!isHydrating && !isAuthenticated) {
-    return <Redirect href="/login" />;
-  }
-  if (!isHydrating && isAuthenticated && !user?.businessId) {
-    return <Redirect href="/create-business" />;
-  }
+  const { user, logout } = useAuth();
 
   return (
     <View style={styles.container}>
