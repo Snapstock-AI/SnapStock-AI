@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,13 +10,16 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import {
   countHistoryItems,
   formatHistoryDate,
   getScanHistory,
   type ScanHistoryItem,
 } from '../../lib/detection';
+import { fonts, radius, ripple, spacing, typography, type ThemeColors } from '../../theme';
 
 type RangeOption = { label: string; days: number | null };
 
@@ -27,12 +30,14 @@ const RANGE_OPTIONS: RangeOption[] = [
   { label: 'All time', days: null },
 ];
 
-const statusColors: Record<ScanHistoryItem['status'], { bg: string; text: string }> = {
-  PENDING: { bg: '#fef3c7', text: '#92400e' },
-  PROCESSING: { bg: '#dbeafe', text: '#1d4ed8' },
-  COMPLETED: { bg: '#dcfce7', text: '#15803d' },
-  FAILED: { bg: '#fee2e2', text: '#b91c1c' },
-};
+function statusColors(colors: ThemeColors): Record<ScanHistoryItem['status'], { bg: string; text: string }> {
+  return {
+    PENDING: { bg: colors.warningSoft, text: colors.warning },
+    PROCESSING: { bg: colors.muted, text: colors.info },
+    COMPLETED: { bg: colors.accentSoft, text: colors.accentDark },
+    FAILED: { bg: colors.dangerSoft, text: colors.danger },
+  };
+}
 
 function rangeStart(days: number): string {
   const date = new Date();
@@ -42,6 +47,10 @@ function rangeStart(days: number): string {
 
 export default function ScanHistoryScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const statuses = useMemo(() => statusColors(colors), [colors]);
   const businessId = user?.businessId ?? null;
 
   const [range, setRange] = useState<RangeOption>(RANGE_OPTIONS[1]);
@@ -79,7 +88,7 @@ export default function ScanHistoryScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
           <Text style={styles.backLink}>‹ Back</Text>
         </Pressable>
         <Text style={styles.title}>Scan history</Text>
@@ -91,6 +100,7 @@ export default function ScanHistoryScreen() {
             key={option.label}
             style={[styles.chip, range.label === option.label && styles.chipActive]}
             onPress={() => setRange(option)}
+            android_ripple={ripple}
           >
             <Text style={[styles.chipText, range.label === option.label && styles.chipTextActive]}>
               {option.label}
@@ -103,7 +113,7 @@ export default function ScanHistoryScreen() {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#16a34a" />
+          <ActivityIndicator size="large" color={colors.accent} />
         </View>
       ) : (
         <FlatList
@@ -113,7 +123,7 @@ export default function ScanHistoryScreen() {
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
           ListEmptyComponent={<Text style={styles.emptyText}>No scans found for this range.</Text>}
           renderItem={({ item }) => (
-            <Pressable style={styles.row} onPress={() => setSelected(item)}>
+            <Pressable style={styles.row} onPress={() => setSelected(item)} android_ripple={ripple}>
               <View style={styles.rowMain}>
                 <Text style={styles.rowTitle}>{item.shelf_name}</Text>
                 <Text style={styles.rowMeta}>
@@ -122,8 +132,8 @@ export default function ScanHistoryScreen() {
                 </Text>
                 <Text style={styles.rowTime}>{formatHistoryDate(item.created_at)}</Text>
               </View>
-              <View style={[styles.badge, { backgroundColor: statusColors[item.status].bg }]}>
-                <Text style={[styles.badgeText, { color: statusColors[item.status].text }]}>{item.status}</Text>
+              <View style={[styles.badge, { backgroundColor: statuses[item.status].bg }]}>
+                <Text style={[styles.badgeText, { color: statuses[item.status].text }]}>{item.status}</Text>
               </View>
             </Pressable>
           )}
@@ -132,9 +142,9 @@ export default function ScanHistoryScreen() {
 
       <Modal visible={Boolean(selected)} animationType="slide" onRequestClose={() => setSelected(null)}>
         {selected ? (
-          <View style={styles.modalContainer}>
+          <View style={[styles.modalContainer, { paddingTop: insets.top + spacing.lg }]}>
             <View style={styles.header}>
-              <Pressable onPress={() => setSelected(null)}>
+              <Pressable onPress={() => setSelected(null)} hitSlop={8}>
                 <Text style={styles.backLink}>‹ Close</Text>
               </Pressable>
               <Text style={styles.title}>{selected.shelf_name}</Text>
@@ -180,176 +190,183 @@ export default function ScanHistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: 20,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  backLink: {
-    color: '#16a34a',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  modalSubtitle: {
-    fontSize: 13,
-    color: '#6b7280',
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  chip: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  chipActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-  chipText: {
-    fontSize: 13,
-    color: '#374151',
-  },
-  chipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  error: {
-    color: '#dc2626',
-    fontSize: 13,
-    marginHorizontal: 20,
-    marginBottom: 8,
-  },
-  list: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    gap: 10,
-  },
-  emptyList: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    color: '#6b7280',
-    fontSize: 14,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  rowMain: {
-    flex: 1,
-    gap: 3,
-  },
-  rowTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  rowMeta: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  rowTime: {
-    fontSize: 12,
-    color: '#9ca3af',
-  },
-  badge: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  statGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  statBox: {
-    flexBasis: '47%',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 10,
-    padding: 12,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    marginTop: 2,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
-    paddingHorizontal: 20,
-    marginBottom: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
-    textTransform: 'capitalize',
-  },
-  detailValue: {
-    fontSize: 14,
-    color: '#15803d',
-    fontWeight: '700',
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    backLink: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.accent,
+      fontSize: 14,
+    },
+    title: {
+      ...typography.h2,
+      color: colors.textPrimary,
+    },
+    modalSubtitle: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: colors.textMuted,
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.md,
+    },
+    chipRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.md,
+    },
+    chip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    chipActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    chipText: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    chipTextActive: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.onAccent,
+    },
+    error: {
+      fontFamily: fonts.bodyMedium,
+      color: colors.danger,
+      fontSize: 13,
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.sm,
+    },
+    list: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: 24,
+      gap: spacing.sm,
+    },
+    emptyList: {
+      flexGrow: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyText: {
+      fontFamily: fonts.body,
+      color: colors.textMuted,
+      fontSize: 14,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+      padding: spacing.md,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    rowMain: {
+      flex: 1,
+      gap: 3,
+    },
+    rowTitle: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    rowMeta: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    rowTime: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    badge: {
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3,
+    },
+    badgeText: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 11,
+    },
+    statGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.lg,
+    },
+    statBox: {
+      flexBasis: '47%',
+      backgroundColor: colors.muted,
+      borderRadius: radius.md,
+      padding: spacing.md,
+    },
+    statLabel: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    statValue: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 16,
+      color: colors.textPrimary,
+      marginTop: 2,
+    },
+    sectionTitle: {
+      ...typography.h3,
+      color: colors.textPrimary,
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.sm,
+    },
+    detailRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    detailLabel: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 14,
+      color: colors.textPrimary,
+      textTransform: 'capitalize',
+    },
+    detailValue: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 14,
+      color: colors.accentDark,
+    },
+  });

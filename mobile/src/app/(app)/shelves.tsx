@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import {
   createShelf,
   deleteShelf,
@@ -19,9 +20,12 @@ import {
   updateShelf,
   type Shelf,
 } from '../../lib/shelf';
+import { card, fonts, radius, ripple, spacing, typography, type ThemeColors } from '../../theme';
 
 export default function ShelvesScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const businessId = user?.businessId ?? null;
 
   const [shelves, setShelves] = useState<Shelf[]>([]);
@@ -120,7 +124,7 @@ export default function ShelvesScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -129,7 +133,7 @@ export default function ShelvesScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Shelves</Text>
-        <Pressable style={styles.addButton} onPress={openCreateForm}>
+        <Pressable style={styles.addButton} onPress={openCreateForm} android_ripple={{ color: 'rgba(255,255,255,0.2)' }}>
           <Text style={styles.addButtonText}>+ Add shelf</Text>
         </Pressable>
       </View>
@@ -140,7 +144,7 @@ export default function ShelvesScreen() {
           <TextInput
             style={styles.input}
             placeholder="Shelf name"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={colors.textMuted}
             value={formName}
             onChangeText={setFormName}
           />
@@ -150,6 +154,7 @@ export default function ShelvesScreen() {
                 key={category}
                 style={[styles.categoryChip, formCategory === category && styles.categoryChipActive]}
                 onPress={() => setFormCategory(category)}
+                android_ripple={ripple}
               >
                 <Text
                   style={[
@@ -166,16 +171,17 @@ export default function ShelvesScreen() {
           {formError ? <Text style={styles.error}>{formError}</Text> : null}
 
           <View style={styles.formActions}>
-            <Pressable style={styles.cancelButton} onPress={closeForm} disabled={isSaving}>
+            <Pressable style={styles.cancelButton} onPress={closeForm} disabled={isSaving} android_ripple={ripple}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
               onPress={handleSave}
               disabled={isSaving || !formName.trim()}
+              android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
             >
               {isSaving ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.onAccent} />
               ) : (
                 <Text style={styles.saveButtonText}>{editingShelf ? 'Save changes' : 'Create shelf'}</Text>
               )}
@@ -201,10 +207,10 @@ export default function ShelvesScreen() {
               <Text style={styles.rowCategory}>{item.category}</Text>
             </View>
             <View style={styles.rowActions}>
-              <Pressable onPress={() => openEditForm(item)}>
+              <Pressable onPress={() => openEditForm(item)} hitSlop={8}>
                 <Text style={styles.rowActionEdit}>Edit</Text>
               </Pressable>
-              <Pressable onPress={() => confirmDelete(item)}>
+              <Pressable onPress={() => confirmDelete(item)} hitSlop={8}>
                 <Text style={styles.rowActionDelete}>Delete</Text>
               </Pressable>
             </View>
@@ -215,173 +221,178 @@ export default function ShelvesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  addButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  form: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: '#f3f4f6',
-    gap: 10,
-  },
-  formTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#fff',
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryChip: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#fff',
-  },
-  categoryChipActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-  categoryChipText: {
-    fontSize: 13,
-    color: '#374151',
-  },
-  categoryChipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  formActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  cancelButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-  },
-  cancelButtonText: {
-    color: '#374151',
-    fontWeight: '600',
-  },
-  saveButton: {
-    flex: 2,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#16a34a',
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  error: {
-    color: '#dc2626',
-    fontSize: 13,
-    marginHorizontal: 20,
-    marginBottom: 8,
-  },
-  list: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    gap: 10,
-  },
-  emptyList: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    color: '#6b7280',
-    fontSize: 14,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  rowInfo: {
-    gap: 2,
-  },
-  rowName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  rowCategory: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  rowActions: {
-    flexDirection: 'row',
-    gap: 14,
-  },
-  rowActionEdit: {
-    color: '#2563eb',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  rowActionDelete: {
-    color: '#dc2626',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    headerTitle: {
+      ...typography.title,
+      color: colors.textPrimary,
+    },
+    addButton: {
+      backgroundColor: colors.accent,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      overflow: 'hidden',
+    },
+    addButtonText: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.onAccent,
+      fontSize: 13,
+    },
+    form: {
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.md,
+      padding: spacing.md,
+      borderRadius: radius.md,
+      gap: spacing.sm,
+      ...card(colors),
+    },
+    formTitle: {
+      ...typography.h3,
+      color: colors.textPrimary,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      fontFamily: fonts.body,
+      fontSize: 15,
+      color: colors.textPrimary,
+      backgroundColor: colors.surface,
+    },
+    categoryRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    categoryChip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      backgroundColor: colors.surface,
+    },
+    categoryChipActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    categoryChipText: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    categoryChipTextActive: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.onAccent,
+    },
+    formActions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    cancelButton: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cancelButtonText: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.textSecondary,
+    },
+    saveButton: {
+      flex: 2,
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+      borderRadius: radius.sm,
+      backgroundColor: colors.accent,
+      overflow: 'hidden',
+    },
+    saveButtonDisabled: {
+      opacity: 0.6,
+    },
+    saveButtonText: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.onAccent,
+    },
+    error: {
+      fontFamily: fonts.bodyMedium,
+      color: colors.danger,
+      fontSize: 13,
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.sm,
+    },
+    list: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: 24,
+      gap: spacing.sm,
+    },
+    emptyList: {
+      flexGrow: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyText: {
+      fontFamily: fonts.body,
+      color: colors.textMuted,
+      fontSize: 14,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: spacing.md,
+      borderRadius: radius.md,
+      ...card(colors),
+    },
+    rowInfo: {
+      gap: 2,
+    },
+    rowName: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    rowCategory: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    rowActions: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    rowActionEdit: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.info,
+      fontSize: 13,
+    },
+    rowActionDelete: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.danger,
+      fontSize: 13,
+    },
+  });

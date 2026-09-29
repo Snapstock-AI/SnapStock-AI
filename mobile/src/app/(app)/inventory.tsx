@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { getInventory, type InventoryItem } from '../../lib/dashboard';
+import { card, fonts, radius, ripple, spacing, typography, type ThemeColors } from '../../theme';
 
 const RANGE_OPTIONS = [
   { days: 7, label: '7 days' },
@@ -9,15 +11,20 @@ const RANGE_OPTIONS = [
   { days: 30, label: '30 days' },
 ] as const;
 
-const STATUS_COLORS: Record<InventoryItem['status'], { bg: string; text: string }> = {
-  Fresh: { bg: '#dcfce7', text: '#15803d' },
-  Ripe: { bg: '#fef3c7', text: '#b45309' },
-  Spoiled: { bg: '#fee2e2', text: '#b91c1c' },
-  Unknown: { bg: '#f3f4f6', text: '#4b5563' },
-};
+function statusColors(colors: ThemeColors): Record<InventoryItem['status'], { bg: string; text: string }> {
+  return {
+    Fresh: { bg: colors.accentSoft, text: colors.accentDark },
+    Ripe: { bg: colors.warningSoft, text: colors.warning },
+    Spoiled: { bg: colors.dangerSoft, text: colors.danger },
+    Unknown: { bg: colors.muted, text: colors.textSecondary },
+  };
+}
 
 export default function InventoryScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const badgeColors = useMemo(() => statusColors(colors), [colors]);
   const businessId = user?.businessId ?? null;
 
   const [windowDays, setWindowDays] = useState<number>(7);
@@ -60,6 +67,7 @@ export default function InventoryScreen() {
               key={option.days}
               style={[styles.chip, windowDays === option.days && styles.chipActive]}
               onPress={() => setWindowDays(option.days)}
+              android_ripple={ripple}
             >
               <Text style={[styles.chipText, windowDays === option.days && styles.chipTextActive]}>
                 {option.label}
@@ -74,7 +82,7 @@ export default function InventoryScreen() {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#16a34a" />
+          <ActivityIndicator size="large" color={colors.accent} />
         </View>
       ) : (
         <>
@@ -88,13 +96,13 @@ export default function InventoryScreen() {
               <Text style={styles.emptyText}>No detections in this window yet. Scan a shelf to populate inventory.</Text>
             }
             renderItem={({ item }) => {
-              const colors = STATUS_COLORS[item.status] ?? STATUS_COLORS.Unknown;
+              const badge = badgeColors[item.status] ?? badgeColors.Unknown;
               return (
                 <View style={styles.row}>
                   <View style={styles.rowTop}>
                     <Text style={styles.rowName}>{item.product}</Text>
-                    <View style={[styles.badge, { backgroundColor: colors.bg }]}>
-                      <Text style={[styles.badgeText, { color: colors.text }]}>{item.status}</Text>
+                    <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+                      <Text style={[styles.badgeText, { color: badge.text }]}>{item.status}</Text>
                     </View>
                   </View>
                   <Text style={styles.rowMeta}>
@@ -114,110 +122,114 @@ export default function InventoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  subtitle: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  chipRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  chip: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  chipActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-  chipText: {
-    fontSize: 13,
-    color: '#374151',
-  },
-  chipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  error: {
-    color: '#dc2626',
-    fontSize: 13,
-    marginHorizontal: 20,
-    marginBottom: 8,
-  },
-  list: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    gap: 10,
-  },
-  emptyList: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyText: {
-    color: '#6b7280',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  row: {
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    gap: 4,
-  },
-  rowTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  rowName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  rowMeta: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  badge: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  lowStock: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#b45309',
-    marginTop: 2,
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    header: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+      gap: spacing.sm,
+    },
+    headerTitle: {
+      ...typography.title,
+      color: colors.textPrimary,
+    },
+    subtitle: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    chipRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    chip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+    },
+    chipActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    chipText: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    chipTextActive: {
+      fontFamily: fonts.bodySemiBold,
+      color: colors.onAccent,
+    },
+    error: {
+      fontFamily: fonts.bodyMedium,
+      color: colors.danger,
+      fontSize: 13,
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.sm,
+    },
+    list: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: 24,
+      gap: spacing.sm,
+    },
+    emptyList: {
+      flexGrow: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 40,
+    },
+    emptyText: {
+      fontFamily: fonts.body,
+      color: colors.textMuted,
+      fontSize: 14,
+      textAlign: 'center',
+    },
+    row: {
+      padding: spacing.md,
+      borderRadius: radius.md,
+      gap: 4,
+      ...card(colors),
+    },
+    rowTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    rowName: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    rowMeta: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    badge: {
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3,
+    },
+    badgeText: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 11,
+    },
+    lowStock: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 12,
+      color: colors.warning,
+      marginTop: 2,
+    },
+  });
