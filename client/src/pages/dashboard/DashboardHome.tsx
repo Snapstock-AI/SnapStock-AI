@@ -257,7 +257,7 @@ export default function DashboardHome() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"

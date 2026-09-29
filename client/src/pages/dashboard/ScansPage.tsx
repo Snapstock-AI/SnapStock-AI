@@ -43,6 +43,7 @@ export default function ScansPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   const [previewImage, setPreviewImage] = useState<File | null>(null);
+  const [previewSource, setPreviewSource] = useState<"camera" | "upload">("camera");
 
   const [result, setResult] = useState<DetectionResult | null>(null);
 
@@ -210,6 +211,8 @@ export default function ScansPage() {
 
    
     const file = event.target.files?.[0];
+    // Reset so picking the same file again still fires onChange.
+    event.target.value = "";
 
     if (!file) return;
 
@@ -219,6 +222,7 @@ export default function ScansPage() {
     }
 
     setPreviewImage(file);
+    setPreviewSource("upload");
     setResult(null);
 
     setError("");
@@ -351,6 +355,7 @@ export default function ScansPage() {
             onClose={() => setShowCamera(false)}
             onCapture={(file) => {
               setPreviewImage(file);
+              setPreviewSource("camera");
               setShowCamera(false);
             }}
           />
@@ -370,16 +375,32 @@ export default function ScansPage() {
             />
 
             <div className="mt-6 flex justify-center gap-4">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setPreviewImage(null);
-                  setShowCamera(true);
-                }}
-              >
-                Retake
-              </Button>
+              {previewSource === "upload" ? (
+                <Button variant="secondary" asChild>
+                  <label className="cursor-pointer">
+                    <Upload className="h-4 w-4" />
+                    Choose another
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                    />
+                  </label>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setPreviewImage(null);
+                    setShowCamera(true);
+                  }}
+                >
+                  <Camera className="h-4 w-4" />
+                  Retake
+                </Button>
+              )}
 
               <Button
                 type="button"
