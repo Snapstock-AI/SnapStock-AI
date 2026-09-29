@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { getDashboard, type DashboardData } from '../../lib/dashboard';
-import { card, colors, radius, ripple, spacing, typography } from '../../theme';
+import { card, colors, fonts, radius, ripple, spacing, typography } from '../../theme';
 
 const RANGE_OPTIONS = [
   { days: 7, label: '7 days' },
@@ -87,7 +87,7 @@ export default function HomeScreen() {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.accent} />
         </View>
       ) : (
         <>
@@ -198,10 +198,9 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   analyticsLink: {
-    ...typography.caption,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
+    color: colors.accent,
   },
   email: {
     ...typography.caption,
@@ -220,18 +219,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   chipText: {
     ...typography.caption,
     color: colors.textSecondary,
   },
   chipTextActive: {
-    color: colors.textOnPrimary,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    color: colors.onAccent,
   },
   error: {
+    fontFamily: fonts.bodyMedium,
     color: colors.danger,
     fontSize: 13,
   },
@@ -244,13 +244,12 @@ const styles = StyleSheet.create({
     flexBasis: '47%',
     flexGrow: 1,
     borderRadius: radius.md,
-    backgroundColor: colors.surface,
     padding: spacing.lg,
-    ...card(1),
+    ...card(),
   },
   kpiValue: {
-    ...typography.h2,
-    fontSize: 24,
+    ...typography.title,
+    fontSize: 22,
     color: colors.textPrimary,
   },
   kpiLabel: {
@@ -260,42 +259,43 @@ const styles = StyleSheet.create({
   },
   topAlert: {
     borderRadius: radius.md,
-    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: colors.dangerBorder,
+    backgroundColor: colors.dangerSoft,
     padding: spacing.md,
     gap: 2,
   },
   topAlertTitle: {
-    ...typography.caption,
-    fontWeight: '700',
-    color: '#b91c1c',
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+    color: colors.danger,
   },
   topAlertMessage: {
+    fontFamily: fonts.body,
     fontSize: 12,
-    color: '#7f1d1d',
+    color: '#991b1b',
   },
   scanButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
     borderRadius: radius.md,
     paddingVertical: spacing.lg,
     alignItems: 'center',
     overflow: 'hidden',
-    ...card(2),
   },
   scanButtonText: {
-    color: colors.textOnPrimary,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    color: colors.onAccent,
     fontSize: 15,
   },
   section: {
     gap: spacing.sm,
-    backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: spacing.lg,
-    ...card(1),
+    ...card(),
   },
   sectionTitle: {
-    ...typography.caption,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
     color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -308,10 +308,12 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.background,
   },
   listRowLabel: {
+    fontFamily: fonts.bodyMedium,
     fontSize: 14,
     color: colors.textPrimary,
   },
   listRowValue: {
+    fontFamily: fonts.body,
     fontSize: 13,
     color: colors.textMuted,
   },
@@ -325,6 +327,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   emptyText: {
+    fontFamily: fonts.body,
     fontSize: 13,
     color: colors.textMuted,
     textAlign: 'center',

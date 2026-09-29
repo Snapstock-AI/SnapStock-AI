@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
-import { ActivityIndicator, Platform, StyleSheet, View, type ColorValue } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, type ColorValue } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import { colors } from '../../theme';
+import { colors, fonts } from '../../theme';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -24,7 +24,7 @@ export default function AppLayout() {
   if (isHydrating) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -45,7 +45,7 @@ export default function AppLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: styles.tabLabel,
         tabBarStyle: styles.tabBar,
@@ -101,13 +101,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.background,
   },
-  tabBar: Platform.select({
-    ios: { borderTopColor: colors.border },
-    android: { elevation: 8, borderTopWidth: 0 },
-    default: {},
-  }),
+  tabBar: {
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    elevation: 0,
+  },
   tabLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemiBold,
   },
 });

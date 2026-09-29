@@ -1,29 +1,39 @@
 import { Platform, type ViewStyle } from 'react-native';
 
-// Shared design tokens for the UI polish pass. Values lean toward each
-// platform's own conventions (see card()/Platform.select below) rather than
-// porting the web client's Tailwind palette 1:1.
+// Business-SaaS design system (via the ui-ux-pro-max skill: Flat Design style,
+// "industrial slate + stock green" palette, Poppins/Open Sans typography).
+// Flat Design deliberately avoids shadows/gradients/3D effects — depth comes
+// from color and borders, not elevation.
 export const colors = {
-  primary: '#16a34a',
-  primaryDark: '#15803d',
-  primarySoft: '#f0fdf4',
-  primaryBorder: '#bbf7d0',
+  primary: '#334155',
+  primaryDark: '#1e293b',
+  onPrimary: '#ffffff',
+  secondary: '#475569',
+  onSecondary: '#ffffff',
+  accent: '#059669',
+  accentDark: '#047857',
+  accentSoft: '#ecfdf5',
+  onAccent: '#ffffff',
 
-  background: '#f7f8fa',
+  background: '#f8fafc',
   surface: '#ffffff',
-  border: '#e5e7eb',
+  border: '#e6e8ea',
 
-  textPrimary: '#111827',
-  textSecondary: '#4b5563',
-  textMuted: '#6b7280',
+  textPrimary: '#0f172a',
+  textSecondary: '#334155',
+  textMuted: '#475569',
   textOnPrimary: '#ffffff',
 
   danger: '#dc2626',
   dangerSoft: '#fef2f2',
   dangerBorder: '#fecaca',
+  onDanger: '#ffffff',
   warning: '#d97706',
   warningSoft: '#fffbeb',
   info: '#2563eb',
+
+  muted: '#f2f3f4',
+  ring: '#334155',
 } as const;
 
 export const spacing = {
@@ -42,27 +52,39 @@ export const radius = {
   full: 999,
 } as const;
 
+// Poppins for headings/emphasis, Open Sans for body — loaded via
+// @expo-google-fonts/{poppins,open-sans} and gated behind a splash screen
+// in app/_layout.tsx. Falls back to the system font on the (brief) frame
+// before fonts finish loading.
+export const fonts = {
+  heading: 'Poppins_600SemiBold',
+  headingBold: 'Poppins_700Bold',
+  body: 'OpenSans_400Regular',
+  bodyMedium: 'OpenSans_500Medium',
+  bodySemiBold: 'OpenSans_600SemiBold',
+} as const;
+
 export const typography = {
-  title: { fontSize: 24, fontWeight: '700' as const },
-  h2: { fontSize: 18, fontWeight: '700' as const },
-  h3: { fontSize: 15, fontWeight: '600' as const },
-  body: { fontSize: 14, fontWeight: '400' as const },
-  caption: { fontSize: 12, fontWeight: '500' as const },
+  title: { fontFamily: fonts.headingBold, fontSize: 22 },
+  h2: { fontFamily: fonts.heading, fontSize: 18 },
+  h3: { fontFamily: fonts.heading, fontSize: 15 },
+  body: { fontFamily: fonts.body, fontSize: 14 },
+  bodyMedium: { fontFamily: fonts.bodyMedium, fontSize: 14 },
+  caption: { fontFamily: fonts.bodyMedium, fontSize: 12 },
 };
 
-/** Platform-native elevation: a soft shadow on iOS, Material elevation on Android. */
-export function card(elevation: 1 | 2 | 3 = 1): ViewStyle {
-  return Platform.select<ViewStyle>({
-    ios: {
-      shadowColor: '#0f172a',
-      shadowOffset: { width: 0, height: elevation },
-      shadowOpacity: 0.06 + elevation * 0.01,
-      shadowRadius: elevation * 4,
-    },
-    android: { elevation: elevation * 2 },
-    default: {},
-  })!;
+/**
+ * Flat Design has no shadows/elevation — this exists only to keep a stable
+ * card-surface API (border + background) as screens get restyled, without
+ * every screen repeating the same three lines.
+ */
+export function card(): ViewStyle {
+  return {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  };
 }
 
 /** Ripple config for Pressable's android_ripple prop; no-op shape on iOS. */
-export const ripple = { color: 'rgba(22, 163, 74, 0.12)' };
+export const ripple = { color: 'rgba(5, 150, 105, 0.12)' };
