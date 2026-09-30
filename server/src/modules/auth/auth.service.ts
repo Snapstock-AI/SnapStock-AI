@@ -22,6 +22,20 @@ import { InvitationService } from "../business/invitation.service";
 const ACCESS_TOKEN_TTL = "1d";
 const REFRESH_TOKEN_DAYS = 30;
 
+// FR-AUTH-001 business rule 1: at least 8 characters with a letter and a number.
+export function assertPasswordPolicy(password: unknown) {
+  if (
+    typeof password !== "string" ||
+    password.length < 8 ||
+    !/[A-Za-z]/.test(password) ||
+    !/\d/.test(password)
+  ) {
+    throw new Error(
+      "Password must be at least 8 characters and include a letter and a number.",
+    );
+  }
+}
+
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export class AuthService {
@@ -131,7 +145,10 @@ export class AuthService {
   }
 
   //REGISTER USER
-  static async register(data: RegisterDTO) {
+  static async register(input: RegisterDTO) {
+    assertPasswordPolicy(input.password);
+    const data = { ...input, email: input.email.trim().toLowerCase() };
+
     const existingUser = await AuthRepository.findByEmailIncludingDeleted(
       data.email,
     );
@@ -483,6 +500,8 @@ export class AuthService {
   }
 
   static async resetPassword(data: ResetPasswordDTO) {
+    assertPasswordPolicy(data.password);
+
     const record = await AuthRepository.findPasswordResetToken(data.token);
 
     if (!record) {

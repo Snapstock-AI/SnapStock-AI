@@ -2,6 +2,9 @@ import request from "supertest";
 import app from "../../../src/app";
 import { DetectionService } from "../../../src/modules/detection/detection.service";
 
+// Uploads are checked server-side for an image signature (NFR-SEC-004.3).
+const JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+
 jest.mock("../../../src/modules/detection/detection.service", () => ({
   DetectionService: { analyze: jest.fn() },
 }));
@@ -61,7 +64,7 @@ describe("POST /detection/analyze", () => {
       .post("/detection/analyze")
       .field("businessId", "business-123")
       .field("shelfId", "shelf-123")
-      .attach("file", Buffer.from("fake-image"), "shelf.jpg");
+      .attach("file", JPEG_BYTES, "shelf.jpg");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ success: true, data: result });
@@ -90,7 +93,7 @@ describe("POST /detection/analyze", () => {
     const response = await request(app)
       .post("/detection/analyze")
       .field("shelfId", "shelf-123")
-      .attach("file", Buffer.from("fake-image"), "shelf.jpg");
+      .attach("file", JPEG_BYTES, "shelf.jpg");
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({ success: false, message: "Business ID is required." });
@@ -105,7 +108,7 @@ describe("POST /detection/analyze", () => {
     const response = await request(app)
       .post("/detection/analyze")
       .field("businessId", "business-123")
-      .attach("file", Buffer.from("fake-image"), "shelf.jpg");
+      .attach("file", JPEG_BYTES, "shelf.jpg");
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({ success: false, message: "Shelf ID is required." });
@@ -121,7 +124,7 @@ describe("POST /detection/analyze", () => {
       .post("/detection/analyze")
       .field("businessId", "business-123")
       .field("shelfId", "shelf-123")
-      .attach("file", Buffer.from("fake-image"), "shelf.jpg");
+      .attach("file", JPEG_BYTES, "shelf.jpg");
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({ success: false, message: "AI service unavailable" });
