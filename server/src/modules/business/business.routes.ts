@@ -25,5 +25,9 @@ router.get("/:businessId/dashboard", DashboardController.dashboard);
 router.get("/:businessId/analytics", DashboardController.analytics);
 router.get("/:businessId/inventory", DashboardController.inventory);
 router.get("/:businessId/alerts", DashboardController.alerts);
+router.patch(
+  "/:businessId/alerts/:alertId/resolve",
+  DashboardController.resolveAlert,
+);
 
 export default router;
