@@ -7,6 +7,7 @@ import authRoutes from "./modules/auth/auth.routes";
 import detectionRoutes from "./modules/detection/detection.routes";
 import businessRoutes from "./modules/business/business.routes";
 import shelfRoutes from "./modules/shelf/shelf.routes";
+import { metricsHandler, metricsMiddleware } from "./shared/metrics";
 
 // NFR-SEC-001.3: outside production any origin is accepted for local development; in
 // production only CLIENT_URL / CORS_ORIGINS are, and with neither set cross-origin
@@ -28,6 +29,7 @@ const app = express();
 app.use(helmet());
 app.use(cors(corsOptions()));
 app.use(express.json());
+app.use(metricsMiddleware);
 
 app.get("/health", (_req, res) => {
   res.status(200).json({
@@ -35,6 +37,8 @@ app.get("/health", (_req, res) => {
     service: "snapstock-backend",
   });
 });
+
+app.get("/metrics", metricsHandler);
 
 app.use("/auth", authRoutes);
 app.use("/detection", detectionRoutes);
