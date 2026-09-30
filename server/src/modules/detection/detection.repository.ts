@@ -186,11 +186,19 @@ export class DetectionRepository {
 
         if (change.quantity < change.product.low_stock_threshold) {
           await manager.query(
-            `INSERT INTO alerts (business_id, product_id, type, message, active)
-             VALUES ($1, $2, 'LOW_STOCK', $3, TRUE)
+            `INSERT INTO alerts
+               (business_id, product_id, type, severity, title, message, dedupe_key, evidence_at, active)
+             VALUES ($1, $2, 'LOW_STOCK', 'warning', $3, $4, $5, CURRENT_TIMESTAMP, TRUE)
              ON CONFLICT (business_id, product_id, type) WHERE (active = TRUE)
-             DO UPDATE SET message = EXCLUDED.message, updated_at = CURRENT_TIMESTAMP`,
-            [businessId, change.product.id, alertMessage],
+             DO UPDATE SET message = EXCLUDED.message, title = EXCLUDED.title,
+                           evidence_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`,
+            [
+              businessId,
+              change.product.id,
+              `Low stock: ${change.product.name}`,
+              alertMessage,
+              `low_stock:${change.product.id}`,
+            ],
           );
         } else {
           await manager.query(
