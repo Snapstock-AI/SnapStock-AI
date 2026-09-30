@@ -1,3 +1,4 @@
+import threading
 from collections import defaultdict
 from ultralytics import YOLO
 from keras import Model
@@ -16,7 +17,21 @@ from app.config import (
 )
 
 
+# The SQS worker thread and HTTP requests share the same YOLO/Keras models; running them
+# concurrently is not thread-safe and only competes for the same CPU, so serialize inference.
+_INFERENCE_LOCK = threading.Lock()
+
+
 def analyze_image(
+    detection_model: YOLO,
+    freshness_model: Model,
+    image_bytes: bytes,
+) -> AnalysisResponse:
+    with _INFERENCE_LOCK:
+        return _analyze_image(detection_model, freshness_model, image_bytes)
+
+
+def _analyze_image(
     detection_model: YOLO,
     freshness_model: Model,
     image_bytes: bytes,
