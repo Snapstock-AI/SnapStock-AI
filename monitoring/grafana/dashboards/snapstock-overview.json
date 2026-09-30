@@ -1,0 +1,104 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Prod health probe success",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "probe_success{job=\"snapstock-health-prod\"}",
+          "legendFormat": "up",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "title": "Prod probe latency (s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "probe_duration_seconds{job=\"snapstock-health-prod\"}",
+          "legendFormat": "duration",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "API request rate (by env)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum by (env) (rate(snapstock_http_requests_total[5m]))",
+          "legendFormat": "{{env}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "API p95 latency (s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, env) (rate(snapstock_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{env}} p95",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "EC2 node CPU (via SSH tunnel + node_exporter)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",job=\"ec2-node-via-tunnel\"}[5m])) * 100)",
+          "legendFormat": "CPU % busy",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "EC2 memory available ratio",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "node_memory_MemAvailable_bytes{job=\"ec2-node-via-tunnel\"} / node_memory_MemTotal_bytes{job=\"ec2-node-via-tunnel\"}",
+          "legendFormat": "mem available",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["snapstock"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "browser",
+  "title": "SnapStock overview",
+  "uid": "snapstock-overview",
+  "version": 1
+}
