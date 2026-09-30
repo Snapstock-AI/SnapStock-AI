@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useAuth, type Business } from '@/context/AuthContext'
 import { apiRequest } from '@/lib/api'
-import { getAlertsCount } from '@/lib/dashboard'
+import { ALERTS_CHANGED_EVENT, getAlertsCount } from '@/lib/dashboard'
 import { usePollingData } from '@/hooks/usePollingData'
 import PageTransition from '@/components/dashboard/PageTransition'
 import { cn } from '@/lib/utils'
@@ -200,11 +200,17 @@ export default function DashboardLayout() {
     return res.data?.count ?? 0
   }, [businessId])
 
-  const { data: alertCount } = usePollingData<number>(
+  const { data: alertCount, refresh: refreshAlertCount } = usePollingData<number>(
     loadAlertCount,
     Boolean(businessId),
     businessId ? `alerts-count:${businessId}` : undefined,
   )
+
+  useEffect(() => {
+    const onAlertsChanged = () => void refreshAlertCount(true)
+    window.addEventListener(ALERTS_CHANGED_EVENT, onAlertsChanged)
+    return () => window.removeEventListener(ALERTS_CHANGED_EVENT, onAlertsChanged)
+  }, [refreshAlertCount])
 
   useEffect(() => {
     if (isOwner === false && location.pathname === '/dashboard/analytics') {
