@@ -31,6 +31,29 @@ services:
     volumes:
       - pgadmin-data:/var/lib/pgadmin
 
+  # Local AWS (S3 + SQS) for event-driven scan analysis. Resources are created by
+  # infra/localstack/init-aws.sh; the backend and AI service reach it on localhost:4566.
+  localstack:
+    container_name: snapstock-localstack
+    image: localstack/localstack:3.8.1
+    restart: unless-stopped
+    environment:
+      SERVICES: s3,sqs
+      AWS_DEFAULT_REGION: ${AWS_REGION:-ap-south-1}
+      S3_UPLOAD_BUCKET: ${S3_UPLOAD_BUCKET:-snapstock-uploads}
+      S3_CORS_ORIGINS: ${S3_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack-data:/var/lib/localstack
+      - ./infra/localstack/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal sqs list-queues | grep -q snapstock-analysis-results"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
 volumes:
   postgres-data:
   pgadmin-data:
+  localstack-data:
