@@ -54,6 +54,12 @@ function receiveImage(req: Request, res: Response, next: NextFunction) {
   });
 }
 
+// Event-driven analysis (web client): S3 upload -> SQS -> AI worker -> SQS -> backend.
+router.post("/upload-url", authMiddleware, DetectionController.createUploadUrl);
+router.post("/queue", authMiddleware, DetectionController.queueScan);
+router.get("/status/:scanId", authMiddleware, DetectionController.getScanStatus);
+
+// Synchronous analysis over HTTP (fallback when the pipeline is not configured; mobile app).
 router.post("/analyze", authMiddleware, receiveImage, DetectionController.analyze);
 router.get("/history", authMiddleware, DetectionController.history);
 router.patch(
