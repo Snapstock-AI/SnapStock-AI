@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Camera, Upload } from "lucide-react";
 import { Link } from "react-router";
 import { analyzeImage, countHistoryItems, formatHistoryDate, getScanHistory } from "../../lib/detection";
+import type { AnalysisStage } from "../../lib/detection";
 import { updateDetectionFreshness } from "../../lib/detection";
 import type {
   DetectionResult,
@@ -48,6 +49,7 @@ export default function ScansPage() {
   const [result, setResult] = useState<DetectionResult | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const [analysisStage, setAnalysisStage] = useState<AnalysisStage | null>(null);
 
   const [error, setError] = useState("");
 
@@ -190,6 +192,7 @@ export default function ScansPage() {
       businessId!,
       token,
       scanMode,
+      { onProgress: setAnalysisStage },
     );
 
     setResult(data);
@@ -203,6 +206,7 @@ export default function ScansPage() {
 
   } finally {
     setLoading(false);
+    setAnalysisStage(null);
   }
 };
 
@@ -444,7 +448,13 @@ export default function ScansPage() {
             <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
               <div className="flex flex-col items-center gap-3">
                 <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent" />
-                <p className="font-medium text-white">Analyzing...</p>
+                <p className="font-medium text-white">
+                  {analysisStage === "uploading"
+                    ? "Uploading image..."
+                    : analysisStage === "queued"
+                      ? "Queued for analysis..."
+                      : "Analyzing..."}
+                </p>
               </div>
             </div>
           )}
