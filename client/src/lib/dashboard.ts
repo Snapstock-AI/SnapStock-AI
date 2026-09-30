@@ -67,15 +67,24 @@ export type InventoryData = {
 
 export type DashboardAlert = {
   id: string
+  type: 'LOW_STOCK' | 'SPOILAGE' | 'FRESHNESS_RISK' | 'STALE_SHELF'
   severity: 'critical' | 'warning' | 'info'
   title: string
   message: string
   createdAt: string
+  status: 'active' | 'resolved'
+  resolvedAt?: string
+  /** 'user' = the owner resolved it, 'auto' = the condition cleared on its own. */
+  resolvedBy?: 'user' | 'auto'
+  resolvedByName?: string
+  /** When the alert was first raised; createdAt tracks the latest evidence. */
+  raisedAt?: string
   shelfName?: string
   productLabel?: string
 }
 
 export type AlertsData = {
+  /** Number of active alerts; `alerts` also holds recently resolved ones. */
   count: number
   alerts: DashboardAlert[]
 }
@@ -106,6 +115,19 @@ export async function getInventory(businessId: string, days = 7) {
 
 export async function getAlerts(businessId: string) {
   return apiRequest<AlertsData>(`/businesses/${businessId}/alerts`, {}, true)
+}
+
+/** Fired after an alert is resolved so badges can refresh without waiting for the next poll. */
+export const ALERTS_CHANGED_EVENT = 'snapstock:alerts-changed'
+
+export async function resolveAlert(businessId: string, alertId: string) {
+  const res = await apiRequest<{ id: string; resolvedAt: string }>(
+    `/businesses/${businessId}/alerts/${alertId}/resolve`,
+    { method: 'PATCH' },
+    true,
+  )
+  window.dispatchEvent(new CustomEvent(ALERTS_CHANGED_EVENT))
+  return res
 }
 
 export async function getAlertsCount(businessId: string) {
