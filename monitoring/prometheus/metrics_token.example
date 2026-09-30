@@ -1,0 +1,4 @@
+# Placeholder so the volume mount always exists.
+# Put the same secret as server METRICS_TOKEN on one line when scrape auth is enabled.
+# This file is gitignored once you add a real token; keep the empty placeholder in git via:
+# if needed, use metrics_token.example and copy.

@@ -1,0 +1,56 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  # Local API (when server runs on the host, e.g. PORT=5000)
+  - job_name: snapstock-api-local
+    metrics_path: /metrics
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["host.docker.internal:5000"]
+        labels:
+          env: local
+
+  # Production API over public HTTPS (no PEM required for app metrics)
+  # After setting METRICS_TOKEN on the API, add under this job:
+  #   authorization:
+  #     type: Bearer
+  #     credentials_file: /etc/prometheus/metrics_token
+  - job_name: snapstock-api-prod
+    scheme: https
+    metrics_path: /snapstock-backend-http/metrics
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["snapstock.rashmika.dev"]
+        labels:
+          env: production
+
+  # Uptime probe of production /health via blackbox exporter
+  - job_name: snapstock-health-prod
+    metrics_path: /probe
+    params:
+      module: [http_2xx_json]
+    static_configs:
+      - targets:
+          - https://snapstock.rashmika.dev/snapstock-backend-http/health
+        labels:
+          env: production
+          check: health
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  # EC2 host metrics via SSH tunnel (./tunnel.sh → localhost:9100)
+  # Only scrapes successfully when the PEM tunnel is up and node_exporter listens on the host.
+  - job_name: ec2-node-via-tunnel
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["host.docker.internal:9100"]
+        labels:
+          env: production
+          job_kind: node_exporter

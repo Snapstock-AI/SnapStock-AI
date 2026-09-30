@@ -1,0 +1,19 @@
+# Optional: copy to cloudwatch.yml when AWS keys are set in monitoring/.env
+#   cp cloudwatch.yml.example cloudwatch.yml
+# Then restart: docker compose up -d grafana
+#
+# Grafana substitutes env vars when the file is loaded inside the container.
+apiVersion: 1
+
+datasources:
+  - name: CloudWatch
+    uid: cloudwatch
+    type: cloudwatch
+    access: proxy
+    editable: true
+    jsonData:
+      authType: keys
+      defaultRegion: ap-southeast-1
+    secureJsonData:
+      accessKey: ${AWS_ACCESS_KEY_ID}
+      secretKey: ${AWS_SECRET_ACCESS_KEY}
