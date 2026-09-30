@@ -1,0 +1,26 @@
+{{- if eq .Values.exposure "nlb-eip" }}
+# Internet-facing NLB with a fixed Elastic IP, created by the AWS Load Balancer Controller.
+# nginx in the frontend serves the SPA and proxies /snapstock-backend-http/ to the backend.
+apiVersion: v1
+kind: Service
+metadata:
+  name: snapstock-public
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: external
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+    service.beta.kubernetes.io/aws-load-balancer-subnets: {{ required "publicService.subnet is required" .Values.publicService.subnet | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-eip-allocations: {{ required "publicService.eipAllocation is required" .Values.publicService.eipAllocation | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: HTTP
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: /health
+spec:
+  type: LoadBalancer
+  loadBalancerClass: service.k8s.aws/nlb
+  selector:
+    app: snapstock-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: {{ .Values.frontend.port }}
+{{- end }}

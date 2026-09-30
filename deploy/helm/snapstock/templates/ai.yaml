@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snapstock-ai
+  labels:
+    app: snapstock-ai
+spec:
+  selector:
+    matchLabels:
+      app: snapstock-ai
+  template:
+    metadata:
+      labels:
+        app: snapstock-ai
+    spec:
+      serviceAccountName: snapstock-ai
+      nodeSelector:
+        {{- toYaml .Values.ai.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.ai.tolerations | nindent 8 }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: snapstock-ai
+      containers:
+        - name: ai
+          image: "{{ .Values.ai.image.repository }}:{{ required "ai.image.tag is required" .Values.ai.image.tag }}"
+          imagePullPolicy: {{ .Values.ai.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.ai.port }}
+          env:
+            - name: CUDA_VISIBLE_DEVICES
+              value: "-1"
+            - name: TF_CPP_MIN_LOG_LEVEL
+              value: "2"
+            {{- include "snapstock.eventsEnv" . | nindent 12 }}
+          # First start downloads two models (Hugging Face): allow up to ~15 minutes.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.ai.port }}
+            periodSeconds: 10
+            failureThreshold: 90
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.ai.port }}
+            periodSeconds: 10
+            timeoutSeconds: 10
+          # Generous: CPU inference can briefly starve /health, and a restart would reload models.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.ai.port }}
+            periodSeconds: 30
+            timeoutSeconds: 30
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.ai.resources | nindent 12 }}
+---
+# ClusterIP only: the AI service is never exposed publicly.
+apiVersion: v1
+kind: Service
+metadata:
+  name: snapstock-ai
+spec:
+  selector:
+    app: snapstock-ai
+  ports:
+    - port: {{ .Values.ai.port }}
+      targetPort: {{ .Values.ai.port }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: snapstock-ai
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: snapstock-ai
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: snapstock-ai
+spec:
+  scaleTargetRef:
+    name: snapstock-ai
+  minReplicaCount: {{ .Values.ai.scaling.minReplicas }}
+  maxReplicaCount: {{ .Values.ai.scaling.maxReplicas }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: {{ .Values.ai.scaling.scaleDownStabilizationSeconds }}
+  triggers:
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: "{{ .Values.ai.scaling.cpuUtilization }}"
+    {{- if .Values.events.enabled }}
+    # Event-driven: add replicas while analysis jobs are waiting.
+    - type: aws-sqs-queue
+      authenticationRef:
+        name: snapstock-keda-aws
+      metadata:
+        queueURL: {{ .Values.events.jobQueueUrl | quote }}
+        queueLength: "{{ .Values.ai.scaling.queueLength }}"
+        awsRegion: {{ .Values.events.region | quote }}
+    {{- end }}
+{{- if .Values.events.enabled }}
+---
+# KEDA uses its own operator identity (IRSA) to read the queue depth.
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: snapstock-keda-aws
+spec:
+  podIdentity:
+    provider: aws
+    identityOwner: keda
+{{- end }}

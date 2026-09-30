@@ -153,3 +153,29 @@ jobs:
           aws ssm get-command-invocation \
             --command-id "$COMMAND_ID" \
             --instance-id "$INSTANCE_ID"
+
+  deploy-frontend-eks:
+    # Runs only after the EKS stack exists: set repo variables EKS_CLUSTER_NAME and EKS_DEPLOY_ROLE_ARN.
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy')) && vars.EKS_CLUSTER_NAME != ''
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.EKS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Roll out frontend on EKS
+        run: |
+          aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${{ vars.AWS_REGION }}"
+          helm upgrade snapstock deploy/helm/snapstock \
+            --namespace snapstock \
+            --reset-then-reuse-values \
+            --set frontend.image.repository=ghcr.io/snapstock-ai/snapstock-client \
+            --set frontend.image.tag=dev-${{ github.sha }} \
+            --atomic --timeout 25m
+          kubectl -n snapstock get pods -o wide
