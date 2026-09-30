@@ -24,6 +24,13 @@ export class Scan {
   })
   status!: ScanStatus;
   @Column({ type: "text", nullable: true }) error_message!: string | null;
+  // Event-driven analysis: uploaded S3 object and the final result summary.
+  @Column({ type: "text", nullable: true }) image_key!: string | null;
+  @Column({ type: "varchar", length: 100, nullable: true })
+  image_content_type!: string | null;
+  @Column({ type: "varchar", length: 255, nullable: true })
+  image_original_name!: string | null;
+  @Column({ type: "jsonb", nullable: true }) result_json!: unknown | null;
   @CreateDateColumn({ type: "timestamptz" }) created_at!: Date;
   @Column({ type: "timestamptz", nullable: true }) completed_at!: Date | null;
 }

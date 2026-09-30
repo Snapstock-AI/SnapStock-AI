@@ -4,6 +4,19 @@ import { Scan, ScanMode, ScanStatus } from "../../entities/Scan";
 import { calculateInventoryQuantity } from "./inventory.utils";
 import db from "../../config/db";
 
+export type ScanRecord = {
+  id: string;
+  business_id: string;
+  shelf_id: string;
+  user_id: string;
+  scan_mode: ScanMode;
+  status: ScanStatus;
+  error_message: string | null;
+  image_key: string | null;
+  image_content_type: string | null;
+  result_json: unknown | null;
+};
+
 export class DetectionRepository {
   static async findScanHistory(
     businessId: string,
@@ -258,6 +271,48 @@ export class DetectionRepository {
       [status, errorMessage ?? null, scanId],
     );
     return result.rows[0];
+  }
+
+  // ---- Event-driven analysis ------------------------------------------------
+
+  static async updateScanImageMetadata(
+    scanId: string,
+    imageKey: string,
+    contentType: string,
+    originalName: string,
+  ) {
+    await db.query(
+      `UPDATE scans SET image_key = $1, image_content_type = $2, image_original_name = $3
+       WHERE id = $4`,
+      [imageKey, contentType, originalName, scanId],
+    );
+  }
+
+  static async getScanById(scanId: string): Promise<ScanRecord | undefined> {
+    const result = await db.query(
+      `SELECT id, business_id, shelf_id, user_id, scan_mode, status, error_message,
+              image_key, image_content_type, result_json
+       FROM scans WHERE id = $1`,
+      [scanId],
+    );
+    return result.rows[0];
+  }
+
+  /** Atomically moves a scan from PENDING to PROCESSING; false if someone else already did. */
+  static async claimScanForQueue(scanId: string): Promise<boolean> {
+    const result = await db.query(
+      `UPDATE scans SET status = 'PROCESSING', error_message = NULL
+       WHERE id = $1 AND status = 'PENDING' RETURNING id`,
+      [scanId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  static async saveScanResult(scanId: string, result: unknown) {
+    await db.query(`UPDATE scans SET result_json = $1 WHERE id = $2`, [
+      JSON.stringify(result),
+      scanId,
+    ]);
   }
 
   static async createDetection(

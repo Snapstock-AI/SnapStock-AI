@@ -13,6 +13,7 @@ jest.mock("../../../src/modules/detection/detection.repository", () => ({
     findOrCreateProduct: jest.fn(),
     createDetection: jest.fn(),
     applyInventoryChange: jest.fn(),
+    saveScanResult: jest.fn(),
   },
 }));
 

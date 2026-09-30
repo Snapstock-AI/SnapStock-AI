@@ -6,6 +6,8 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 import { AppDataSource } from "./config/data-source";
 import app from "./app";
+import { isEventPipelineEnabled } from "./config/aws";
+import { DetectionService } from "./modules/detection/detection.service";
 
 const PORT = process.env.PORT || 5000;
 
@@ -15,6 +17,13 @@ AppDataSource.initialize()
 
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
+
+      if (isEventPipelineEnabled()) {
+        DetectionService.startResultConsumer();
+        console.log("Event-driven analysis enabled: consuming the SQS results queue");
+      } else {
+        console.log("Event-driven analysis disabled (S3/SQS not configured): synchronous /detection/analyze only");
+      }
     });
   })
   .catch((err) => {
