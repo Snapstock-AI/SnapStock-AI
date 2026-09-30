@@ -122,6 +122,17 @@ export class DetectionRepository {
     scanMode: ScanMode,
   ) {
     return AppDataSource.transaction(async (manager) => {
+      const scanRows = (await manager.query(
+        `SELECT business_id FROM scans WHERE id = $1 FOR UPDATE`,
+        [scanId],
+      )) as Array<{ business_id: string }>;
+      if (!scanRows[0]) {
+        throw new Error("Scan not found");
+      }
+      if (scanRows[0].business_id !== businessId) {
+        throw new Error("Scan does not belong to this business");
+      }
+
       const rows = (await manager.query(
         `SELECT
            p.id,

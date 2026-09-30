@@ -1,3 +1,4 @@
+import { errorMessage, errorStatus } from "../../shared/utils/errors";
 import { Response } from "express";
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
 import { DashboardService } from "./dashboard.service";
@@ -13,7 +14,7 @@ export class DashboardController {
       );
       return res.status(200).json({ success: true, data });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -27,7 +28,7 @@ export class DashboardController {
       );
       return res.status(200).json({ success: true, data });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -41,7 +42,7 @@ export class DashboardController {
       );
       return res.status(200).json({ success: true, data });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -59,7 +60,7 @@ export class DashboardController {
       }
       return res.status(200).json({ success: true, data });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 }
