@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snapstock-backend
+  labels:
+    app: snapstock-backend
+spec:
+  # replicas are owned by the KEDA ScaledObject
+  selector:
+    matchLabels:
+      app: snapstock-backend
+  template:
+    metadata:
+      labels:
+        app: snapstock-backend
+    spec:
+      serviceAccountName: snapstock-backend
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: snapstock-backend
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ required "backend.image.tag is required" .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.backend.port }}
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "{{ .Values.backend.port }}"
+            - name: AI_SERVICE_URL
+              value: "http://snapstock-ai:{{ .Values.ai.port }}"
+            - name: MAX_UPLOAD_BYTES
+              value: "{{ .Values.events.maxUploadBytes }}"
+            {{- include "snapstock.eventsEnv" . | nindent 12 }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.secretName }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.backend.port }}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: snapstock-backend
+spec:
+  selector:
+    app: snapstock-backend
+  ports:
+    - port: {{ .Values.backend.port }}
+      targetPort: {{ .Values.backend.port }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: snapstock-backend
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: snapstock-backend
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: snapstock-backend
+spec:
+  scaleTargetRef:
+    name: snapstock-backend
+  minReplicaCount: {{ .Values.backend.scaling.minReplicas }}
+  maxReplicaCount: {{ .Values.backend.scaling.maxReplicas }}
+  triggers:
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: "{{ .Values.backend.scaling.cpuUtilization }}"

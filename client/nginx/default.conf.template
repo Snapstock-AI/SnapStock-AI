@@ -1,0 +1,34 @@
+server {
+    listen 8080;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Image uploads for shelf scans / detection.
+    client_max_body_size 20m;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location = /health {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 'ok';
+    }
+
+    # The SPA is built with VITE_API_URL=/snapstock-backend-http. Behind the AWS ALB (which cannot
+    # rewrite paths) nginx strips that prefix and forwards to the backend Service.
+    # BACKEND_UPSTREAM is substituted at container start (nginx envsubst templates).
+    location /snapstock-backend-http/ {
+        proxy_pass http://${BACKEND_UPSTREAM}/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+    }
+}
