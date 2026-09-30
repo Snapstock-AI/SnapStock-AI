@@ -461,7 +461,8 @@ describe("ScansPage", () => {
       mockShelf,
       businessId,
       "test-token",
-      "STOCK_IN"
+      "STOCK_IN",
+      expect.objectContaining({ onProgress: expect.any(Function) }),
     );
   });
 

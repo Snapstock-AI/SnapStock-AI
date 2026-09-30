@@ -179,7 +179,144 @@ export async function updateDetectionFreshness(
   return body.data as { id: string; freshness: FreshnessStatus };
 }
 
+export type AnalysisStage = "uploading" | "queued" | "analyzing";
+
+export type AnalyzeOptions = {
+  onProgress?: (stage: AnalysisStage) => void;
+  pollIntervalMs?: number;
+  timeoutMs?: number;
+};
+
+type ScanUploadTicket = {
+  scanId: string;
+  upload: { url: string; fields: Record<string, string> };
+};
+
+type ScanStatus = {
+  scanId: string;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  data: DetectionResult | null;
+  errorMessage?: string;
+};
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function readJson(response: Response) {
+  try {
+    return await response.json();
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Analyzes a shelf image.
+ *
+ * Event-driven (default): request a presigned S3 POST, upload the image straight to S3,
+ * queue the scan (backend publishes IMAGE_UPLOADED to SQS, the AI worker consumes it) and
+ * poll the scan status until the result is stored.
+ *
+ * Falls back to the synchronous POST /detection/analyze when the server reports that the
+ * S3/SQS pipeline is not configured (503 EVENT_PIPELINE_DISABLED).
+ */
 export async function analyzeImage(
+  file: File,
+  shelf: Shelf,
+  businessId: string,
+  token: string,
+  scanMode: ScanMode = "STOCK_IN",
+  options: AnalyzeOptions = {},
+): Promise<DetectionResult> {
+  const { onProgress, pollIntervalMs = 1500, timeoutMs = 180_000 } = options;
+  const authHeaders = { Authorization: `Bearer ${token}` };
+
+  onProgress?.("uploading");
+
+  const ticketResponse = await fetch(`${API_URL}/detection/upload-url`, {
+    method: "POST",
+    headers: { ...authHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      businessId,
+      shelfId: shelf.id,
+      scanMode,
+      fileName: file.name,
+      contentType: file.type,
+    }),
+  });
+  const ticketBody = await readJson(ticketResponse);
+
+  if (ticketBody.code === "EVENT_PIPELINE_DISABLED") {
+    return analyzeImageSync(file, shelf, businessId, token, scanMode);
+  }
+  if (!ticketResponse.ok || ticketBody.success === false) {
+    throw new Error(ticketBody.message || "Unable to start the image upload.");
+  }
+
+  const ticket = ticketBody.data as ScanUploadTicket;
+
+  // Direct browser -> S3 upload. The presigned fields must precede the file.
+  const form = new FormData();
+  for (const [name, value] of Object.entries(ticket.upload.fields)) {
+    form.append(name, value);
+  }
+  form.append("file", file);
+
+  const uploadResponse = await fetch(ticket.upload.url, { method: "POST", body: form });
+  if (!uploadResponse.ok) {
+    throw new Error(
+      uploadResponse.status === 400 || uploadResponse.status === 403
+        ? "The image was rejected by storage. Use a JPEG, PNG or WebP image under 10 MB."
+        : "Image upload failed. Please try again.",
+    );
+  }
+
+  const queueResponse = await fetch(`${API_URL}/detection/queue`, {
+    method: "POST",
+    headers: { ...authHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify({ scanId: ticket.scanId }),
+  });
+  const queueBody = await readJson(queueResponse);
+  if (!queueResponse.ok || queueBody.success === false) {
+    throw new Error(queueBody.message || "Unable to queue the image for analysis.");
+  }
+
+  onProgress?.("queued");
+
+  const deadline = Date.now() + timeoutMs;
+  let announcedAnalyzing = false;
+
+  while (Date.now() < deadline) {
+    await sleep(pollIntervalMs);
+
+    const statusResponse = await fetch(`${API_URL}/detection/status/${ticket.scanId}`, {
+      headers: authHeaders,
+    });
+    const statusBody = await readJson(statusResponse);
+    if (!statusResponse.ok || statusBody.success === false) {
+      throw new Error(statusBody.message || "Unable to check the analysis status.");
+    }
+
+    const status = statusBody.data as ScanStatus;
+
+    if (status.status === "COMPLETED" && status.data) {
+      return status.data;
+    }
+    if (status.status === "FAILED") {
+      throw new Error(status.errorMessage || "Image analysis failed.");
+    }
+    if (!announcedAnalyzing) {
+      announcedAnalyzing = true;
+      onProgress?.("analyzing");
+    }
+  }
+
+  throw new Error(
+    "Analysis is taking longer than expected. Check Scan history in a moment for the result.",
+  );
+}
+
+/** Synchronous analysis (multipart upload to the backend, which calls the AI service). */
+export async function analyzeImageSync(
   file: File,
   shelf: Shelf,
   businessId: string,
