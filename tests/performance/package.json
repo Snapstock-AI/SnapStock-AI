@@ -1,0 +1,18 @@
+{
+  "name": "snapstock-performance",
+  "private": true,
+  "version": "1.0.0",
+  "description": "k6 performance, load and resource tests for SnapStock-AI (SRS NFR-PERF-001..005)",
+  "type": "module",
+  "scripts": {
+    "seed": "node tools/seed.mjs",
+    "seed:capacity": "node tools/seed.mjs --capacity",
+    "test": "node tools/run.mjs",
+    "test:local-stack": "node tools/run.mjs --with-stack",
+    "test:load": "node tools/run.mjs --only=concurrent-scan,concurrent-reads --with-stack",
+    "test:resources": "node tools/resource-usage.mjs --with-stack"
+  },
+  "dependencies": {
+    "pg": "^8.22.0"
+  }
+}
