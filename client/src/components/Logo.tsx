@@ -48,7 +48,12 @@ export default function Logo({
   }
 
   return (
-    <Link to={href} viewTransition className={cn('flex items-center gap-2.5', className)}>
+    <Link
+      to={href}
+      viewTransition
+      aria-label="SnapStock-AI home"
+      className={cn('flex items-center gap-2.5', className)}
+    >
       {content}
     </Link>
   )

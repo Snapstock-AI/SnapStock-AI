@@ -34,7 +34,7 @@ export default function HowItWorks() {
               key={step.num}
               className="rounded-2xl border border-border/80 bg-card p-6 shadow-sm"
             >
-              <span className="text-4xl font-semibold tracking-tight text-primary/25">{step.num}</span>
+              <span aria-hidden="true" className="text-4xl font-semibold tracking-tight text-primary/25">{step.num}</span>
               <h3 className="mt-3 text-lg font-semibold tracking-tight">{step.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
             </div>

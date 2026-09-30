@@ -374,6 +374,7 @@ export default function DashboardLayout() {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
+                    data-testid="user-menu"
                     aria-label="Account menu"
                     className="rounded-full ring-offset-2 ring-offset-background transition hover:ring-2 hover:ring-primary/30"
                   >
