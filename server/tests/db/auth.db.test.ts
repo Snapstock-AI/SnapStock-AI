@@ -50,9 +50,8 @@ describe("registration (FR-AUTH-001)", () => {
     expect(rows[0].system_role).toBe("BUSINESS_USER");
   });
 
-  it("rejects a duplicate email in any letter case and leaves a single row", async () => {
-    const email = uniqueEmail();
-    await AuthService.register({ full_name: "First", email, password: PASSWORD });
+  it("rejects a duplicate of a verified account in any letter case and leaves a single row", async () => {
+    const { email } = await registerAndVerify();
 
     await expect(
       AuthService.register({ full_name: "Second", email: email.toUpperCase(), password: PASSWORD }),
@@ -60,6 +59,30 @@ describe("registration (FR-AUTH-001)", () => {
 
     const { rows } = await pool.query("SELECT 1 FROM users WHERE email = $1", [email.toLowerCase()]);
     expect(rows).toHaveLength(1);
+  });
+
+  it("lets an unverified account sign up again: keeps one row, updates it and resends verification", async () => {
+    const email = uniqueEmail();
+    await AuthService.register({ full_name: "First", email, password: PASSWORD });
+    const mailsBefore = (sendVerificationEmail as jest.Mock).mock.calls.length;
+
+    const result = await AuthService.register({
+      full_name: "Second",
+      email: email.toUpperCase(),
+      password: "Fresh2025",
+    });
+
+    expect(result.message).toMatch(/resent the verification email/i);
+    expect((sendVerificationEmail as jest.Mock).mock.calls.length).toBe(mailsBefore + 1);
+
+    const { rows } = await pool.query(
+      "SELECT full_name, password_hash, email_verified FROM users WHERE email = $1",
+      [email.toLowerCase()],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].full_name).toBe("Second");
+    expect(rows[0].email_verified).toBe(false);
+    expect(await bcrypt.compare("Fresh2025", rows[0].password_hash)).toBe(true);
   });
 
   it("stores a verification token that expires within one hour", async () => {
