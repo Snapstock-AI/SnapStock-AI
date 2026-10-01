@@ -91,10 +91,9 @@ jobs:
             curl -fsS http://127.0.0.1:8000/health && break
             sleep 10
           done
-          python3 - <<'PY'
-          from PIL import Image
-          Image.new("RGB", (320, 240), (200, 30, 30)).save("/tmp/test.jpg")
-          PY
+          # The runner's system Python has no Pillow; the image does, so build the test JPEG in there.
+          docker exec ai python -c 'from PIL import Image; Image.new("RGB", (320, 240), (200, 30, 30)).save("/tmp/test.jpg")'
+          docker cp ai:/tmp/test.jpg /tmp/test.jpg
           code=$(curl -s -o /tmp/analyze.json -w '%{http_code}' -F "file=@/tmp/test.jpg;type=image/jpeg" http://127.0.0.1:8000/analyze)
           echo "analyze HTTP $code"; head -c 300 /tmp/analyze.json; echo
           sleep 3
