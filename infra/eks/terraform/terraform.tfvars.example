@@ -1,7 +1,7 @@
 # Copy to terraform.tfvars (git-ignored). Never commit real values.
 
-# Must be a snapstock-client image built AFTER the nginx proxy change (see README).
-frontend_image_tag = "dev-<sha>"
+# App versions are released by CI/CD. Only for a first-time install (empty ECR) or to pin a version:
+# image_tags = { backend = "dev-<sha>", frontend = "dev-<sha>", ai = "dev-<sha>" }
 
 jwt_secret       = "change-me-long-random"
 google_client_id = ""
