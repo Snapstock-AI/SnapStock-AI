@@ -19,10 +19,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -42,7 +39,8 @@
         "expo-image-picker",
         {
           "cameraPermission": "SnapStock uses the camera to scan shelves for inventory and freshness detection.",
-          "photosPermission": "SnapStock uses your photo library so you can select an existing shelf photo to scan."
+          "photosPermission": "SnapStock uses your photo library so you can select an existing shelf photo to scan.",
+          "microphonePermission": false
         }
       ]
     ],
