@@ -1,9 +1,21 @@
 /**
- * Base URL of the SnapStock-AI Express backend (see server/src/app.ts).
+ * Public URL of the Express backend. The backend is the only service the app
+ * talks to; it owns access to RDS and the private AI service.
  *
- * Set EXPO_PUBLIC_API_URL in a local .env file to point at your backend:
- *  - Android emulator reaching a host machine dev server: http://10.0.2.2:5000
- *  - iOS simulator reaching a host machine dev server:    http://localhost:5000
- *  - Physical device on the same network:                 http://<your-lan-ip>:5000
+ * Expo replaces EXPO_PUBLIC_API_URL while bundling. Production must never fall
+ * back to localhost because localhost on a phone means the phone itself.
  */
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:5000';
+const LOCAL_API_URL = 'http://localhost:5000';
+const DEPLOYED_API_URL = 'http://13.201.24.199/snapstock-backend-http';
+
+function resolveApiUrl(value: string | undefined): string {
+  const url = (value?.trim() || (__DEV__ ? LOCAL_API_URL : DEPLOYED_API_URL)).replace(/\/+$/, '');
+
+  if (!/^https?:\/\//i.test(url)) {
+    throw new Error('EXPO_PUBLIC_API_URL must be an absolute http(s) URL.');
+  }
+
+  return url;
+}
+
+export const API_URL = resolveApiUrl(process.env.EXPO_PUBLIC_API_URL);
