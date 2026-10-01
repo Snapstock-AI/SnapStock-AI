@@ -141,6 +141,10 @@ jobs:
     needs: build
     if: vars.EKS_CLUSTER_NAME != ''
     runs-on: ubuntu-latest
+    # One release at a time across the backend, frontend and AI pipelines (Helm locks the release).
+    concurrency:
+      group: snapstock-eks-release
+      cancel-in-progress: false
     # No `environment:` here: it would change the OIDC subject and break the role trust (dev branch only).
     steps:
       - name: Checkout repository

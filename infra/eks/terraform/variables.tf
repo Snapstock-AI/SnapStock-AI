@@ -64,21 +64,19 @@ variable "db_multi_az" {
 
 # ---- Application ----------------------------------------------------------------
 
-variable "backend_image_tag" {
-  description = "Tag in the snapstock-server ECR repo."
-  type        = string
-  default     = "v1"
-}
+# App versions are released by CI/CD (helm upgrade --set <svc>.image.tag=dev-<sha>).
+# Terraform keeps whatever is deployed (helm_release reuse_values). Set image tags here only
+# for a first-time install or to deliberately pin a version, e.g.
+#   image_tags = { backend = "dev-<sha>", frontend = "dev-<sha>", ai = "dev-<sha>" }
+variable "image_tags" {
+  description = "Optional image tag overrides per service (backend, frontend, ai). Empty = keep the deployed versions."
+  type        = map(string)
+  default     = {}
 
-variable "frontend_image_tag" {
-  description = "Must be a snapstock-client build that contains the nginx /snapstock-backend-http proxy template."
-  type        = string
-}
-
-variable "ai_image_tag" {
-  description = "Tag in the snapstock-ai-service ECR repo (CPU-only PyTorch build)."
-  type        = string
-  default     = "v1"
+  validation {
+    condition     = alltrue([for k in keys(var.image_tags) : contains(["backend", "frontend", "ai"], k)])
+    error_message = "image_tags keys must be backend, frontend or ai."
+  }
 }
 
 variable "certificate_arn" {

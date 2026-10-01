@@ -1,5 +1,19 @@
 locals {
   app_url = "http://${aws_eip.app.public_ip}"
+
+  # Repositories are always ECR. Tags are only sent when explicitly overridden: CI/CD owns
+  # app versions, and reuse_values keeps the tag CI deployed last.
+  app_images = {
+    for svc, repo in {
+      backend  = "snapstock-server"
+      frontend = "snapstock-client"
+      ai       = "snapstock-ai-service"
+    } :
+    svc => merge(
+      { repository = aws_ecr_repository.app[repo].repository_url },
+      contains(keys(var.image_tags), svc) ? { tag = var.image_tags[svc] } : {},
+    )
+  }
 }
 
 resource "kubernetes_namespace_v1" "app" {
@@ -41,10 +55,14 @@ resource "helm_release" "snapstock" {
   timeout = 1800
   wait    = true
 
+  # CI/CD changes image tags with `helm upgrade --reset-then-reuse-values`. Reusing the
+  # release's values means a later `terraform apply` keeps those tags instead of reverting them.
+  reuse_values = true
+
   values = [yamlencode({
-    backend  = { image = { repository = aws_ecr_repository.app["snapstock-server"].repository_url, tag = var.backend_image_tag } }
-    frontend = { image = { repository = aws_ecr_repository.app["snapstock-client"].repository_url, tag = var.frontend_image_tag } }
-    ai       = { image = { repository = aws_ecr_repository.app["snapstock-ai-service"].repository_url, tag = var.ai_image_tag } }
+    backend  = { image = local.app_images.backend }
+    frontend = { image = local.app_images.frontend }
+    ai       = { image = local.app_images.ai }
     events = {
       enabled        = true
       region         = var.region

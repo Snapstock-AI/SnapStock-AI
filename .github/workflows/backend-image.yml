@@ -123,6 +123,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # EKS pulls application images from ECR (see infra/eks/terraform/ecr.tf).
+      - name: Configure AWS credentials (EKS)
+        if: vars.EKS_CLUSTER_NAME != ''
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.EKS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to ECR (EKS)
+        if: vars.EKS_CLUSTER_NAME != ''
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Build and push backend image
         uses: docker/build-push-action@v6
         with:
@@ -131,6 +144,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/snapstock-ai/snapstock-server:dev-${{ github.sha }}
+            ${{ steps.ecr.outputs.registry && format('{0}/snapstock-server:dev-{1}', steps.ecr.outputs.registry, github.sha) || '' }}
 
   deploy-backend:
     # Legacy single-server (K3s/OpenChoreo) deploy over SSM. Off by default since the app moved to EKS;
@@ -173,6 +187,11 @@ jobs:
     if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy')) && vars.EKS_CLUSTER_NAME != ''
     needs: build-backend
     runs-on: ubuntu-latest
+    # App releases are owned by CI: only the image tag changes; infrastructure stays with Terraform.
+    # One release at a time across the backend, frontend and AI pipelines (Helm locks the release).
+    concurrency:
+      group: snapstock-eks-release
+      cancel-in-progress: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -189,7 +208,6 @@ jobs:
           helm upgrade snapstock deploy/helm/snapstock \
             --namespace snapstock \
             --reset-then-reuse-values \
-            --set backend.image.repository=ghcr.io/snapstock-ai/snapstock-server \
             --set backend.image.tag=dev-${{ github.sha }} \
             --atomic --timeout 25m
           kubectl -n snapstock get pods -o wide
