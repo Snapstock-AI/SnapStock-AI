@@ -2,20 +2,18 @@ import { NavLink, useLocation, useNavigate } from 'react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle,
-  BarChart3,
   Bell,
   Camera,
   ChevronDown,
-  History,
   LayoutDashboard,
   LogOut,
   Package,
   Plus,
   Search,
   Settings,
+  ShoppingBasket,
   Users,
 } from 'lucide-react'
-import Logo from '@/components/Logo'
 import ThemeToggle from '@/components/ThemeToggle'
 import NoBusinessWorkspace from '@/components/dashboard/NoBusinessWorkspace'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -44,19 +42,10 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-
-const applications = [
-  { to: '/dashboard/inventory', label: 'Inventory', icon: Package },
-  { to: '/dashboard/scans', label: 'Scans', icon: Camera, end: true as const },
-  { to: '/dashboard/scans/history', label: 'History', icon: History },
-  { to: '/dashboard/alerts', label: 'Alerts', icon: AlertTriangle },
-]
-
-const components = [
-  { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/dashboard/shelves', label: 'Shelves', icon: Package },
-  { to: '/dashboard/settings', label: 'Settings', icon: Settings },
-]
+import { Separator } from '@/components/ui/separator'
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import AppSidebar from '@/components/dashboard/AppSidebar'
+import { homeNav, isNavActive, manageNav } from '@/components/dashboard/nav'
 
 const workspacePromptPaths = [
   '/dashboard',
@@ -66,48 +55,6 @@ const workspacePromptPaths = [
   '/dashboard/alerts',
   '/dashboard/analytics',
 ]
-
-function SidebarLink({
-  to,
-  label,
-  icon: Icon,
-  end,
-}: {
-  to: string
-  label: string
-  icon: typeof LayoutDashboard
-  end?: boolean
-}) {
-  return (
-    <li>
-      <NavLink
-        to={to}
-        end={end}
-        viewTransition
-        className={({ isActive }) =>
-          cn(
-            'group mr-[17px] flex items-center gap-2 rounded-r-[60px] py-3 pl-[30px] pr-[30px] text-base leading-[27px] transition-all duration-200',
-            isActive
-              ? 'fd-nav-active !text-white'
-              : 'text-fd-body hover:translate-x-0.5 hover:bg-muted/70 hover:text-fd-ink',
-          )
-        }
-      >
-        {({ isActive }) => (
-          <>
-            <Icon
-              className={cn(
-                'h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110',
-                isActive ? 'text-white' : 'text-fd-muted group-hover:text-primary',
-              )}
-            />
-            <span className="truncate">{label}</span>
-          </>
-        )}
-      </NavLink>
-    </li>
-  )
-}
 
 export default function DashboardLayout() {
   const navigate = useNavigate()
@@ -159,19 +106,18 @@ export default function DashboardLayout() {
     }
   }
 
-  const searchableLinks = useMemo(() => {
-    const links = [
-      { to: '/dashboard', label: 'Dashboard', keywords: 'home overview' },
-      ...applications.map((link) => ({ ...link, keywords: '' })),
-      ...components
-        .filter((link) => isOwner || link.to !== '/dashboard/analytics')
-        .map((link) => ({ ...link, keywords: '' })),
-    ]
-    if (isOwner) {
-      links.push({ to: '/dashboard/invitations', label: 'Team', keywords: 'invite employees' })
-    }
-    return links
-  }, [isOwner])
+  const searchableLinks = useMemo(
+    () =>
+      [...homeNav, ...manageNav]
+        .filter((link) => isOwner || !link.ownerOnly)
+        .map((link) => ({
+          to: link.to,
+          label: link.label,
+          keywords:
+            link.to === '/dashboard' ? 'home overview' : link.to === '/dashboard/invitations' ? 'invite employees' : '',
+        })),
+    [isOwner],
+  )
 
   const searchResults = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -229,152 +175,132 @@ export default function DashboardLayout() {
     navigate(to, { viewTransition: true })
   }
 
-  const pageTitle = useMemo(() => {
-    const all = [
-      { to: '/dashboard', label: 'Dashboard', end: true },
-      ...applications,
-      ...components,
-      { to: '/dashboard/invitations', label: 'Team' },
-    ]
-    return (
-      [...all]
-        .sort((a, b) => b.to.length - a.to.length)
-        .find((link) =>
-          'end' in link && link.end
-            ? location.pathname === link.to
-            : location.pathname === link.to ||
-              location.pathname.startsWith(`${link.to}/`),
-        )?.label ?? 'Dashboard'
-    )
-  }, [location.pathname])
+  const pageTitle = useMemo(
+    () =>
+      [...homeNav, ...manageNav]
+        .sort((x, y) => y.to.length - x.to.length)
+        .find((link) => isNavActive(location.pathname, link))?.label ?? 'Dashboard',
+    [location.pathname],
+  )
 
   const badge = alertCount ?? 0
 
   return (
-    <div className="min-h-dvh bg-background">
-      <header className="fixed inset-x-0 top-0 z-40 hidden h-20 bg-background md:block">
-        <div className="flex h-full items-stretch border-b border-border">
-          <div className="flex w-[260px] shrink-0 items-center bg-white px-[30px] dark:bg-sidebar">
-            <Logo />
-          </div>
+    <SidebarProvider
+      style={{ '--sidebar-width': '16rem', '--header-height': '3.5rem' } as React.CSSProperties}
+    >
+      <AppSidebar isOwner={isOwner} alertCount={badge} user={user} onLogout={handleLogout} />
 
-          <div className="grid min-w-0 flex-1 grid-cols-[minmax(max-content,1fr)_minmax(0,32rem)_minmax(max-content,1fr)] items-center gap-6 px-6 lg:px-[35px]">
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  disabled={switchingWorkspace}
-                  className="flex h-11 max-w-[220px] items-center justify-self-start gap-2 rounded-[60px] border border-border bg-white px-4 text-left text-sm transition hover:bg-muted/40 disabled:opacity-60 dark:bg-card"
-                >
-                  <div className="min-w-0 leading-tight">
-                    <p className="truncate font-medium text-fd-ink">
+      <SidebarInset className="min-w-0">
+        <header className="sticky top-0 z-30 flex h-(--header-height) shrink-0 items-center gap-2 border-b border-border bg-background/90 backdrop-blur safe-top md:rounded-t-xl">
+          <div className="flex w-full min-w-0 items-center gap-1 px-3 sm:gap-2 lg:px-6">
+            <SidebarTrigger className="-ml-1 size-9" aria-label="Toggle sidebar" />
+            <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4" />
+            <span className="truncate text-base font-medium text-foreground">{pageTitle}</span>
+
+            <div className="ml-auto flex items-center gap-1 sm:gap-2">
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={switchingWorkspace}
+                    className="hidden h-9 max-w-[220px] items-center gap-2 rounded-lg border border-border bg-card px-3 text-left text-sm shadow-xs transition hover:bg-muted disabled:opacity-60 md:flex"
+                  >
+                    <span className="min-w-0 truncate font-medium text-foreground">
                       {activeWorkspace?.business_name || 'Workspace'}
-                    </p>
-                    <p className="truncate text-xs text-fd-muted">
+                    </span>
+                    <span className="hidden truncate text-xs text-muted-foreground xl:inline">
                       {activeWorkspace?.role || user?.businessRole || 'Member'}
-                    </p>
-                  </div>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-fd-muted" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-[260px] border-0 fd-shadow">
-                <DropdownMenuLabel>Switch workspace</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {workspaces.length === 0 ? (
-                  <DropdownMenuItem disabled className="text-muted-foreground">
-                    No workspaces yet
-                  </DropdownMenuItem>
-                ) : (
-                  workspaces.map((workspace) => (
-                    <DropdownMenuItem
-                      key={workspace.id}
-                      onClick={() => handleSwitchWorkspace(workspace.id)}
-                      className={cn(
-                        workspace.id === businessId && 'bg-muted font-medium',
-                      )}
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate">{workspace.business_name}</p>
-                        <p className="truncate text-xs text-muted-foreground">{workspace.role}</p>
-                      </div>
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[260px]">
+                  <DropdownMenuLabel>Switch workspace</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {workspaces.length === 0 ? (
+                    <DropdownMenuItem disabled className="text-muted-foreground">
+                      No workspaces yet
                     </DropdownMenuItem>
-                  ))
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/onboarding/business')}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create new business
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <div ref={searchRef} className="relative w-full">
-              <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-fd-muted" />
-              <input
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value)
-                  setSearchOpen(true)
-                }}
-                onFocus={() => setSearchOpen(true)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchResults[0]) {
-                    e.preventDefault()
-                    goToSearchResult(searchResults[0].to)
-                  }
-                  if (e.key === 'Escape') {
-                    setSearchOpen(false)
-                    setQuery('')
-                  }
-                }}
-                placeholder="Search pages…"
-                aria-label="Search dashboard pages"
-                className="h-11 w-full rounded-[60px] border border-border bg-white px-6 pr-11 text-sm text-fd-ink outline-none placeholder:text-fd-muted fd-shadow-input dark:bg-card"
-              />
-              {searchOpen && query.trim() && (
-                <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-border bg-white shadow-lg dark:bg-card">
-                  {searchResults.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-fd-muted">No matching pages</p>
                   ) : (
-                    <ul className="py-1">
-                      {searchResults.map((result) => (
-                        <li key={result.to}>
-                          <button
-                            type="button"
-                            className="flex w-full items-center px-4 py-2.5 text-left text-sm text-fd-ink transition hover:bg-muted"
-                            onClick={() => goToSearchResult(result.to)}
-                          >
-                            {result.label}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                    workspaces.map((workspace) => (
+                      <DropdownMenuItem
+                        key={workspace.id}
+                        onClick={() => handleSwitchWorkspace(workspace.id)}
+                        className={cn(workspace.id === businessId && 'bg-muted font-medium')}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate">{workspace.business_name}</p>
+                          <p className="truncate text-xs text-muted-foreground">{workspace.role}</p>
+                        </div>
+                      </DropdownMenuItem>
+                    ))
                   )}
-                </div>
-              )}
-            </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/onboarding/business')}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create new business
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            <div className="flex items-center justify-self-end gap-3">
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full text-fd-muted" asChild>
-                  <NavLink to="/dashboard/alerts" viewTransition aria-label="Notifications">
-                    <Bell className="h-5 w-5" />
-                    {badge > 0 ? (
-                      <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-white">
-                        {badge > 99 ? '99+' : badge}
-                      </span>
-                    ) : null}
-                  </NavLink>
-                </Button>
-                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-fd-muted" asChild>
-                  <NavLink to="/dashboard/settings" viewTransition aria-label="Settings">
-                    <Settings className="h-5 w-5" />
-                  </NavLink>
-                </Button>
-                <ThemeToggle className="h-10 w-10 rounded-full border-0 bg-transparent shadow-none" />
+              <div ref={searchRef} className="relative hidden w-56 lg:block xl:w-64">
+                <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value)
+                    setSearchOpen(true)
+                  }}
+                  onFocus={() => setSearchOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchResults[0]) {
+                      e.preventDefault()
+                      goToSearchResult(searchResults[0].to)
+                    }
+                    if (e.key === 'Escape') {
+                      setSearchOpen(false)
+                      setQuery('')
+                    }
+                  }}
+                  placeholder="Search pages…"
+                  aria-label="Search dashboard pages"
+                  className="h-9 w-full rounded-lg border border-input bg-transparent pr-3 pl-9 text-sm text-foreground shadow-xs outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+                />
+                {searchOpen && query.trim() && (
+                  <div className="absolute top-[calc(100%+6px)] right-0 left-0 z-50 overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+                    {searchResults.length === 0 ? (
+                      <p className="px-3 py-2.5 text-sm text-muted-foreground">No matching pages</p>
+                    ) : (
+                      <ul className="p-1">
+                        {searchResults.map((result) => (
+                          <li key={result.to}>
+                            <button
+                              type="button"
+                              className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-popover-foreground transition hover:bg-muted"
+                              onClick={() => goToSearchResult(result.to)}
+                            >
+                              {result.label}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div className="h-6 w-px bg-border" />
+              <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg" asChild>
+                <NavLink to="/dashboard/alerts" viewTransition aria-label="Notifications">
+                  <Bell className="h-[18px] w-[18px]" />
+                  {badge > 0 ? (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  ) : null}
+                </NavLink>
+              </Button>
+              <ThemeToggle className="h-9 w-9 rounded-lg border-0 bg-transparent shadow-none" />
 
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
@@ -382,20 +308,20 @@ export default function DashboardLayout() {
                     type="button"
                     data-testid="user-menu"
                     aria-label="Account menu"
-                    className="rounded-full ring-offset-2 ring-offset-background transition hover:ring-2 hover:ring-primary/30"
+                    className="ml-1 rounded-full ring-offset-2 ring-offset-background transition hover:ring-2 hover:ring-primary/40"
                   >
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-primary text-sm font-medium text-white">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary text-sm font-semibold text-primary-foreground">
                         {(user?.full_name || 'U').charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[280px] border-0 fd-shadow">
+                <DropdownMenuContent align="end" className="w-[260px]">
                   <DropdownMenuLabel>
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-fd-ink">{user?.full_name}</span>
-                      <span className="text-xs font-normal text-fd-muted">{user?.email}</span>
+                      <span className="truncate">{user?.full_name}</span>
+                      <span className="truncate text-xs font-normal text-muted-foreground">{user?.email}</span>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -418,94 +344,29 @@ export default function DashboardLayout() {
               </DropdownMenu>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <aside className="fixed bottom-0 left-0 top-20 z-30 hidden w-[260px] bg-white fd-shadow dark:bg-sidebar md:block">
-        <nav className="flex h-full flex-col overflow-y-auto pb-6 pt-[30px]">
-          <ul>
-            <SidebarLink to="/dashboard" label="Dashboard" icon={LayoutDashboard} end />
-          </ul>
-
-          <div className="mx-[30px] my-5 h-px bg-border" />
-
-          <p className="mb-2 px-[30px] text-xs font-medium uppercase text-fd-cap">Applications</p>
-          <ul>
-            {applications.map((link) => (
-              <SidebarLink key={link.to} {...link} />
-            ))}
-            {isOwner && <SidebarLink to="/dashboard/invitations" label="Team" icon={Users} />}
-          </ul>
-
-          <div className="mx-[30px] my-5 h-px bg-border" />
-
-          <p className="mb-2 px-[30px] text-xs font-medium uppercase text-fd-cap">Components</p>
-          <ul>
-            {components
-              .filter((link) => isOwner || link.to !== '/dashboard/analytics')
-              .map((link) => (
-                <SidebarLink key={link.to} {...link} />
-              ))}
-          </ul>
-
-          <div className="mt-auto pt-5">
-            <div className="mx-[30px] mb-3 h-px bg-border" />
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="group mr-[17px] flex w-[calc(100%-17px)] items-center gap-2 rounded-r-[60px] py-3 pl-[30px] pr-[30px] text-base leading-[27px] text-fd-body transition-all duration-200 hover:translate-x-0.5 hover:bg-destructive/10 hover:text-destructive"
-            >
-              <LogOut className="h-5 w-5 shrink-0 text-fd-muted transition-transform duration-200 group-hover:scale-110 group-hover:text-destructive" />
-              <span className="truncate">Logout</span>
-            </button>
+        <div className="@container/main flex flex-1 flex-col">
+          <div className="mx-auto w-full max-w-[1400px] px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
+            {!user?.businessId && workspacePromptPaths.includes(location.pathname) ? (
+              <NoBusinessWorkspace />
+            ) : (
+              <PageTransition />
+            )}
           </div>
-        </nav>
-      </aside>
-
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-white px-4 dark:bg-sidebar safe-top md:hidden">
-        <Logo showText={false} />
-        <span className="text-sm font-medium text-fd-ink">{pageTitle}</span>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="relative h-9 w-9" asChild>
-            <NavLink to="/dashboard/alerts" viewTransition aria-label="Notifications">
-              <Bell className="h-4 w-4" />
-              {badge > 0 ? (
-                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-0.5 text-[9px] font-medium text-white">
-                  {badge > 99 ? '99+' : badge}
-                </span>
-              ) : null}
-            </NavLink>
-          </Button>
-          <ThemeToggle />
         </div>
-      </header>
+      </SidebarInset>
 
-      <div className="md:ml-[260px] md:pt-20">
-        <div className="mx-auto max-w-[1300px] px-4 py-6 pb-24 md:px-[35px] md:py-[30px] md:pb-10">
-          {location.pathname !== '/dashboard' && (
-            <div className="mb-6 hidden md:block">
-              <h1 className="text-[21px] font-medium text-fd-ink">{pageTitle}</h1>
-              <p className="mt-1 text-sm text-fd-cap">
-                Dashboard <span className="mx-1">/</span> {pageTitle}
-              </p>
-            </div>
-          )}
-
-          {!user?.businessId && workspacePromptPaths.includes(location.pathname) ? (
-            <NoBusinessWorkspace />
-          ) : (
-            <PageTransition />
-          )}
-        </div>
-      </div>
-
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-white dark:bg-sidebar safe-bottom md:hidden">
+      <nav
+        aria-label="Quick navigation"
+        className="fixed right-0 bottom-0 left-0 z-40 flex border-t border-border bg-background/95 backdrop-blur safe-bottom md:hidden"
+      >
         {(
           [
             { to: '/dashboard', label: 'Home', icon: LayoutDashboard, end: true },
             { to: '/dashboard/inventory', label: 'Inventory', icon: Package, end: false },
             { to: '/dashboard/scans', label: 'Scans', icon: Camera, end: false },
-            { to: '/dashboard/shelves', label: 'Shelves', icon: Package, end: false },
+            { to: '/dashboard/shelves', label: 'Shelves', icon: ShoppingBasket, end: false },
             { to: '/dashboard/alerts', label: 'Alerts', icon: AlertTriangle, end: false },
           ] as const
         ).map(({ to, label, icon: Icon, end }) => (
@@ -516,8 +377,8 @@ export default function DashboardLayout() {
             viewTransition
             className={({ isActive }) =>
               cn(
-                'flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-all duration-200',
-                isActive ? 'text-primary scale-105' : 'text-fd-muted hover:text-fd-ink',
+                'flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors',
+                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
               )
             }
           >
@@ -575,6 +436,6 @@ export default function DashboardLayout() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </SidebarProvider>
   )
 }

@@ -14,3 +14,8 @@ export function useMobile(breakpoint = 768) {
 
   return isMobile
 }
+
+/** Alias used by the shadcn sidebar component. */
+export function useIsMobile() {
+  return useMobile()
+}
