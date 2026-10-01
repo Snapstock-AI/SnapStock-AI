@@ -151,7 +151,7 @@ variable "domain_name" {
 }
 
 variable "enable_https" {
-  description = "Serve the app on https://domain_name (needs the ACM certificate issued and the frontend nginx redirect deployed)."
+  description = "Serve the app on https://domain_name (needs the ACM certificate issued and the frontend nginx redirect deployed). Set false only when bootstrapping a new stack."
   type        = bool
-  default     = false
+  default     = true
 }

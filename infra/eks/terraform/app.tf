@@ -37,8 +37,8 @@ resource "kubernetes_secret_v1" "backend" {
     CLIENT_URL   = local.app_url
     # E-mail links (verify, reset, invitation) open the backend's own pages through the nginx proxy.
     SERVER_PUBLIC_URL = "${local.app_url}/snapstock-backend-http"
-    # HTTP only (no certificate yet): stop the CSP from forcing form posts to https.
-    CSP_UPGRADE_INSECURE = var.certificate_arn == "" ? "false" : "true"
+    # Over plain HTTP the CSP must not force form posts to https; with HTTPS (enable_https) it should.
+    CSP_UPGRADE_INSECURE = var.enable_https ? "true" : "false"
     GOOGLE_CLIENT_ID     = var.google_client_id
     SMTP_HOST            = var.smtp_host
     SMTP_PORT            = var.smtp_port
