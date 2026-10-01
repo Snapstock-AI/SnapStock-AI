@@ -1,5 +1,6 @@
 locals {
-  app_url = "http://${aws_eip.app.public_ip}"
+  ip_url  = "http://${aws_eip.app.public_ip}"
+  app_url = var.enable_https ? "https://${var.domain_name}" : local.ip_url
 
   # Repositories are always ECR. Tags are only sent when explicitly overridden: CI/CD owns
   # app versions, and reuse_values keeps the tag CI deployed last.
@@ -76,8 +77,10 @@ resource "helm_release" "snapstock" {
     }
     exposure = "nlb-eip"
     publicService = {
-      eipAllocation = join(",", local.app_eip_allocations)
-      subnet        = join(",", local.app_public_subnets)
+      eipAllocation  = join(",", local.app_eip_allocations)
+      subnet         = join(",", local.app_public_subnets)
+      certificateArn = local.https_certificate_arn
+      host           = local.public_host
     }
     ingress = { certificateArn = var.certificate_arn }
   })]

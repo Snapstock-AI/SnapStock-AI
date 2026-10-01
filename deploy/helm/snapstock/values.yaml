@@ -23,6 +23,7 @@ frontend:
     tag: ""            # must be built with the nginx proxy template
     pullPolicy: IfNotPresent
   port: 8080
+  redirectPort: 8081   # nginx: plain HTTP -> https redirect
   resources:
     requests: { cpu: 50m,  memory: 64Mi }
     limits:   { cpu: 250m, memory: 128Mi }
@@ -81,6 +82,9 @@ exposure: nlb-eip
 publicService:
   eipAllocation: ""
   subnet: ""
+  # Terraform sets these when enable_https = true (ACM certificate + public hostname).
+  certificateArn: ""
+  host: ""
 
 ingress:
   className: alb
