@@ -133,7 +133,9 @@ jobs:
             ghcr.io/snapstock-ai/snapstock-server:dev-${{ github.sha }}
 
   deploy-backend:
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy')
+    # Legacy single-server (K3s/OpenChoreo) deploy over SSM. Off by default since the app moved to EKS;
+    # set the repo variable K3S_DEPLOY_ENABLED=true (and a valid AWS_ROLE_ARN) to use it again.
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy')) && vars.K3S_DEPLOY_ENABLED == 'true'
     needs: build-backend
     runs-on: ubuntu-latest
     steps:
@@ -187,6 +189,7 @@ jobs:
           helm upgrade snapstock deploy/helm/snapstock \
             --namespace snapstock \
             --reset-then-reuse-values \
+            --set backend.image.repository=ghcr.io/snapstock-ai/snapstock-server \
             --set backend.image.tag=dev-${{ github.sha }} \
             --atomic --timeout 25m
           kubectl -n snapstock get pods -o wide
