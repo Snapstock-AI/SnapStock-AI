@@ -121,7 +121,9 @@ jobs:
             ghcr.io/snapstock-ai/snapstock-client:dev-${{ github.sha }}
 
   deploy-frontend:
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy')
+    # Legacy single-server (K3s/OpenChoreo) deploy over SSM. Off by default since the app moved to EKS;
+    # set the repo variable K3S_DEPLOY_ENABLED=true (and a valid AWS_ROLE_ARN) to use it again.
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy')) && vars.K3S_DEPLOY_ENABLED == 'true'
     needs: build-frontend
     runs-on: ubuntu-latest
     steps:
