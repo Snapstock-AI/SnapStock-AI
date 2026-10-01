@@ -1,0 +1,32 @@
+# EAS uses the Git repository as the archive boundary even when the command is
+# run from mobile/. This app has no workspace dependencies, so exclude every
+# other service and large local model artifact.
+/.git/
+/.github/
+/.anima/
+/ai-service/
+/client/
+/designDiagrams/
+/docs/
+/e2e/
+/infra/
+/server/
+/tests/
+/.env
+/.env.*
+/docker-compose.yml
+/README.md
+
+# Local mobile artifacts and secrets
+mobile/node_modules/
+mobile/.expo/
+mobile/.env
+mobile/.env.*
+!mobile/.env.example
+mobile/android/
+mobile/ios/
+mobile/dist/
+mobile/web-build/
+mobile/*.tsbuildinfo
+mobile/*.log
+mobile/.eas-inspect-*/
