@@ -25,7 +25,7 @@ type AlertFilter = 'all' | 'active' | 'resolved'
 
 const typeStyles: Record<string, string> = {
   critical: 'border-destructive/50 bg-destructive/10',
-  warning: 'border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/20',
+  warning: 'border-ripe/40 bg-ripe/10',
   info: '',
 }
 
