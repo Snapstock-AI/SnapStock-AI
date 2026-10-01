@@ -32,3 +32,25 @@ server {
         proxy_send_timeout 120s;
     }
 }
+
+# Plain-HTTP entry point when TLS is terminated at the load balancer: the NLB sends port 80 here
+# and port 443 (TLS) to :8080 above. Everything except the health check is redirected to https.
+# PUBLIC_HOST (the public domain) is substituted at start; empty keeps the requested host.
+server {
+    listen 8081;
+    server_name _;
+
+    location = /health {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 'ok';
+    }
+
+    location / {
+        set $redirect_host "${PUBLIC_HOST}";
+        if ($redirect_host = "") {
+            set $redirect_host $host;
+        }
+        return 301 https://$redirect_host$request_uri;
+    }
+}

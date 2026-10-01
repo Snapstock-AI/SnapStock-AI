@@ -71,6 +71,16 @@ Without them the EKS jobs are skipped (build and tests still run). Deploy jobs n
 running: if it is paused (`pause.ps1`), run `resume.ps1` first or the rollout times out.
 The legacy K3s/SSM deploy jobs only run when `K3S_DEPLOY_ENABLED` is `true`.
 
+## Domain and HTTPS (`https.tf`)
+The app is served as **https://snapstock.rashmika.dev** (DNS at name.com). The NLB keeps its
+Elastic IP and terminates TLS with a free, auto-renewed ACM certificate; port 80 is redirected
+to https by nginx (:8081). To set it up on a new stack:
+1. `terraform apply` with `enable_https = false` requests the certificate.
+2. At the DNS provider add the CNAME from `terraform output acm_validation_record` and an
+   A record `snapstock` -> `terraform output app_public_ip`.
+3. Deploy a frontend image built from this repo (nginx with the :8081 redirect listener).
+4. Set `enable_https = true` and `terraform apply` (waits until the certificate is issued).
+
 ## Verify
 ```powershell
 aws eks update-kubeconfig --region ap-south-1 --name snapstock-prod

@@ -7,6 +7,10 @@ output "app_url" {
   value = local.app_url
 }
 
+output "domain_url" {
+  value = "https://${var.domain_name} (active when enable_https = true)"
+}
+
 output "backend_health_url" {
   value = "${local.app_url}/snapstock-backend-http/health"
 }

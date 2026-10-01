@@ -141,3 +141,17 @@ variable "scan_image_retention_days" {
   type        = number
   default     = 90
 }
+
+# ---- Public domain and HTTPS (see https.tf) ------------------------------------------
+
+variable "domain_name" {
+  description = "Public hostname of the app. Its DNS is managed outside AWS (name.com)."
+  type        = string
+  default     = "snapstock.rashmika.dev"
+}
+
+variable "enable_https" {
+  description = "Serve the app on https://domain_name (needs the ACM certificate issued and the frontend nginx redirect deployed)."
+  type        = bool
+  default     = false
+}

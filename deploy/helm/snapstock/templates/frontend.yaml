@@ -26,10 +26,15 @@ spec:
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.frontend.port }}
+            # Plain-HTTP listener that only redirects to https (used when TLS is enabled).
+            - containerPort: {{ .Values.frontend.redirectPort }}
           env:
             # nginx template proxies /snapstock-backend-http/ to this upstream
             - name: BACKEND_UPSTREAM
               value: "snapstock-backend:{{ .Values.backend.port }}"
+            # Host the http->https redirect sends browsers to (empty = keep the requested host)
+            - name: PUBLIC_HOST
+              value: {{ .Values.publicService.host | quote }}
           readinessProbe:
             httpGet:
               path: /health

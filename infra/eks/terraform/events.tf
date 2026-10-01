@@ -40,7 +40,8 @@ resource "aws_s3_bucket_cors_configuration" "scans" {
   bucket = aws_s3_bucket.scans.id
 
   cors_rule {
-    allowed_origins = concat([local.app_url], var.extra_cors_origins)
+    # Both the domain (https) and the IP keep working for browser uploads during and after the switch.
+    allowed_origins = distinct(concat([local.app_url, local.ip_url], var.extra_cors_origins))
     allowed_methods = ["POST", "PUT", "GET", "HEAD"]
     allowed_headers = ["*"]
     expose_headers  = ["ETag"]
