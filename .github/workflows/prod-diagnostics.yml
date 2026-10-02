@@ -1,0 +1,71 @@
+name: Prod diagnostics (EKS)
+
+# One-shot cluster/app health + backend log dump.
+# OIDC trust is refs/heads/dev — always:
+#   gh workflow run "Prod diagnostics (EKS)" --ref dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      log_lines:
+        description: "Backend log tail lines"
+        required: false
+        default: "300"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.EKS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Cluster + backend diagnostics
+        env:
+          CLUSTER: ${{ vars.EKS_CLUSTER_NAME }}
+          REGION: ${{ vars.AWS_REGION }}
+          LOG_LINES: ${{ inputs.log_lines }}
+        run: |
+          set -euo pipefail
+          aws eks update-kubeconfig --name "${CLUSTER}" --region "${REGION}"
+
+          echo "======== NODES ========"
+          kubectl get nodes -L workload -o wide || true
+
+          echo "======== SNAPSTOCK WORKLOADS ========"
+          kubectl -n snapstock get pods,deploy,svc,ingress -o wide || true
+
+          echo "======== SECRET KEYS (names only) ========"
+          kubectl -n snapstock get secret snapstock-backend-secrets -o json \
+            | python3 -c 'import sys,json,base64; d=json.load(sys.stdin).get("data",{});
+print("keys:", sorted(d));
+cid=d.get("GOOGLE_CLIENT_ID");
+print("GOOGLE_CLIENT_ID_len:", len(base64.b64decode(cid)) if cid else 0)'
+
+          echo "======== BACKEND ENV (filtered) ========"
+          POD=$(kubectl -n snapstock get pods -l app=snapstock-backend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          if [ -z "${POD}" ]; then
+            POD=$(kubectl -n snapstock get pods -o name | grep -i backend | grep -v migrate | head -1 | cut -d/ -f2 || true)
+          fi
+          echo "POD=${POD}"
+          if [ -n "${POD}" ]; then
+            kubectl -n snapstock exec "$POD" -- printenv \
+              | grep -E '^(GOOGLE_CLIENT_ID|CLIENT_URL|SERVER_PUBLIC_URL|NODE_ENV|CSP_)=' \
+              | sed -E 's/(GOOGLE_CLIENT_ID=).+/\1***redacted***/' || true
+
+            echo "======== BACKEND LOGS (tail ${LOG_LINES}) ========"
+            kubectl -n snapstock logs "$POD" --tail="${LOG_LINES}" || true
+
+            echo "======== BACKEND LOGS grep auth/google/error ========"
+            kubectl -n snapstock logs "$POD" --tail=2000 2>/dev/null \
+              | grep -iE 'google|auth|error|fail|warn' | tail -80 || true
+          fi
+
+          echo "======== EVENTS (snapstock, recent) ========"
+          kubectl -n snapstock get events --sort-by=.lastTimestamp | tail -40 || true
