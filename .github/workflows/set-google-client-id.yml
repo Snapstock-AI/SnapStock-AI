@@ -57,3 +57,23 @@ jobs:
             -o jsonpath="{.data.GOOGLE_CLIENT_ID}" | base64 -d | wc -c)
           echo "GOOGLE_CLIENT_ID length in secret: ${LEN}"
           test "${LEN}" -gt 20
+
+          echo "======== SNAPSTOCK WORKLOADS ========"
+          kubectl -n snapstock get pods,deploy -o wide || true
+
+          POD=$(kubectl -n snapstock get pods -l app=snapstock-backend -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || true)
+          if [ -z "${POD}" ]; then
+            POD=$(kubectl -n snapstock get pods -o name | grep -i backend | grep -v migrate | head -1 | cut -d/ -f2 || true)
+          fi
+          echo "POD=${POD}"
+          if [ -n "${POD}" ]; then
+            echo "======== BACKEND ENV (filtered) ========"
+            kubectl -n snapstock exec "${POD}" -- printenv \
+              | grep -E '^(GOOGLE_CLIENT_ID|CLIENT_URL|SERVER_PUBLIC_URL|NODE_ENV|CSP_)=' \
+              | sed -E 's/(GOOGLE_CLIENT_ID=).+/\1***redacted***/' || true
+            echo "======== BACKEND LOGS grep auth/google/error ========"
+            kubectl -n snapstock logs "${POD}" --tail=2000 2>/dev/null \
+              | grep -iE 'google|auth|/auth|error|fail|warn' | tail -100 || true
+            echo "======== BACKEND LOGS (tail 150) ========"
+            kubectl -n snapstock logs "${POD}" --tail=150 || true
+          fi
