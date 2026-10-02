@@ -41,9 +41,9 @@ print("keys:", sorted(d));
 cid=d.get("GOOGLE_CLIENT_ID");
 print("GOOGLE_CLIENT_ID_len:", len(base64.b64decode(cid)) if cid else 0)'
 
-          POD=$(kubectl -n snapstock get pods -l app=snapstock-backend -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || true)
+          POD=$(kubectl -n snapstock get pods -l app=snapstock-backend --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || true)
           if [ -z "${POD}" ]; then
-            POD=$(kubectl -n snapstock get pods -o name | grep -i backend | grep -v migrate | head -1 | cut -d/ -f2 || true)
+            POD=$(kubectl -n snapstock get pods --field-selector=status.phase=Running -o name | grep -i backend | grep -v migrate | head -1 | cut -d/ -f2 || true)
           fi
           echo "POD=${POD}"
           if [ -n "${POD}" ]; then
