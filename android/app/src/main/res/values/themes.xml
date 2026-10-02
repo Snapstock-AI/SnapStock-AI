@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SnapStock" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/snap_teal</item>
+        <item name="colorPrimaryVariant">@color/snap_teal_dark</item>
+        <item name="colorSecondary">@color/snap_lime</item>
+        <item name="android:statusBarColor">@color/snap_teal</item>
+        <item name="android:navigationBarColor">@color/snap_teal</item>
+        <item name="android:windowBackground">@color/white</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="Theme.SnapStock.Splash" parent="Theme.SnapStock">
+        <item name="android:windowBackground">@color/snap_lime</item>
+        <item name="android:statusBarColor">@color/snap_lime</item>
+        <item name="android:navigationBarColor">@color/snap_lime</item>
+    </style>
+</resources>

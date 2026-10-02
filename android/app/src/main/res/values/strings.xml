@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SnapStock</string>
+    <string name="loading">Loading SnapStock…</string>
+    <string name="offline_title">You\'re offline</string>
+    <string name="offline_message">Check your internet connection and try again.</string>
+    <string name="retry">Retry</string>
+    <string name="error_title">Something went wrong</string>
+    <string name="error_message">SnapStock could not load. Please try again.</string>
+</resources>
