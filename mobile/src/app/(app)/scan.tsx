@@ -16,6 +16,7 @@ import { useTheme } from '../../context/ThemeContext';
 import {
   analyzeImage,
   compressForUpload,
+  confirmScanInventory,
   formatHistoryDate,
   getScanHistory,
   updateDetectionFreshness,
@@ -54,6 +55,7 @@ export default function ScanScreen() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DetectionResult | null>(null);
   const [savingDetectionId, setSavingDetectionId] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const [recentScans, setRecentScans] = useState<ScanHistoryItem[]>([]);
   const [isLoadingRecent, setIsLoadingRecent] = useState(true);
@@ -136,11 +138,10 @@ export default function ScanScreen() {
     setIsAnalyzing(true);
     try {
       const data = await analyzeImage(image, selectedShelf, businessId, scanMode);
-      // The captured photo and capture controls disappear once a result
-      // exists (see the render below) — only the result card shows until
-      // "Scan another" is tapped.
+      // The capture controls disappear once a result exists (see the render
+      // below); the photo stays on the result card until "Scan another".
+      // Stock is unchanged until the user taps "Add to stock".
       setResult(data);
-      setImage(null);
       loadRecentScans();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Image analysis failed');
@@ -160,10 +161,12 @@ export default function ScanScreen() {
       );
       const counts = detections.reduce<DetectionResult['counts']>((summary, detection) => {
         const key = detection.class_name;
-        summary[key] ||= { fresh: 0, rotten: 0, total: 0 };
+        summary[key] ||= { fresh: 0, medium: 0, rotten: 0, total: 0 };
         summary[key].total += 1;
         if (detection.freshness === 'Fresh') {
           summary[key].fresh += 1;
+        } else if (detection.freshness === 'Medium') {
+          summary[key].medium = (summary[key].medium ?? 0) + 1;
         } else {
           summary[key].rotten += 1;
         }
@@ -174,6 +177,28 @@ export default function ScanScreen() {
       setError(err instanceof Error ? err.message : 'Unable to update freshness.');
     } finally {
       setSavingDetectionId(null);
+    }
+  }
+
+  async function handleConfirmInventory() {
+    if (!result || result.inventoryApplied || isConfirming) return;
+    setIsConfirming(true);
+    setError(null);
+    try {
+      const data = await confirmScanInventory(result.scanId);
+      // Keep the local detections (they carry any freshness corrections) and
+      // take only the applied stock changes from the server.
+      setResult((current) =>
+        current
+          ? { ...current, inventoryApplied: true, inventoryChanges: data.inventoryChanges ?? [] }
+          : current,
+      );
+      loadRecentScans();
+      router.push('/inventory');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to add the scan to inventory.');
+    } finally {
+      setIsConfirming(false);
     }
   }
 
@@ -215,6 +240,11 @@ export default function ScanScreen() {
       {result ? (
         <ScanResult
           result={result}
+          imageUri={image?.uri ?? null}
+          scanMode={result.scanMode ?? scanMode}
+          error={error}
+          isConfirming={isConfirming}
+          onConfirm={handleConfirmInventory}
           onScanAnother={handleScanAnother}
           onFreshnessChange={handleFreshnessChange}
           savingDetectionId={savingDetectionId}
@@ -340,6 +370,11 @@ const FRESHNESS_OPTIONS: FreshnessStatus[] = ['Fresh', 'Medium', 'Spoiled'];
 
 function ScanResult({
   result,
+  imageUri,
+  scanMode,
+  error,
+  isConfirming,
+  onConfirm,
   onScanAnother,
   onFreshnessChange,
   savingDetectionId,
@@ -347,6 +382,11 @@ function ScanResult({
   colors,
 }: {
   result: DetectionResult;
+  imageUri: string | null;
+  scanMode: ScanMode;
+  error: string | null;
+  isConfirming: boolean;
+  onConfirm: () => void;
   onScanAnother: () => void;
   onFreshnessChange: (detectionId: string | undefined, freshness: FreshnessStatus) => void;
   savingDetectionId: string | null;
@@ -354,10 +394,27 @@ function ScanResult({
   colors: ThemeColors;
 }) {
   const classEntries = Object.entries(result.counts);
+  const isApplied = result.inventoryApplied === true;
+  const isStockIn = scanMode === 'STOCK_IN';
+  const confirmLabel = isApplied
+    ? isStockIn
+      ? 'Added to stock'
+      : 'Removed from stock'
+    : isStockIn
+      ? 'Add to stock'
+      : 'Remove from stock';
+  const canConfirm = !isApplied && !isConfirming && result.total_count > 0;
 
   return (
     <View style={styles.resultCard}>
+      {imageUri ? <Image source={{ uri: imageUri }} style={styles.preview} /> : null}
+
       <Text style={styles.resultTitle}>Scan complete — {result.total_count} item(s) detected</Text>
+      {!isApplied && result.total_count > 0 ? (
+        <Text style={styles.resultHint}>
+          Check the results, then tap "{confirmLabel}" to update inventory.
+        </Text>
+      ) : null}
 
       {classEntries.length > 0 ? (
         <View style={styles.resultSection}>
@@ -366,7 +423,8 @@ function ScanResult({
             <View key={className} style={styles.resultRow}>
               <Text style={styles.resultRowLabel}>{className}</Text>
               <Text style={styles.resultRowValue}>
-                {counts.fresh} fresh · {counts.rotten} spoiled · {counts.total} total
+                {counts.fresh} fresh · {counts.medium ? `${counts.medium} medium · ` : ''}
+                {counts.rotten} spoiled · {counts.total} total
               </Text>
             </View>
           ))}
@@ -425,9 +483,30 @@ function ScanResult({
         </View>
       ) : null}
 
-      <Pressable style={styles.primaryButton} onPress={onScanAnother} android_ripple={{ color: 'rgba(255,255,255,0.2)' }}>
-        <Text style={styles.primaryButtonText}>Scan another</Text>
-      </Pressable>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <View style={styles.actionsRow}>
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={onScanAnother}
+          disabled={isConfirming}
+          android_ripple={ripple}
+        >
+          <Text style={styles.secondaryButtonText}>Scan another</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.primaryButton, !canConfirm && styles.primaryButtonDisabled]}
+          onPress={onConfirm}
+          disabled={!canConfirm}
+          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+        >
+          {isConfirming ? (
+            <ActivityIndicator color={colors.onAccent} />
+          ) : (
+            <Text style={styles.primaryButtonText}>{confirmLabel}</Text>
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 }

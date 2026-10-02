@@ -10,6 +10,9 @@ import type { Shelf } from './shelf';
 export type DetectionResult = {
   scanId: string;
   shelf?: Shelf;
+  scanMode?: ScanMode;
+  /** False until the user confirms the scan with "Add to stock". */
+  inventoryApplied?: boolean;
 
   image_width: number;
   image_height: number;
@@ -19,6 +22,7 @@ export type DetectionResult = {
     string,
     {
       fresh: number;
+      medium?: number;
       rotten: number;
       total: number;
     }
@@ -66,6 +70,20 @@ export async function updateDetectionFreshness(
     true,
   );
   if (!result.data) throw new Error('Unable to update freshness.');
+  return result.data;
+}
+
+/**
+ * Applies an analyzed scan to inventory (POST /detection/scans/:scanId/confirm).
+ * Analysis alone never changes stock; the server accepts this once per scan.
+ */
+export async function confirmScanInventory(scanId: string): Promise<DetectionResult> {
+  const result = await apiRequest<DetectionResult>(
+    `/detection/scans/${scanId}/confirm`,
+    { method: 'POST' },
+    true,
+  );
+  if (!result.data) throw new Error('Unable to add the scan to inventory.');
   return result.data;
 }
 

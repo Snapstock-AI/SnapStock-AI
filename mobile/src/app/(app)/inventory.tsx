@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -46,10 +47,14 @@ export default function InventoryScreen() {
     }
   }, [businessId, windowDays]);
 
-  useEffect(() => {
-    setIsLoading(true);
-    load().finally(() => setIsLoading(false));
-  }, [load]);
+  // Reload on every visit: tabs stay mounted, and a confirmed scan
+  // ("Add to stock") changes quantities while this screen is in the background.
+  useFocusEffect(
+    useCallback(() => {
+      setIsLoading(true);
+      load().finally(() => setIsLoading(false));
+    }, [load]),
+  );
 
   async function handleRefresh() {
     setIsRefreshing(true);
