@@ -34,6 +34,7 @@ terraform output -raw backend_config > ../terraform/backend.hcl
 # 2. Network + cluster
 cd ../terraform
 copy terraform.tfvars.example terraform.tfvars      # fill in values, never commit
+# Required: google_client_id = same value as GitHub var VITE_GOOGLE_CLIENT_ID
 terraform init -backend-config=backend.hcl
 terraform apply -target=module.vpc -target=module.eks
 
