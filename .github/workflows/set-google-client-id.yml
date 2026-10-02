@@ -1,23 +1,31 @@
 name: Set Google Client ID on EKS
 
-# Patches snapstock-backend-secrets.GOOGLE_CLIENT_ID to match VITE_GOOGLE_CLIENT_ID,
-# then restarts the backend so pods pick up the new value.
-#
-# Run against the `dev` branch (OIDC trust on SnapStockEksDeployRole is ref:refs/heads/dev):
-#   gh workflow run "Set Google Client ID on EKS" --ref dev
+# OIDC trust is refs/heads/dev — always dispatch with --ref dev:
+#   gh workflow run "Set Google Client ID on EKS" --ref dev -f action=diagnose
+#   gh workflow run "Set Google Client ID on EKS" --ref dev -f action=patch
 
 on:
   workflow_dispatch:
+    inputs:
+      action:
+        description: "diagnose = logs/secret check only; patch = set GOOGLE_CLIENT_ID + restart"
+        required: true
+        type: choice
+        options:
+          - diagnose
+          - patch
+        default: diagnose
 
 permissions:
   contents: read
   id-token: write
 
 jobs:
-  patch-secret:
+  run:
     runs-on: ubuntu-latest
     steps:
       - name: Require Google client ID variable
+        if: inputs.action == 'patch'
         env:
           CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
         run: |
@@ -38,7 +46,52 @@ jobs:
           role-to-assume: ${{ vars.EKS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
+      - name: Diagnose cluster and backend logs
+        if: inputs.action == 'diagnose'
+        env:
+          CLUSTER: ${{ vars.EKS_CLUSTER_NAME }}
+          REGION: ${{ vars.AWS_REGION }}
+        run: |
+          set -euo pipefail
+          aws eks update-kubeconfig --name "${CLUSTER}" --region "${REGION}"
+
+          echo "======== NODES ========"
+          kubectl get nodes -L workload -o wide || true
+
+          echo "======== SNAPSTOCK WORKLOADS ========"
+          kubectl -n snapstock get pods,deploy,svc -o wide || true
+
+          echo "======== SECRET / GOOGLE_CLIENT_ID ========"
+          kubectl -n snapstock get secret snapstock-backend-secrets -o json \
+            | python3 -c 'import sys,json,base64; d=json.load(sys.stdin).get("data",{});
+print("keys:", sorted(d));
+cid=d.get("GOOGLE_CLIENT_ID");
+print("GOOGLE_CLIENT_ID_len:", len(base64.b64decode(cid)) if cid else 0)'
+
+          POD=$(kubectl -n snapstock get pods -l app=snapstock-backend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          if [ -z "${POD}" ]; then
+            POD=$(kubectl -n snapstock get pods -o name | grep -i backend | grep -v migrate | head -1 | cut -d/ -f2 || true)
+          fi
+          echo "POD=${POD}"
+          if [ -n "${POD}" ]; then
+            echo "======== BACKEND ENV (filtered) ========"
+            kubectl -n snapstock exec "$POD" -- printenv \
+              | grep -E '^(GOOGLE_CLIENT_ID|CLIENT_URL|SERVER_PUBLIC_URL|NODE_ENV|CSP_)=' \
+              | sed -E 's/(GOOGLE_CLIENT_ID=).+/\1***redacted***/' || true
+
+            echo "======== BACKEND LOGS (tail 300) ========"
+            kubectl -n snapstock logs "$POD" --tail=300 || true
+
+            echo "======== BACKEND LOGS grep auth/google/error ========"
+            kubectl -n snapstock logs "$POD" --tail=2000 2>/dev/null \
+              | grep -iE 'google|auth|/auth|error|fail|warn' | tail -100 || true
+          fi
+
+          echo "======== RECENT EVENTS ========"
+          kubectl -n snapstock get events --sort-by=.lastTimestamp | tail -40 || true
+
       - name: Patch secret and restart backend
+        if: inputs.action == 'patch'
         env:
           CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
           CLUSTER: ${{ vars.EKS_CLUSTER_NAME }}
@@ -55,7 +108,6 @@ jobs:
           kubectl -n snapstock rollout restart deployment/snapstock-backend
           kubectl -n snapstock rollout status deployment/snapstock-backend --timeout=5m
 
-          # Confirm the secret now holds a non-empty value (do not print the full ID).
           LEN=$(kubectl -n snapstock get secret snapstock-backend-secrets \
             -o jsonpath='{.data.GOOGLE_CLIENT_ID}' | base64 -d | wc -c)
           echo "GOOGLE_CLIENT_ID length in secret: ${LEN}"
