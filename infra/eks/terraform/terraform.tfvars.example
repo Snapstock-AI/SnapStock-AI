@@ -3,8 +3,9 @@
 # App versions are released by CI/CD. Only for a first-time install (empty ECR) or to pin a version:
 # image_tags = { backend = "dev-<sha>", frontend = "dev-<sha>", ai = "dev-<sha>" }
 
-jwt_secret       = "change-me-long-random"
-google_client_id = ""
+jwt_secret = "change-me-long-random"
+# Must match GitHub var VITE_GOOGLE_CLIENT_ID (and local .env). Empty values fail plan/apply.
+google_client_id = "YOUR_ID.apps.googleusercontent.com"
 
 smtp_host = ""
 smtp_port = "587"

@@ -91,8 +91,13 @@ variable "jwt_secret" {
 }
 
 variable "google_client_id" {
-  type    = string
-  default = ""
+  description = "Same OAuth client ID as VITE_GOOGLE_CLIENT_ID (…apps.googleusercontent.com). Required so Google Sign-In works on the backend."
+  type        = string
+
+  validation {
+    condition     = length(var.google_client_id) > 0 && endswith(var.google_client_id, ".apps.googleusercontent.com")
+    error_message = "google_client_id must be set to the full Google OAuth client ID (must match VITE_GOOGLE_CLIENT_ID)."
+  }
 }
 
 variable "smtp_host" {
