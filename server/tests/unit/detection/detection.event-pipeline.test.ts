@@ -40,6 +40,7 @@ jest.mock("../../../src/modules/detection/detection.repository", () => ({
     findOrCreateProduct: jest.fn(),
     createDetection: jest.fn(),
     applyInventoryChange: jest.fn(),
+    linkScanProducts: jest.fn(),
   },
 }));
 
@@ -214,6 +215,17 @@ describe("DetectionService.queueScan", () => {
 });
 
 describe("DetectionService.getScanStatus", () => {
+  it("returns the stored result once ANALYZED so the user can add it to inventory", async () => {
+    const result = { scanId: SCAN_ID, inventoryApplied: false };
+    repo.getScanById.mockResolvedValue({ ...pendingScan, status: "ANALYZED", result_json: result });
+
+    await expect(DetectionService.getScanStatus("scan-1", "user-1")).resolves.toEqual({
+      scanId: "scan-1",
+      status: "ANALYZED",
+      data: result,
+    });
+  });
+
   it("returns the stored result once COMPLETED", async () => {
     const result = { scanId: "scan-1", detections: [], inventoryChanges: [] };
     repo.getScanById.mockResolvedValue({ ...pendingScan, status: "COMPLETED", result_json: result });
@@ -281,7 +293,7 @@ describe("DetectionService.handleAnalysisResult", () => {
       data: aiResult,
     });
 
-    expect(persist).toHaveBeenCalledWith(SCAN_ID, "biz-1", "STOCK_IN", aiResult);
+    expect(persist).toHaveBeenCalledWith(SCAN_ID, "STOCK_IN", aiResult);
     persist.mockRestore();
   });
 
@@ -293,6 +305,20 @@ describe("DetectionService.handleAnalysisResult", () => {
     });
 
     expect(repo.getScanById).not.toHaveBeenCalled();
+  });
+
+  it("ignores duplicate deliveries for analyzed scans", async () => {
+    repo.getScanById.mockResolvedValue({ ...pendingScan, status: "ANALYZED" });
+    const persist = jest.spyOn(DetectionService, "persistAnalysis");
+
+    await DetectionService.handleAnalysisResult({
+      eventType: "ANALYSIS_COMPLETED",
+      scanId: SCAN_ID,
+      data: aiResult,
+    });
+
+    expect(persist).not.toHaveBeenCalled();
+    persist.mockRestore();
   });
 
   it("ignores duplicate deliveries for finished scans", async () => {
@@ -339,5 +365,75 @@ describe("DetectionService.handleAnalysisResult", () => {
       "No matching inventory products found for: apple.",
     );
     persist.mockRestore();
+  });
+});
+
+describe("DetectionService.confirmInventory", () => {
+  const analyzedScan = {
+    ...pendingScan,
+    status: "ANALYZED",
+    scan_mode: "STOCK_IN",
+    result_json: { scanId: SCAN_ID, total_count: 2, detections: [], inventoryApplied: false },
+  };
+
+  it("links products, applies the stock change once and stores the applied result", async () => {
+    repo.getScanById.mockResolvedValue(analyzedScan as never);
+    repo.linkScanProducts.mockResolvedValue({ linked: 2, unmatchedLabels: [] });
+    const changes = [
+      { productId: "p-1", product: "apple", detected: 2, currentQuantity: 3, quantity: 5 },
+    ];
+    repo.applyInventoryChange.mockResolvedValue(changes);
+
+    const result = await DetectionService.confirmInventory(SCAN_ID, "user-1");
+
+    expect(business.assertMember).toHaveBeenCalledWith("user-1", "biz-1");
+    expect(repo.linkScanProducts).toHaveBeenCalledWith(SCAN_ID, "biz-1", "STOCK_IN");
+    expect(repo.applyInventoryChange).toHaveBeenCalledWith(SCAN_ID, "biz-1", "STOCK_IN");
+    expect(result).toMatchObject({
+      scanId: SCAN_ID,
+      scanMode: "STOCK_IN",
+      total_count: 2,
+      inventoryApplied: true,
+      inventoryChanges: changes,
+    });
+    expect(repo.saveScanResult).toHaveBeenCalledWith(SCAN_ID, result);
+  });
+
+  it("refuses a scan that was already added to inventory", async () => {
+    repo.getScanById.mockResolvedValue({ ...analyzedScan, status: "COMPLETED" } as never);
+
+    await expect(DetectionService.confirmInventory(SCAN_ID, "user-1")).rejects.toThrow(
+      "already been added to inventory",
+    );
+    expect(repo.applyInventoryChange).not.toHaveBeenCalled();
+  });
+
+  it("refuses a scan that has not finished analysis", async () => {
+    repo.getScanById.mockResolvedValue({ ...analyzedScan, status: "PROCESSING" } as never);
+
+    await expect(DetectionService.confirmInventory(SCAN_ID, "user-1")).rejects.toThrow(
+      "not finished analysis",
+    );
+    expect(repo.applyInventoryChange).not.toHaveBeenCalled();
+  });
+
+  it("refuses a stock-out scan when no detected product exists in inventory", async () => {
+    repo.getScanById.mockResolvedValue({ ...analyzedScan, scan_mode: "STOCK_OUT" } as never);
+    repo.linkScanProducts.mockResolvedValue({ linked: 0, unmatchedLabels: ["mango"] });
+
+    await expect(DetectionService.confirmInventory(SCAN_ID, "user-1")).rejects.toThrow(
+      "No matching inventory products found for: mango",
+    );
+    expect(repo.applyInventoryChange).not.toHaveBeenCalled();
+  });
+
+  it("rejects a caller from another business", async () => {
+    repo.getScanById.mockResolvedValue(analyzedScan as never);
+    business.assertMember.mockRejectedValueOnce(new ForbiddenError("nope"));
+
+    await expect(DetectionService.confirmInventory(SCAN_ID, "intruder")).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
+    expect(repo.applyInventoryChange).not.toHaveBeenCalled();
   });
 });

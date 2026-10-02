@@ -20,6 +20,7 @@ jest.mock("../../../src/modules/detection/detection.repository", () => ({
     findProductByName: jest.fn(),
     createDetection: jest.fn(),
     applyInventoryChange: jest.fn(),
+    markScanAnalyzed: jest.fn(),
   },
 }));
 jest.mock("../../../src/modules/business/business.service", () => ({
@@ -113,10 +114,11 @@ describe("failure after AI success rolls back to a FAILED scan (FR-SCAN-004 A3)"
     http.post.mockResolvedValue({
       data: { image_width: 10, image_height: 10, total_count: 0, counts: {}, detections: [] },
     });
-    repo.applyInventoryChange.mockRejectedValue(new Error('deadlock detected in relation "products"'));
+    // Saving the analysed result is the database write that follows a successful AI call.
+    repo.markScanAnalyzed.mockRejectedValue(new Error('deadlock detected in relation "scans"'));
   });
 
-  it("marks the scan FAILED when the inventory transaction throws and returns an error status", async () => {
+  it("marks the scan FAILED when saving the result throws and returns an error status", async () => {
     const res = await submit();
 
     expect(res.status).toBeGreaterThanOrEqual(400);
@@ -128,6 +130,6 @@ describe("failure after AI success rolls back to a FAILED scan (FR-SCAN-004 A3)"
   it.failing("does not expose database internals in the response body", async () => {
     const res = await submit();
 
-    expect(res.text).not.toMatch(/deadlock|relation "products"/);
+    expect(res.text).not.toMatch(/deadlock|relation "scans"/);
   });
 });

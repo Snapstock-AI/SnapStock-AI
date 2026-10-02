@@ -136,14 +136,19 @@ export class DetectionRepository {
   ) {
     return AppDataSource.transaction(async (manager) => {
       const scanRows = (await manager.query(
-        `SELECT business_id FROM scans WHERE id = $1 FOR UPDATE`,
+        `SELECT business_id, status FROM scans WHERE id = $1 FOR UPDATE`,
         [scanId],
-      )) as Array<{ business_id: string }>;
+      )) as Array<{ business_id: string; status: ScanStatus }>;
       if (!scanRows[0]) {
         throw new Error("Scan not found");
       }
       if (scanRows[0].business_id !== businessId) {
         throw new Error("Scan does not belong to this business");
+      }
+      // The row lock makes a double-click (or two tabs) wait here and then stop,
+      // so one scan can never change inventory twice.
+      if (scanRows[0].status === "COMPLETED") {
+        throw new Error("This scan has already been added to inventory.");
       }
 
       const rows = (await manager.query(
@@ -306,6 +311,59 @@ export class DetectionRepository {
       [scanId],
     );
     return (result.rowCount ?? 0) > 0;
+  }
+
+  /** Stores the AI result without touching inventory; the user confirms it later. */
+  static async markScanAnalyzed(scanId: string, result: unknown) {
+    await db.query(
+      `UPDATE scans SET status = 'ANALYZED', error_message = NULL, result_json = $1
+       WHERE id = $2`,
+      [JSON.stringify(result), scanId],
+    );
+  }
+
+  /**
+   * Links a scan's unmatched detections to products by label. Stock-in creates missing
+   * products; stock-out only matches existing ones. Returns how many detections are linked.
+   */
+  static async linkScanProducts(
+    scanId: string,
+    businessId: string,
+    scanMode: ScanMode,
+  ): Promise<{ linked: number; unmatchedLabels: string[] }> {
+    const unlinked = await db.query(
+      `SELECT DISTINCT product_label FROM detections
+       WHERE scan_id = $1 AND product_id IS NULL`,
+      [scanId],
+    );
+
+    const unmatchedLabels: string[] = [];
+
+    for (const { product_label: label } of unlinked.rows as Array<{ product_label: string }>) {
+      const product =
+        scanMode === "STOCK_IN"
+          ? await DetectionRepository.findOrCreateProduct(businessId, label)
+          : await DetectionRepository.findProductByName(businessId, label);
+
+      if (!product) {
+        unmatchedLabels.push(label);
+        continue;
+      }
+
+      await db.query(
+        `UPDATE detections SET product_id = $1
+         WHERE scan_id = $2 AND product_label = $3 AND product_id IS NULL`,
+        [product.id, scanId, label],
+      );
+    }
+
+    const linked = await db.query(
+      `SELECT COUNT(*)::int AS count FROM detections
+       WHERE scan_id = $1 AND product_id IS NOT NULL`,
+      [scanId],
+    );
+
+    return { linked: Number(linked.rows[0]?.count ?? 0), unmatchedLabels };
   }
 
   static async saveScanResult(scanId: string, result: unknown) {

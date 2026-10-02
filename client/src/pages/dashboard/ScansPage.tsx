@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { Camera, Upload } from "lucide-react";
 import { Link } from "react-router";
-import { analyzeImage, countHistoryItems, formatHistoryDate, getScanHistory } from "../../lib/detection";
+import {
+  analyzeImage,
+  confirmScanInventory,
+  countHistoryItems,
+  formatHistoryDate,
+  getScanHistory,
+  scanStatusLabel,
+} from "../../lib/detection";
 import type { AnalysisStage } from "../../lib/detection";
 import { updateDetectionFreshness } from "../../lib/detection";
 import type {
@@ -61,6 +68,9 @@ export default function ScansPage() {
   const [historyError, setHistoryError] = useState("");
   const [selectedHistoryScan, setSelectedHistoryScan] = useState<ScanHistoryItem | null>(null);
   const [scanMode, setScanMode] = useState<ScanMode>("STOCK_IN");
+  const [confirmingScanId, setConfirmingScanId] = useState<string | null>(null);
+  // Bumped after a scan is analysed or added to inventory so the history list reloads.
+  const [historyVersion, setHistoryVersion] = useState(0);
 
   const { token, user } = useAuth();
   const businessId = user?.businessId;
@@ -124,7 +134,7 @@ export default function ScansPage() {
         );
       })
       .finally(() => setHistoryLoading(false));
-  }, [token, businessId]);
+  }, [token, businessId, historyVersion]);
 
   const handleFreshnessChange = async (
     detectionId: string | undefined,
@@ -169,6 +179,49 @@ export default function ScansPage() {
   };
 
 
+  /**
+   * Analysis never changes stock; this applies a reviewed scan to inventory exactly once,
+   * so two photos of the same shelf are not counted twice by accident.
+   */
+  const addScanToInventory = async (scanId: string) => {
+    if (!token) return;
+
+    setConfirmingScanId(scanId);
+    setError("");
+
+    try {
+      const applied = await confirmScanInventory(scanId, token);
+
+      // Keep the on-screen detections (they include any freshness corrections).
+      setResult((current) =>
+        current && current.scanId === scanId
+          ? {
+              ...current,
+              inventoryApplied: true,
+              inventoryChanges: applied.inventoryChanges ?? [],
+            }
+          : current,
+      );
+      setSelectedHistoryScan((current) =>
+        current && current.id === scanId ? { ...current, status: "COMPLETED" } : current,
+      );
+      setHistoryVersion((version) => version + 1);
+    } catch (confirmError: unknown) {
+      showError(
+        confirmError instanceof Error
+          ? confirmError.message
+          : "Unable to add the scan to inventory.",
+      );
+    } finally {
+      setConfirmingScanId(null);
+    }
+  };
+
+  const discardResult = () => {
+    setResult(null);
+    setSelectedImage(null);
+  };
+
   const analyzeSelectedImage = async (
   file: File, 
   shelf: Shelf | null
@@ -198,6 +251,7 @@ export default function ScansPage() {
     );
 
     setResult(data);
+    setHistoryVersion((version) => version + 1);
     return true;
   } catch (error: unknown) {
 
@@ -483,10 +537,47 @@ export default function ScansPage() {
             )}
           </CardHeader>
           <CardContent className="space-y-6">
-            {(result.inventoryChanges ?? []).length > 0 && (
+            {result.inventoryApplied === false && (
+              <div className="rounded-xl border border-primary/40 bg-primary/5 p-5">
+                <p className="text-sm font-semibold">Not added to inventory yet</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Review the detected items below and correct any freshness grades, then{" "}
+                  {(result.scanMode ?? scanMode) === "STOCK_OUT"
+                    ? "remove them from"
+                    : "add them to"}{" "}
+                  inventory. If you already added a photo of this shelf, discard this one so
+                  the stock is not counted twice.
+                </p>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <Button
+                    type="button"
+                    className="min-h-11"
+                    variant={(result.scanMode ?? scanMode) === "STOCK_OUT" ? "destructive" : "default"}
+                    disabled={confirmingScanId === result.scanId || result.total_count === 0}
+                    onClick={() => addScanToInventory(result.scanId)}
+                  >
+                    {confirmingScanId === result.scanId
+                      ? "Saving..."
+                      : (result.scanMode ?? scanMode) === "STOCK_OUT"
+                        ? "Remove from inventory"
+                        : "Add to inventory"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11"
+                    disabled={confirmingScanId === result.scanId}
+                    onClick={discardResult}
+                  >
+                    Discard
+                  </Button>
+                </div>
+              </div>
+            )}
+            {result.inventoryApplied !== false && (result.inventoryChanges ?? []).length > 0 && (
               <div className="rounded-xl border border-border bg-muted p-5">
                 <p className="text-sm font-semibold">
-                  {scanMode === "STOCK_OUT" ? "Stock removed" : "Stock added"}
+                  {(result.scanMode ?? scanMode) === "STOCK_OUT" ? "Stock removed" : "Stock added"}
                 </p>
                 <div className="mt-3 space-y-2 text-sm">
                   {(result.inventoryChanges ?? []).map((change) => (
@@ -630,7 +721,7 @@ export default function ScansPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{scan.status}</span>
+                    <span>{scanStatusLabel(scan.status)}</span>
                     <span>{formatHistoryDate(scan.created_at)}</span>
                   </div>
                 </button>
@@ -662,7 +753,7 @@ export default function ScansPage() {
               <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                 <div className="rounded-xl bg-muted p-3">
                   <p className="text-muted-foreground">Status</p>
-                  <p className="mt-1 font-semibold">{selectedHistoryScan.status}</p>
+                  <p className="mt-1 font-semibold">{scanStatusLabel(selectedHistoryScan.status)}</p>
                 </div>
                 <div className="rounded-xl bg-muted p-3">
                   <p className="text-muted-foreground">Items</p>
@@ -677,6 +768,31 @@ export default function ScansPage() {
                   <p className="mt-1 font-semibold">{selectedHistoryScan.spoiled_count}</p>
                 </div>
               </div>
+
+              {selectedHistoryScan.status === "ANALYZED" && (
+                <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm">
+                  <p className="text-muted-foreground">
+                    This scan has not changed inventory. Add it only if it is not a repeat
+                    photo of a shelf you already added.
+                  </p>
+                  <Button
+                    type="button"
+                    className="mt-3 min-h-11"
+                    variant={selectedHistoryScan.scan_mode === "STOCK_OUT" ? "destructive" : "default"}
+                    disabled={
+                      confirmingScanId === selectedHistoryScan.id ||
+                      selectedHistoryScan.item_count === 0
+                    }
+                    onClick={() => addScanToInventory(selectedHistoryScan.id)}
+                  >
+                    {confirmingScanId === selectedHistoryScan.id
+                      ? "Saving..."
+                      : selectedHistoryScan.scan_mode === "STOCK_OUT"
+                        ? "Remove from inventory"
+                        : "Add to inventory"}
+                  </Button>
+                </div>
+              )}
 
               <h3 className="text-lg font-semibold tracking-tight">Detected items</h3>
               <div className="flex flex-wrap gap-2">

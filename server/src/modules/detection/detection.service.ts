@@ -174,42 +174,25 @@ export class DetectionService {
   }
 
   /**
-   * Stores an AI result for a scan: detections, product links, the stock-in/stock-out
-   * inventory change and low-stock alerts. Shared by the synchronous endpoint and the
-   * event-driven result consumer so both paths behave identically.
+   * Stores an AI result for a scan and leaves it at ANALYZED. Inventory is not touched
+   * here: the user reviews the result and confirms it with confirmInventory, so two
+   * photos of the same shelf are never counted twice by accident. Shared by the
+   * synchronous endpoint and the event-driven result consumer.
    */
   static async persistAnalysis(
     scanId: string,
-    businessId: string,
     scanMode: ScanMode,
     aiResult: AIAnalysisResponse,
   ): Promise<DetectionResult> {
     const savedDetections: SavedDetection[] = [];
-    const unmatchedLabels = new Set<string>();
-    let linkedProducts = 0;
 
     for (const detection of aiResult.detections) {
-      const product =
-        scanMode === "STOCK_IN"
-          ? await DetectionRepository.findOrCreateProduct(
-              businessId,
-              detection.class_name,
-            )
-          : await DetectionRepository.findProductByName(
-              businessId,
-              detection.class_name,
-            );
-
-      if (!product) {
-        unmatchedLabels.add(detection.class_name);
-      } else {
-        linkedProducts += 1;
-      }
-
+      // Products are linked when the scan is added to inventory, so an unconfirmed
+      // stock-in scan does not create empty products.
       const savedDetection = await DetectionRepository.createDetection(
         scanId,
         detection.class_name,
-        product ? product.id : null,
+        null,
         detection.confidence,
         detection.bounding_box,
         mapFreshness(detection.freshness),
@@ -239,24 +222,10 @@ export class DetectionService {
       });
     }
 
-    if (
-      scanMode === "STOCK_OUT" &&
-      aiResult.detections.length > 0 &&
-      linkedProducts === 0
-    ) {
-      throw new Error(
-        `No matching inventory products found for: ${[...unmatchedLabels].join(", ")}. Add stock first before removing.`,
-      );
-    }
-
-    const inventoryChanges = await DetectionRepository.applyInventoryChange(
-      scanId,
-      businessId,
-      scanMode,
-    );
-
     const result: DetectionResult = {
       scanId,
+
+      scanMode,
 
       image_width: aiResult.image_width,
 
@@ -268,6 +237,66 @@ export class DetectionService {
 
       detections: savedDetections,
 
+      inventoryApplied: false,
+
+      inventoryChanges: [],
+    };
+
+    await DetectionRepository.markScanAnalyzed(scanId, result);
+
+    return result;
+  }
+
+  /**
+   * "Add to inventory": applies an ANALYZED scan's stock-in/stock-out change and
+   * low-stock alerts, then marks it COMPLETED. A scan can be applied only once.
+   */
+  static async confirmInventory(
+    scanId: string,
+    userId: string,
+  ): Promise<DetectionResult> {
+    if (!UUID_PATTERN.test(scanId)) {
+      throw new Error("Scan not found.");
+    }
+
+    const scan = await DetectionRepository.getScanById(scanId);
+    if (!scan) {
+      throw new Error("Scan not found.");
+    }
+
+    await BusinessService.assertMember(userId, scan.business_id);
+
+    if (scan.status === "COMPLETED") {
+      throw new Error("This scan has already been added to inventory.");
+    }
+
+    if (scan.status !== "ANALYZED") {
+      throw new Error("This scan has not finished analysis yet.");
+    }
+
+    const { linked, unmatchedLabels } = await DetectionRepository.linkScanProducts(
+      scanId,
+      scan.business_id,
+      scan.scan_mode,
+    );
+
+    if (scan.scan_mode === "STOCK_OUT" && linked === 0 && unmatchedLabels.length > 0) {
+      throw new Error(
+        `No matching inventory products found for: ${unmatchedLabels.join(", ")}. Add stock first before removing.`,
+      );
+    }
+
+    const inventoryChanges = await DetectionRepository.applyInventoryChange(
+      scanId,
+      scan.business_id,
+      scan.scan_mode,
+    );
+
+    const result: DetectionResult = {
+      ...(scan.result_json as DetectionResult),
+      scanId,
+      scanMode: scan.scan_mode,
+      inventoryApplied: true,
       inventoryChanges: inventoryChanges ?? [],
     };
 
@@ -339,7 +368,6 @@ export class DetectionService {
 
       return await DetectionService.persistAnalysis(
         scanId,
-        analyzeRequest.businessId,
         scanMode,
         response.data,
       );
@@ -522,10 +550,10 @@ export class DetectionService {
 
     await BusinessService.assertMember(userId, scan.business_id);
 
-    // COMPLETED is set inside the inventory transaction just before the result is stored,
-    // so report PROCESSING until the result is readable.
-    if (scan.status === "COMPLETED" && scan.result_json) {
-      return { scanId, status: "COMPLETED" as const, data: scan.result_json as DetectionResult };
+    // ANALYZED: the result is ready and waits for "Add to inventory". COMPLETED: the
+    // scan has been added to inventory.
+    if ((scan.status === "ANALYZED" || scan.status === "COMPLETED") && scan.result_json) {
+      return { scanId, status: scan.status, data: scan.result_json as DetectionResult };
     }
 
     if (scan.status === "FAILED") {
@@ -561,7 +589,7 @@ export class DetectionService {
       return;
     }
 
-    if (scan.status === "COMPLETED" || scan.status === "FAILED") {
+    if (scan.status === "ANALYZED" || scan.status === "COMPLETED" || scan.status === "FAILED") {
       return; // duplicate delivery
     }
 
@@ -583,10 +611,9 @@ export class DetectionService {
     }
 
     try {
-      // Business and scan mode come from the database, never from the message.
+      // Scan mode comes from the database, never from the message.
       await DetectionService.persistAnalysis(
         scan.id,
-        scan.business_id,
         scan.scan_mode,
         event.data,
       );

@@ -9,6 +9,8 @@
  */
 import { AppDataSource } from "../../src/config/data-source";
 import { DetectionRepository } from "../../src/modules/detection/detection.repository";
+import { DetectionService } from "../../src/modules/detection/detection.service";
+import { DashboardService } from "../../src/modules/dashboard/dashboard.service";
 import { createScanWithDetections, createTenant, pool, quantityOf, scanStatus } from "./helpers";
 
 beforeAll(async () => {
@@ -141,5 +143,104 @@ describe("DetectionRepository.applyInventoryChange", () => {
     );
 
     expect(await quantityOf(tenant.productId)).toBe(10);
+  });
+});
+
+describe("add to inventory only on confirmation", () => {
+  const aiResult = (label: string, count: number) => ({
+    image_width: 640,
+    image_height: 480,
+    total_count: count,
+    counts: { [label]: { fresh: count, medium: 0, rotten: 0, total: count } },
+    detections: Array.from({ length: count }, () => ({
+      class_name: label,
+      confidence: 0.9,
+      bounding_box: { x1: 0, y1: 0, x2: 10, y2: 10 },
+      freshness: "fresh",
+      freshness_confidence: 0.8,
+      freshness_confidence_percent: 80,
+    })),
+  });
+
+  async function analyzedScan(tenant: Awaited<ReturnType<typeof createTenant>>, label: string, count: number, mode: "STOCK_IN" | "STOCK_OUT") {
+    const scan = await DetectionRepository.createScan(tenant.businessId, tenant.shelfId, tenant.ownerId, mode);
+    await DetectionService.persistAnalysis(scan.id, mode, aiResult(label, count));
+    return scan.id as string;
+  }
+
+  it("analysis alone leaves stock unchanged, creates no product and is hidden from the dashboard", async () => {
+    const tenant = await createTenant({ quantity: 10 });
+    const scanId = await analyzedScan(tenant, "mango", 3, "STOCK_IN");
+
+    expect(await scanStatus(scanId)).toBe("ANALYZED");
+    expect(await quantityOf(tenant.productId)).toBe(10);
+    const mango = await pool.query("SELECT 1 FROM products WHERE business_id = $1 AND name = 'mango'", [tenant.businessId]);
+    expect(mango.rowCount).toBe(0);
+
+    const inventory = await DashboardService.getInventory(tenant.ownerId, tenant.businessId);
+    expect(inventory.hasData).toBe(false);
+  });
+
+  it("confirming adds the stock once, creating missing products for stock-in", async () => {
+    const tenant = await createTenant({ quantity: 10 });
+    const existing = await analyzedScan(tenant, tenant.productName, 3, "STOCK_IN");
+    const created = await analyzedScan(tenant, "mango", 2, "STOCK_IN");
+
+    const result = await DetectionService.confirmInventory(existing, tenant.ownerId);
+    await DetectionService.confirmInventory(created, tenant.ownerId);
+
+    expect(result).toMatchObject({ inventoryApplied: true, scanMode: "STOCK_IN" });
+    expect(await quantityOf(tenant.productId)).toBe(13);
+    expect(await scanStatus(existing)).toBe("COMPLETED");
+    const mango = await pool.query("SELECT quantity FROM products WHERE business_id = $1 AND name = 'mango'", [tenant.businessId]);
+    expect(mango.rows[0].quantity).toBe(2);
+  });
+
+  it("a second confirmation of the same scan is rejected and does not double the stock", async () => {
+    const tenant = await createTenant({ quantity: 10 });
+    const scanId = await analyzedScan(tenant, tenant.productName, 3, "STOCK_IN");
+
+    await DetectionService.confirmInventory(scanId, tenant.ownerId);
+    await expect(DetectionService.confirmInventory(scanId, tenant.ownerId)).rejects.toThrow(
+      /already been added/,
+    );
+
+    expect(await quantityOf(tenant.productId)).toBe(13);
+  });
+
+  it("two simultaneous confirmations (double-click) apply the stock only once", async () => {
+    const tenant = await createTenant({ quantity: 10 });
+    const scanId = await analyzedScan(tenant, tenant.productName, 3, "STOCK_IN");
+
+    const outcomes = await Promise.allSettled([
+      DetectionService.confirmInventory(scanId, tenant.ownerId),
+      DetectionService.confirmInventory(scanId, tenant.ownerId),
+    ]);
+
+    expect(outcomes.filter((o) => o.status === "fulfilled")).toHaveLength(1);
+    expect(await quantityOf(tenant.productId)).toBe(13);
+  });
+
+  it("two analysed photos of the same shelf only count twice if both are confirmed", async () => {
+    const tenant = await createTenant({ quantity: 10 });
+    const first = await analyzedScan(tenant, tenant.productName, 4, "STOCK_IN");
+    await analyzedScan(tenant, tenant.productName, 4, "STOCK_IN"); // duplicate photo, never confirmed
+
+    await DetectionService.confirmInventory(first, tenant.ownerId);
+
+    expect(await quantityOf(tenant.productId)).toBe(14);
+  });
+
+  it("stock-out confirmation does not create products it cannot find", async () => {
+    const tenant = await createTenant({ quantity: 10 });
+    const scanId = await analyzedScan(tenant, "mango", 2, "STOCK_OUT");
+
+    await expect(DetectionService.confirmInventory(scanId, tenant.ownerId)).rejects.toThrow(
+      /No matching inventory products found for: mango/,
+    );
+
+    expect(await scanStatus(scanId)).toBe("ANALYZED");
+    const mango = await pool.query("SELECT 1 FROM products WHERE business_id = $1 AND name = 'mango'", [tenant.businessId]);
+    expect(mango.rowCount).toBe(0);
   });
 });

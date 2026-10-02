@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, CalendarDays, Clock3 } from "lucide-react";
 import { Link } from "react-router";
 import { useAuth } from "@/context/AuthContext";
-import { countHistoryItems, formatHistoryDate, getScanHistory, type ScanHistoryItem } from "@/lib/detection";
+import {
+  countHistoryItems,
+  formatHistoryDate,
+  getScanHistory,
+  scanStatusLabel,
+  type ScanHistoryItem,
+} from "@/lib/detection";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -35,6 +41,7 @@ function rangeDate(value: string, endOfDay = false) {
 const statusVariant: Record<ScanHistoryItem["status"], "warning" | "info" | "success" | "destructive"> = {
   PENDING: "warning",
   PROCESSING: "info",
+  ANALYZED: "warning",
   COMPLETED: "success",
   FAILED: "destructive",
 };
@@ -172,7 +179,7 @@ export default function ScanHistoryPage() {
                         {scan.item_count} item{scan.item_count === 1 ? "" : "s"} · Fresh {scan.fresh_count} · Medium {scan.medium_count} · Spoiled {scan.spoiled_count}
                       </p>
                     </div>
-                    <Badge variant={statusVariant[scan.status]}>{scan.status}</Badge>
+                    <Badge variant={statusVariant[scan.status]}>{scanStatusLabel(scan.status)}</Badge>
                     <span className="text-sm text-muted-foreground">{formatHistoryDate(scan.created_at)}</span>
                   </button>
                 ))}
@@ -200,7 +207,7 @@ export default function ScanHistoryPage() {
               <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                 <div className="rounded-xl bg-muted p-3">
                   <p className="text-muted-foreground">Status</p>
-                  <p className="mt-1 font-semibold">{selectedScan.status}</p>
+                  <p className="mt-1 font-semibold">{scanStatusLabel(selectedScan.status)}</p>
                 </div>
                 <div className="rounded-xl bg-muted p-3">
                   <p className="text-muted-foreground">Items</p>
