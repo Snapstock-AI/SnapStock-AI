@@ -2,6 +2,9 @@ name: Set Google Client ID on EKS
 
 # Patches snapstock-backend-secrets.GOOGLE_CLIENT_ID to match VITE_GOOGLE_CLIENT_ID,
 # then restarts the backend so pods pick up the new value.
+#
+# Run against the `dev` branch (OIDC trust on SnapStockEksDeployRole is ref:refs/heads/dev):
+#   gh workflow run "Set Google Client ID on EKS" --ref dev
 
 on:
   workflow_dispatch:
