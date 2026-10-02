@@ -25,6 +25,7 @@ export interface AIAnalysisResponse {
   total_count: number;
   counts: Record<string, {
   fresh: number;
+  medium: number;
   rotten: number;
   total: number;
 }>
@@ -43,6 +44,7 @@ export interface DetectionResult {
   total_count: number;
   counts: Record<string, {
   fresh: number;
+  medium: number;
   rotten: number;
   total: number;
 }>;

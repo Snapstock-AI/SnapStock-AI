@@ -178,11 +178,13 @@ describe("DetectionService", () => {
           counts: {
             apple: {
           fresh: 1,
+          medium: 0,
           rotten: 0,
           total: 1,
             },
             banana: {
           fresh: 1,
+          medium: 0,
           rotten: 0,
           total: 1,
         },
@@ -334,12 +336,14 @@ describe("DetectionService", () => {
         counts: {
           apple: {
             fresh: 1,
+            medium: 0,
             rotten: 0,
             total: 1,
           },
     
           banana: {
             fresh: 1,
+            medium: 0,
             rotten: 0,
             total: 1,
         

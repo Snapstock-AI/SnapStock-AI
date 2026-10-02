@@ -254,7 +254,7 @@ describe("DetectionService.handleAnalysisResult", () => {
     image_width: 100,
     image_height: 80,
     total_count: 1,
-    counts: { apple: { fresh: 1, rotten: 0, total: 1 } },
+    counts: { apple: { fresh: 1, medium: 0, rotten: 0, total: 1 } },
     detections: [
       {
         class_name: "apple",

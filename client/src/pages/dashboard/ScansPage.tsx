@@ -144,10 +144,12 @@ export default function ScansPage() {
       );
       const counts = detections.reduce<DetectionResult["counts"]>((summary, detection) => {
         const key = detection.class_name;
-        summary[key] ||= { fresh: 0, rotten: 0, total: 0 };
+        summary[key] ||= { fresh: 0, medium: 0, rotten: 0, total: 0 };
         summary[key].total += 1;
         if (detection.freshness === "Fresh") {
           summary[key].fresh += 1;
+        } else if (detection.freshness === "Medium") {
+          summary[key].medium += 1;
         } else {
           summary[key].rotten += 1;
         }
@@ -563,7 +565,7 @@ export default function ScansPage() {
                   >
                     <h4 className="text-lg font-semibold capitalize">{productName}</h4>
 
-                    <div className="mt-4 grid grid-cols-3 gap-3">
+                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Total</p>
                         <p className="mt-1 text-xl font-semibold">{product.total}</p>
@@ -571,6 +573,10 @@ export default function ScansPage() {
                       <div>
                         <p className="text-sm text-muted-foreground">Fresh</p>
                         <p className="mt-1 text-xl font-semibold">{product.fresh}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Medium</p>
+                        <p className="mt-1 text-xl font-semibold">{product.medium ?? 0}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Rotten</p>

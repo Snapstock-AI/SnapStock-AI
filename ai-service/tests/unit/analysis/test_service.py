@@ -53,7 +53,7 @@ def create_detected_crop(
 
 
 def create_prediction(
-    freshness="good",
+    freshness="fresh",
     confidence=0.85,
 ):
     """
@@ -156,7 +156,7 @@ def test_analyze_image_single_detection(
 
     mock_predict = Mock(
         return_value=create_prediction(
-            freshness="good",
+            freshness="fresh",
             confidence=0.88,
         )
     )
@@ -194,7 +194,7 @@ def test_analyze_image_single_detection(
     assert fruit.class_name == "apple"
     assert fruit.confidence == 0.91
 
-    assert fruit.freshness == "good"
+    assert fruit.freshness == "fresh"
 
     assert (
         fruit.freshness_confidence
@@ -247,15 +247,15 @@ def test_analyze_image_multiple_detections(
     mock_predict = Mock(
         side_effect=[
             create_prediction(
-                "good",
+                "fresh",
                 0.90,
             ),
             create_prediction(
-                "bad",
+                "rotten",
                 0.80,
             ),
             create_prediction(
-                "good",
+                "fresh",
                 0.70,
             ),
         ]
@@ -296,17 +296,17 @@ def test_analyze_image_multiple_detections(
 
     assert (
         result.detections[0].freshness
-        == "good"
+        == "fresh"
     )
 
     assert (
         result.detections[1].freshness
-        == "bad"
+        == "rotten"
     )
 
     assert (
         result.detections[2].freshness
-        == "good"
+        == "fresh"
     )
 
     assert mock_predict.call_count == 3
@@ -321,7 +321,7 @@ def test_analyze_image_single_category_mixed_freshness(
 ):
     """
     One fruit category should still be split into
-    fresh and rotten counts.
+    fresh, medium and rotten counts.
     """
 
     detection_model = Mock()
@@ -345,10 +345,10 @@ def test_analyze_image_single_category_mixed_freshness(
 
     mock_predict = Mock(
         side_effect=[
-            create_prediction("good"),
-            create_prediction("bad"),
-            create_prediction("good"),
-            create_prediction("good"),
+            create_prediction("fresh"),
+            create_prediction("rotten"),
+            create_prediction("medium"),
+            create_prediction("fresh"),
         ]
     )
 
@@ -372,7 +372,8 @@ def test_analyze_image_single_category_mixed_freshness(
 
     assert result.counts == {
         "banana": CategorySummary(
-            fresh=3,
+            fresh=2,
+            medium=1,
             rotten=1,
             total=4,
         )

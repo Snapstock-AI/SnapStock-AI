@@ -31,6 +31,11 @@ class CategorySummary(BaseModel):
         default=0,
     )
 
+    medium: int = Field(
+        ge=0,
+        default=0,
+    )
+
     rotten: int = Field(
         ge=0,
         default=0,
