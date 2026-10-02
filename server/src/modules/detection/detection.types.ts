@@ -39,6 +39,9 @@ export interface SavedDetection extends AIDetection {
 
 export interface DetectionResult {
   scanId: string;
+  scanMode: "STOCK_IN" | "STOCK_OUT";
+  /** False until the user confirms the scan with "Add to inventory". */
+  inventoryApplied: boolean;
   image_width: number;
   image_height: number;
   total_count: number;

@@ -143,6 +143,21 @@ export class DetectionController {
     }
   }
 
+  static async confirmInventory(req: AuthRequest, res: Response) {
+    try {
+      const data = await DetectionService.confirmInventory(
+        String(req.params.scanId),
+        req.user!.id,
+      );
+      return res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      return res.status(errorStatus(error)).json({
+        success: false,
+        message: errorMessage(error, "Unable to add the scan to inventory."),
+      });
+    }
+  }
+
   static async analyze(req: AuthRequest, res: Response) {
     try {
       console.log("========== DETECTION REQUEST ==========");

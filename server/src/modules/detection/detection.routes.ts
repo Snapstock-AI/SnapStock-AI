@@ -62,6 +62,12 @@ router.get("/status/:scanId", authMiddleware, DetectionController.getScanStatus)
 // Synchronous analysis over HTTP (fallback when the pipeline is not configured; mobile app).
 router.post("/analyze", authMiddleware, receiveImage, DetectionController.analyze);
 router.get("/history", authMiddleware, DetectionController.history);
+// Analysis never changes stock by itself; the user confirms a scan to apply it once.
+router.post(
+  "/scans/:scanId/confirm",
+  authMiddleware,
+  DetectionController.confirmInventory,
+);
 router.patch(
   "/:detectionId/freshness",
   authMiddleware,

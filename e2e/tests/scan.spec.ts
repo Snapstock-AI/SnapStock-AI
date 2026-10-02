@@ -20,7 +20,7 @@ test.beforeEach(async ({ request }) => {
 
 test.describe("scan journey", () => {
   // E2E-03: FR-SCAN-001/002/004, FR-DET-002, FR-INV-002
-  test("select shelf -> upload -> preview -> analyze -> result and inventory update", async ({ page, request }) => {
+  test("select shelf -> upload -> preview -> analyze -> add to inventory -> inventory update", async ({ page, request }) => {
     const vendor = await createVendor(request);
     await openScanPage(page, vendor);
 
@@ -28,7 +28,13 @@ test.describe("scan journey", () => {
     await expect(page.getByRole("img", { name: "Preview" })).toBeVisible();
     await page.getByRole("button", { name: "Analyze" }).click();
 
+    // Analysis alone never changes stock.
     await expect(page.getByText("Scan Result")).toBeVisible();
+    await expect(page.getByText("Not added to inventory yet")).toBeVisible();
+    expect(await stockOf(vendor.businessId)).toBe(10);
+    expect(await scanStatuses(vendor.businessId)).toEqual(["ANALYZED"]);
+
+    await page.getByRole("button", { name: "Add to inventory" }).click();
     await expect(page.getByText("Stock added")).toBeVisible();
     await expect(page.getByText("Current 10 · Detected 3 · New stock 13")).toBeVisible();
 
@@ -72,7 +78,31 @@ test.describe("scan journey", () => {
     await page.getByLabel("Choose another").setInputFiles(SAMPLE_JPEG);
     await page.getByRole("button", { name: "Analyze" }).click();
     await expect(page.getByText("Scan Result")).toBeVisible();
+    await page.getByRole("button", { name: "Add to inventory" }).click();
+    await expect(page.getByText("Stock added")).toBeVisible();
     expect(await stockOf(vendor.businessId)).toBe(13);
+  });
+
+  test("a second photo of the same shelf can be discarded so stock is not counted twice", async ({ page, request }) => {
+    const vendor = await createVendor(request);
+    await openScanPage(page, vendor);
+
+    await page.locator('input[type="file"]').setInputFiles(SAMPLE_JPEG);
+    await page.getByRole("button", { name: "Analyze" }).click();
+    await page.getByRole("button", { name: "Add to inventory" }).click();
+    await expect(page.getByText("Stock added")).toBeVisible();
+    // Once added, the button is gone, so the same scan cannot be added again.
+    await expect(page.getByRole("button", { name: "Add to inventory" })).toHaveCount(0);
+
+    // Same shelf photographed again: analysed, then discarded.
+    await page.locator('input[type="file"]').first().setInputFiles(SAMPLE_JPEG);
+    await page.getByRole("button", { name: "Analyze" }).click();
+    await expect(page.getByText("Not added to inventory yet")).toBeVisible();
+    await page.getByRole("button", { name: "Discard" }).click();
+    await expect(page.getByText("Scan Result")).toHaveCount(0);
+
+    expect(await stockOf(vendor.businessId)).toBe(13);
+    expect(await scanStatuses(vendor.businessId)).toEqual(["COMPLETED", "ANALYZED"]);
   });
 
   test("Remove Stock subtracts the detected items from inventory", async ({ page, request }) => {
@@ -82,6 +112,9 @@ test.describe("scan journey", () => {
     await page.getByRole("button", { name: "Remove Stock" }).click();
     await page.locator('input[type="file"]').setInputFiles(SAMPLE_JPEG);
     await page.getByRole("button", { name: "Analyze" }).click();
+    await expect(page.getByText("Not added to inventory yet")).toBeVisible();
+    expect(await stockOf(vendor.businessId)).toBe(10);
+    await page.getByRole("button", { name: "Remove from inventory" }).click();
 
     await expect(page.getByText("Stock removed")).toBeVisible();
     expect(await stockOf(vendor.businessId)).toBe(7);
@@ -119,13 +152,15 @@ test.describe("degraded mode: AI service unavailable", () => {
     await expect(page.getByRole("heading", { name: "Settings" }).first()).toBeVisible();
     await expect(page).not.toHaveURL(/login/);
 
-    // AI recovers -> a new scan succeeds and only then changes inventory.
+    // AI recovers -> a new scan succeeds and only changes inventory once confirmed.
     await setAiMode(request, "up");
     await page.goto("/dashboard/scans");
     await page.getByLabel("Select a Shelf").selectOption({ label: `${vendor.shelfName} (Fruit)` });
     await page.locator('input[type="file"]').setInputFiles(SAMPLE_JPEG);
     await page.getByRole("button", { name: "Analyze" }).click();
     await expect(page.getByText("Scan Result")).toBeVisible();
+    await page.getByRole("button", { name: "Add to inventory" }).click();
+    await expect(page.getByText("Stock added")).toBeVisible();
 
     expect(await scanStatuses(vendor.businessId)).toEqual(["FAILED", "COMPLETED"]);
     expect(await stockOf(vendor.businessId)).toBe(13);
@@ -143,6 +178,8 @@ test.describe("degraded mode: AI service unavailable", () => {
     await page.getByRole("button", { name: "Analyze" }).click();
 
     await expect(page.getByText("Scan Result")).toBeVisible();
+    await page.getByRole("button", { name: "Add to inventory" }).click();
+    await expect(page.getByText("Stock added")).toBeVisible();
     expect(await stockOf(vendor.businessId)).toBe(13);
   });
 });

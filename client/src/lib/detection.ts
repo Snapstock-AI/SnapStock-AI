@@ -4,6 +4,9 @@ import { API_URL } from "./api";
 export type DetectionResult = {
   scanId: string;
   shelf?: Shelf;
+  scanMode?: ScanMode;
+  /** False until the user presses "Add to inventory"; analysis alone never changes stock. */
+  inventoryApplied?: boolean;
 
   image_width: number;
   image_height: number;
@@ -52,11 +55,26 @@ export type ScanMode = "STOCK_IN" | "STOCK_OUT";
 
 export type FreshnessStatus = "Fresh" | "Medium" | "Spoiled";
 
+/** ANALYZED: result ready but not yet added to inventory. COMPLETED: added to inventory. */
+export type ScanStatusValue = "PENDING" | "PROCESSING" | "ANALYZED" | "COMPLETED" | "FAILED";
+
+const SCAN_STATUS_LABELS: Record<ScanStatusValue, string> = {
+  PENDING: "Pending",
+  PROCESSING: "Processing",
+  ANALYZED: "Not added to inventory",
+  COMPLETED: "Added to inventory",
+  FAILED: "Failed",
+};
+
+export function scanStatusLabel(status: ScanStatusValue) {
+  return SCAN_STATUS_LABELS[status] ?? status;
+}
+
 export type ScanHistoryItem = {
   id: string;
   shelf_id: string;
   shelf_name: string;
-  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  status: ScanStatusValue;
   created_at: string;
   completed_at: string | null;
   item_count: number;
@@ -180,6 +198,24 @@ export async function updateDetectionFreshness(
   return body.data as { id: string; freshness: FreshnessStatus };
 }
 
+/**
+ * Applies an analysed scan's stock change. Stock is only changed here, so taking two
+ * photos of the same shelf does not double the inventory unless both are confirmed.
+ */
+export async function confirmScanInventory(scanId: string, token: string) {
+  const response = await fetch(`${API_URL}/detection/scans/${scanId}/confirm`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const body = await readJson(response);
+  if (!response.ok || body.success === false) {
+    throw new Error(body.message || "Unable to add the scan to inventory.");
+  }
+
+  return body.data as DetectionResult;
+}
+
 export type AnalysisStage = "uploading" | "queued" | "analyzing";
 
 export type AnalyzeOptions = {
@@ -195,7 +231,7 @@ type ScanUploadTicket = {
 
 type ScanStatus = {
   scanId: string;
-  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  status: ScanStatusValue;
   data: DetectionResult | null;
   errorMessage?: string;
 };
@@ -299,7 +335,7 @@ export async function analyzeImage(
 
     const status = statusBody.data as ScanStatus;
 
-    if (status.status === "COMPLETED" && status.data) {
+    if ((status.status === "ANALYZED" || status.status === "COMPLETED") && status.data) {
       return status.data;
     }
     if (status.status === "FAILED") {

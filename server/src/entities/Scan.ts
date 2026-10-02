@@ -5,7 +5,8 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 
-export type ScanStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+/** ANALYZED: AI result saved, waiting for the user to add it to inventory (then COMPLETED). */
+export type ScanStatus = "PENDING" | "PROCESSING" | "ANALYZED" | "COMPLETED" | "FAILED";
 export type ScanMode = "STOCK_IN" | "STOCK_OUT";
 
 @Entity("scans")
@@ -18,7 +19,7 @@ export class Scan {
   scan_mode!: ScanMode;
   @Column({
     type: "enum",
-    enum: ["PENDING", "PROCESSING", "COMPLETED", "FAILED"],
+    enum: ["PENDING", "PROCESSING", "ANALYZED", "COMPLETED", "FAILED"],
     enumName: "scan_status",
     default: "PENDING",
   })
