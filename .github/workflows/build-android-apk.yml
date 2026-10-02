@@ -25,13 +25,13 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android platform & build-tools
+      - name: Accept Android SDK licenses & install packages
         run: |
+          set -euo pipefail
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
-          sdkmanager --list_installed
+          sdkmanager --list_installed | head -40
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -40,6 +40,7 @@ jobs:
         working-directory: android
         run: |
           chmod +x gradlew
+          printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
           ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
