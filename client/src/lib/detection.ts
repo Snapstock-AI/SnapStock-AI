@@ -13,6 +13,7 @@ export type DetectionResult = {
     string,
     {
       fresh: number;
+      medium: number;
       rotten: number;
       total: number;
     }

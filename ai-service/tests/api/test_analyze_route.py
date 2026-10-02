@@ -82,7 +82,7 @@ def create_analysis_response():
                     x2=100,
                     y2=120,
                 ),
-                freshness="good",
+                freshness="fresh",
                 freshness_confidence=0.88,
                 freshness_confidence_percent=88.0,
             ),
@@ -95,7 +95,7 @@ def create_analysis_response():
                     x2=250,
                     y2=180,
                 ),
-                freshness="bad",
+                freshness="rotten",
                 freshness_confidence=0.79,
                 freshness_confidence_percent=79.0,
             ),
@@ -147,11 +147,13 @@ def test_analyze_success(
     assert data["counts"] == {
         "apple": {
             "fresh": 1,
+            "medium": 0,
             "rotten": 0,
             "total": 1,
         },
         "orange": {
             "fresh": 0,
+            "medium": 0,
             "rotten": 1,
             "total": 1,
         },
@@ -166,7 +168,7 @@ def test_analyze_success(
 
     assert (
         data["detections"][0]["freshness"]
-        == "good"
+        == "fresh"
     )
 
     assert (
@@ -176,7 +178,7 @@ def test_analyze_success(
 
     assert (
         data["detections"][1]["freshness"]
-        == "bad"
+        == "rotten"
     )
 
     mock_analyze.assert_called_once_with(

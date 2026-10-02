@@ -12,7 +12,8 @@ from app.analysis.schemas import (
 )
 
 from app.config import (
-    POSITIVE_CLASS_LABEL,
+    FRESH_LABEL,
+    MEDIUM_LABEL,
     YOLO_CONFIDENCE_THRESHOLD,
 )
 
@@ -67,8 +68,10 @@ def _analyze_image(
 
         summary = counts[fruit.class_name]
 
-        if prediction.freshness == POSITIVE_CLASS_LABEL:
+        if prediction.freshness == FRESH_LABEL:
             summary.fresh += 1
+        elif prediction.freshness == MEDIUM_LABEL:
+            summary.medium += 1
         else:
             summary.rotten += 1
 

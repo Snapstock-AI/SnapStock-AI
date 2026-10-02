@@ -34,8 +34,8 @@ describe("POST /detection/analyze", () => {
       image_height: 480,
       total_count: 2,
       counts: {
-        apple: { fresh: 1, rotten: 0, total: 1 },
-        lemon: { fresh: 1, rotten: 0, total: 1 },
+        apple: { fresh: 1, medium: 0, rotten: 0, total: 1 },
+        lemon: { fresh: 1, medium: 0, rotten: 0, total: 1 },
       },
       detections: [
         {

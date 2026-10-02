@@ -54,7 +54,7 @@ def test_predict_success(
     image_bytes = b"fake-valid-image-bytes"
 
     fake_prediction = PredictionResponse(
-        freshness="good",
+        freshness="fresh",
         confidence=0.90,
         confidence_percent=90.0,
         model="test-model",
@@ -86,7 +86,7 @@ def test_predict_success(
 
     data = response.json()
 
-    assert data["freshness"] == "good"
+    assert data["freshness"] == "fresh"
     assert data["confidence"] == 0.90
     assert data["confidence_percent"] == 90.0
     assert data["model"] == "test-model"
