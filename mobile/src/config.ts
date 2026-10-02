@@ -6,7 +6,7 @@
  * back to localhost because localhost on a phone means the phone itself.
  */
 const LOCAL_API_URL = 'http://localhost:5000';
-const DEPLOYED_API_URL = 'http://13.201.24.199/snapstock-backend-http';
+const DEPLOYED_API_URL = 'https://snapstock.rashmika.dev/snapstock-backend-http';
 
 function resolveApiUrl(value: string | undefined): string {
   const url = (value?.trim() || (__DEV__ ? LOCAL_API_URL : DEPLOYED_API_URL)).replace(/\/+$/, '');
