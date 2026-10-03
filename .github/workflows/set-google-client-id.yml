@@ -1,7 +1,8 @@
 name: Set Google Client ID on EKS
 
-# Patches snapstock-backend-secrets.GOOGLE_CLIENT_ID to match VITE_GOOGLE_CLIENT_ID,
-# then restarts the backend so pods pick up the new value.
+# Patch GOOGLE_CLIENT_ID then restart backend.
+# OIDC is refs/heads/dev only:
+#   gh workflow run "Set Google Client ID on EKS" --ref dev
 
 on:
   workflow_dispatch:
@@ -27,7 +28,7 @@ jobs:
             echo "VITE_GOOGLE_CLIENT_ID does not look like a Google OAuth client ID."
             exit 1
           fi
-          echo "Using client ID ending …${CLIENT_ID: -28}"
+          echo "Using client ID ending ...${CLIENT_ID: -28}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -52,8 +53,27 @@ jobs:
           kubectl -n snapstock rollout restart deployment/snapstock-backend
           kubectl -n snapstock rollout status deployment/snapstock-backend --timeout=5m
 
-          # Confirm the secret now holds a non-empty value (do not print the full ID).
           LEN=$(kubectl -n snapstock get secret snapstock-backend-secrets \
-            -o jsonpath='{.data.GOOGLE_CLIENT_ID}' | base64 -d | wc -c)
+            -o jsonpath="{.data.GOOGLE_CLIENT_ID}" | base64 -d | wc -c)
           echo "GOOGLE_CLIENT_ID length in secret: ${LEN}"
           test "${LEN}" -gt 20
+
+          echo "======== SNAPSTOCK WORKLOADS ========"
+          kubectl -n snapstock get pods,deploy -o wide || true
+
+          POD=$(kubectl -n snapstock get pods -l app=snapstock-backend -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || true)
+          if [ -z "${POD}" ]; then
+            POD=$(kubectl -n snapstock get pods -o name | grep -i backend | grep -v migrate | head -1 | cut -d/ -f2 || true)
+          fi
+          echo "POD=${POD}"
+          if [ -n "${POD}" ]; then
+            echo "======== BACKEND ENV (filtered) ========"
+            kubectl -n snapstock exec "${POD}" -- printenv \
+              | grep -E '^(GOOGLE_CLIENT_ID|CLIENT_URL|SERVER_PUBLIC_URL|NODE_ENV|CSP_)=' \
+              | sed -E 's/(GOOGLE_CLIENT_ID=).+/\1***redacted***/' || true
+            echo "======== BACKEND LOGS grep auth/google/error ========"
+            kubectl -n snapstock logs "${POD}" --tail=2000 2>/dev/null \
+              | grep -iE 'google|auth|/auth|error|fail|warn' | tail -100 || true
+            echo "======== BACKEND LOGS (tail 150) ========"
+            kubectl -n snapstock logs "${POD}" --tail=150 || true
+          fi
