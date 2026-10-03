@@ -1,11 +1,16 @@
-name: Prod diagnostics EKS
+name: Prod diagnostics (EKS)
 
-# Dump EKS pod/secret status and backend logs.
-# OIDC is refs/heads/dev only:
-#   gh workflow run "Prod diagnostics EKS" --ref dev
+# One-shot cluster/app health + backend log dump.
+# OIDC trust is refs/heads/dev — always:
+#   gh workflow run "Prod diagnostics (EKS)" --ref dev
 
 on:
   workflow_dispatch:
+    inputs:
+      log_lines:
+        description: "Backend log tail lines"
+        required: false
+        default: "300"
 
 permissions:
   contents: read
@@ -21,10 +26,11 @@ jobs:
           role-to-assume: ${{ vars.EKS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Cluster and backend diagnostics
+      - name: Cluster + backend diagnostics
         env:
           CLUSTER: ${{ vars.EKS_CLUSTER_NAME }}
           REGION: ${{ vars.AWS_REGION }}
+          LOG_LINES: ${{ inputs.log_lines }}
         run: |
           set -euo pipefail
           aws eks update-kubeconfig --name "${CLUSTER}" --region "${REGION}"
