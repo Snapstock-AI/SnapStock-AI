@@ -8,6 +8,7 @@ import { BusinessService } from "./business.service";
 import { BusinessRepository } from "./business.repository";
 import { AuthRepository } from "../auth/auth.repository";
 import { sendEmployeeInvitationEmail } from "../../shared/utils/email";
+import { ForbiddenError } from "../../shared/utils/errors";
 
 const INVITATION_VALIDITY_DAYS = 7;
 
