@@ -1,0 +1,5 @@
+SnapStock deployed to namespace {{ .Release.Namespace }}.
+
+  kubectl get ingress snapstock -n {{ .Release.Namespace }}      # ALB hostname
+  kubectl get pods,scaledobject -n {{ .Release.Namespace }} -o wide
+  kubectl top pods -n {{ .Release.Namespace }}

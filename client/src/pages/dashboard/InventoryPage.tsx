@@ -60,7 +60,7 @@ export default function InventoryPage() {
         actions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-10 rounded-full">
+              <Button variant="outline" className="h-9">
                 <CalendarDays className="h-4 w-4 text-primary" />
                 {rangeLabel}
                 <ChevronDown className="h-4 w-4 text-fd-muted" />
@@ -120,7 +120,7 @@ export default function InventoryPage() {
                       <TableCell className="font-medium text-fd-ink">
                         {item.product}
                         {item.lowStock ? (
-                          <span className="ml-2 text-xs text-amber-600">Low</span>
+                          <span className="ml-2 text-xs font-medium text-ripe-foreground dark:text-ripe">Low</span>
                         ) : null}
                       </TableCell>
                       <TableCell>{item.stock}</TableCell>

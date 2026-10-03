@@ -1,0 +1,6 @@
+# Copy to backend.hcl (git-ignored) after running infra/eks/bootstrap, or paste its `backend_config` output.
+bucket       = "snapstock-tfstate-<ACCOUNT_ID>"
+key          = "eks/terraform.tfstate"
+region       = "ap-south-1"
+use_lockfile = true
+encrypt      = true

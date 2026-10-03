@@ -84,6 +84,7 @@ describe("DetectionController", () => {
         counts: {
           apple: {
             fresh: 1,
+            medium: 0,
             rotten: 0,
             total: 1,
           },

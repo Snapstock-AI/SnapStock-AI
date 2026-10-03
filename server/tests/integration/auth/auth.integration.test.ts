@@ -6,6 +6,9 @@ import { AuthService } from "../../../src/modules/auth/auth.service";
 import { AuthRepository } from "../../../src/modules/auth/auth.repository";
 import { DetectionService } from "../../../src/modules/detection/detection.service";
 
+// Uploads are checked server-side for an image signature (NFR-SEC-004.3).
+const JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+
 jest.mock("../../../src/modules/auth/auth.service", () => ({
   AuthService: {
     login: jest.fn(),
@@ -202,7 +205,7 @@ describe("Protected detection with real auth middleware", () => {
       .post("/detection/analyze")
       .field("businessId", "business-123")
       .field("shelfId", "shelf-123")
-      .attach("file", Buffer.from("fake-image"), "shelf.jpg");
+      .attach("file", JPEG_BYTES, "shelf.jpg");
 
     expect(response.status).toBe(401);
     expect(mockedDetectionService.analyze).not.toHaveBeenCalled();
@@ -243,7 +246,7 @@ describe("Protected detection with real auth middleware", () => {
       .set("Authorization", `Bearer ${token}`)
       .field("businessId", "business-123")
       .field("shelfId", "shelf-123")
-      .attach("file", Buffer.from("fake-image"), "shelf.jpg");
+      .attach("file", JPEG_BYTES, "shelf.jpg");
 
     expect(response.status).toBe(200);
     expect(mockedDetectionService.analyze).toHaveBeenCalledWith(

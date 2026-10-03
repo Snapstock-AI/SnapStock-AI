@@ -1,3 +1,4 @@
+import { errorMessage, errorStatus } from "../../shared/utils/errors";
 import { Response } from "express";
 import { DetectionService } from "./detection.service";
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
@@ -41,7 +42,7 @@ export class DetectionController {
 
       return res.status(200).json({ success: true, data: scans });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -71,9 +72,88 @@ export class DetectionController {
         },
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message || "Unable to correct freshness.",
+        message: errorMessage(error, "Unable to correct freshness."),
+      });
+    }
+  }
+
+  // ---- Event-driven analysis: upload-url -> (browser uploads to S3) -> queue -> status ----
+
+  private static sendPipelineError(res: Response, error: any) {
+    if (error?.code === "EVENT_PIPELINE_DISABLED" || error?.code === "AI_UNAVAILABLE") {
+      return res.status(503).json({
+        success: false,
+        code: error.code,
+        message: errorMessage(error),
+      });
+    }
+    return res.status(errorStatus(error)).json({
+      success: false,
+      message: errorMessage(error),
+    });
+  }
+
+  static async createUploadUrl(req: AuthRequest, res: Response) {
+    try {
+      const { businessId, shelfId, fileName, contentType, scanMode = "STOCK_IN" } = req.body ?? {};
+      if (scanMode !== "STOCK_IN" && scanMode !== "STOCK_OUT") {
+        return res.status(400).json({ success: false, message: "Invalid scan mode." });
+      }
+
+      const data = await DetectionService.createUploadUrl({
+        businessId: String(businessId || ""),
+        shelfId: String(shelfId || ""),
+        userId: req.user!.id,
+        scanMode,
+        fileName: String(fileName || ""),
+        contentType: String(contentType || ""),
+      });
+
+      return res.status(201).json({ success: true, data });
+    } catch (error: any) {
+      return DetectionController.sendPipelineError(res, error);
+    }
+  }
+
+  static async queueScan(req: AuthRequest, res: Response) {
+    try {
+      const scanId = String(req.body?.scanId || "");
+      if (!scanId) {
+        return res.status(400).json({ success: false, message: "Scan ID is required." });
+      }
+
+      const data = await DetectionService.queueScan(scanId, req.user!.id);
+      return res.status(202).json({ success: true, data });
+    } catch (error: any) {
+      return DetectionController.sendPipelineError(res, error);
+    }
+  }
+
+  static async getScanStatus(req: AuthRequest, res: Response) {
+    try {
+      const data = await DetectionService.getScanStatus(
+        String(req.params.scanId),
+        req.user!.id,
+      );
+      return res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      return DetectionController.sendPipelineError(res, error);
+    }
+  }
+
+  static async confirmInventory(req: AuthRequest, res: Response) {
+    try {
+      const data = await DetectionService.confirmInventory(
+        String(req.params.scanId),
+        req.user!.id,
+      );
+      return res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      return res.status(errorStatus(error)).json({
+        success: false,
+        message: errorMessage(error, "Unable to add the scan to inventory."),
       });
     }
   }
@@ -119,9 +199,17 @@ export class DetectionController {
         data: result,
       });
     } catch (error: any) {
-      return res.status(400).json({
+      if (error.code === "AI_UNAVAILABLE") {
+        return res.status(503).json({
+          success: false,
+          code: "AI_UNAVAILABLE",
+          message: errorMessage(error),
+        });
+      }
+
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message,
+        message: errorMessage(error),
       });
     }
   }

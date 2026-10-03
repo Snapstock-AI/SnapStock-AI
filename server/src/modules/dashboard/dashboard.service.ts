@@ -1,3 +1,4 @@
+import { AlertService } from "../alerts/alert.service";
 import { BusinessService } from "../business/business.service";
 import { DashboardRepository } from "./dashboard.repository";
 
@@ -5,10 +6,6 @@ function daysAgo(days: number) {
   const d = new Date();
   d.setDate(d.getDate() - days);
   return d;
-}
-
-function hoursAgo(hours: number) {
-  return new Date(Date.now() - hours * 60 * 60 * 1000);
 }
 
 function freshnessScore(
@@ -216,112 +213,19 @@ export class DashboardService {
     };
   }
 
-  static async getAlerts(userId: string, businessId: string) {
+  /** `count` is always the number of active alerts; resolved ones are history only. */
+  static async getAlerts(userId: string, businessId: string, includeResolved = true) {
     await BusinessService.assertMember(userId, businessId);
-    const alerts = await this.buildAlerts(businessId);
-    return { count: alerts.length, alerts };
+    const active = await this.buildAlerts(businessId);
+    const resolved = includeResolved ? await AlertService.listResolved(businessId) : [];
+    return { count: active.length, alerts: [...active, ...resolved] };
+  }
+
+  static async resolveAlert(userId: string, businessId: string, alertId: string) {
+    return AlertService.resolve(userId, businessId, alertId);
   }
 
   private static async buildAlerts(businessId: string) {
-    const thresholds =
-      await DashboardRepository.getBusinessThresholds(businessId);
-    const freshnessThreshold = thresholds?.freshness_alert_threshold ?? 65;
-    const lowStock = thresholds?.low_stock_threshold ?? 25;
-    const since = daysAgo(7);
-
-    const byShelfProduct = await DashboardRepository.productFreshnessByShelf(
-      businessId,
-      since,
-    );
-    const shelves = await DashboardRepository.listShelves(businessId);
-    const lastScans = await DashboardRepository.lastScanByShelf(businessId);
-    const lastScanMap = new Map(
-      lastScans.map((s) => [s.shelf_id, s.last_scan_at]),
-    );
-
-    type Alert = {
-      id: string;
-      severity: "critical" | "warning" | "info";
-      title: string;
-      message: string;
-      createdAt: string;
-      shelfName?: string;
-      productLabel?: string;
-    };
-
-    const alerts: Alert[] = [];
-
-    const activeLowStockAlerts = await DashboardRepository.activeLowStockAlerts(businessId);
-    for (const alert of activeLowStockAlerts) {
-      alerts.push({
-        id: String(alert.id),
-        severity: "warning",
-        title: `Low stock: ${alert.product_name}`,
-        message: String(alert.message),
-        createdAt: new Date(alert.created_at).toISOString(),
-        productLabel: String(alert.product_name),
-      });
-    }
-
-    for (const row of byShelfProduct) {
-      if (row.spoiled_count > 0) {
-        alerts.push({
-          id: `spoiled:${row.shelf_id}:${row.product_label}`,
-          severity: "critical",
-          title: `${row.product_label} spoilage on ${row.shelf_name}`,
-          message: `${row.spoiled_count} spoiled item(s) detected in the last 7 days.`,
-          createdAt: new Date(row.last_seen).toISOString(),
-          shelfName: row.shelf_name,
-          productLabel: row.product_label,
-        });
-      }
-
-      const atRiskShare =
-        row.total > 0
-          ? Math.round(
-              ((row.medium_count + row.spoiled_count) / row.total) * 100,
-            )
-          : 0;
-      if (row.total > 0 && atRiskShare >= freshnessThreshold) {
-        alerts.push({
-          id: `freshness:${row.shelf_id}:${row.product_label}`,
-          severity: "warning",
-          title: `${row.product_label} freshness risk`,
-          message: `${atRiskShare}% of ${row.product_label} on ${row.shelf_name} is ripe or spoiled (threshold ${freshnessThreshold}%).`,
-          createdAt: new Date(row.last_seen).toISOString(),
-          shelfName: row.shelf_name,
-          productLabel: row.product_label,
-        });
-      }
-
-    }
-
-    const staleCutoff = hoursAgo(48);
-    for (const shelf of shelves) {
-      const last = lastScanMap.get(shelf.id);
-      if (!last || new Date(last) < staleCutoff) {
-        alerts.push({
-          id: `stale:${shelf.id}`,
-          severity: "info",
-          title: `${shelf.name} needs a scan`,
-          message: last
-            ? `Last completed scan was ${new Date(last).toLocaleString()}.`
-            : "No completed scans yet for this shelf.",
-          createdAt: last
-            ? new Date(last).toISOString()
-            : new Date().toISOString(),
-          shelfName: shelf.name,
-        });
-      }
-    }
-
-    const severityRank = { critical: 0, warning: 1, info: 2 };
-    alerts.sort(
-      (a, b) =>
-        severityRank[a.severity] - severityRank[b.severity] ||
-        b.createdAt.localeCompare(a.createdAt),
-    );
-
-    return alerts;
+    return AlertService.listActive(businessId);
   }
 }

@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars (git-ignored). Never commit real values.
+
+# App versions are released by CI/CD. Only for a first-time install (empty ECR) or to pin a version:
+# image_tags = { backend = "dev-<sha>", frontend = "dev-<sha>", ai = "dev-<sha>" }
+
+jwt_secret = "change-me-long-random"
+# Must match GitHub var VITE_GOOGLE_CLIENT_ID (and local .env). Empty values fail plan/apply.
+google_client_id = "YOUR_ID.apps.googleusercontent.com"
+
+smtp_host = ""
+smtp_port = "587"
+smtp_user = ""
+smtp_pass = ""
+
+# After the first apply, set this to the ALB URL printed as `app_url`, then re-apply.
+client_url = "http://localhost"
+
+# Later, when you own a domain + ACM certificate in ap-south-1:
+# certificate_arn = "arn:aws:acm:ap-south-1:<acct>:certificate/<id>"

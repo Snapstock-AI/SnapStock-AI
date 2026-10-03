@@ -1,17 +1,45 @@
 import "reflect-metadata";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 
 import authRoutes from "./modules/auth/auth.routes";
 import detectionRoutes from "./modules/detection/detection.routes";
 import businessRoutes from "./modules/business/business.routes";
 import shelfRoutes from "./modules/shelf/shelf.routes";
-import adminRoutes from "./modules/admin/admin.routes";
+import { metricsHandler, metricsMiddleware } from "./shared/metrics";
+
+// NFR-SEC-001.3: outside production any origin is accepted for local development; in
+// production only CLIENT_URL / CORS_ORIGINS are, and with neither set cross-origin
+// access is denied rather than falling back to a wildcard.
+function corsOptions(): cors.CorsOptions {
+  const allowed = [process.env.CLIENT_URL, ...(process.env.CORS_ORIGINS?.split(",") ?? [])]
+    .map((origin) => origin?.trim().replace(/\/$/, ""))
+    .filter((origin): origin is string => Boolean(origin));
+
+  if (allowed.length === 0 && process.env.NODE_ENV !== "production") {
+    return {};
+  }
+
+  return { origin: allowed };
+}
 
 const app = express();
 
-app.use(cors());
+// CSP_UPGRADE_INSECURE=false drops helmet's upgrade-insecure-requests for HTTP-only
+// deployments (no TLS yet); otherwise browsers rewrite the HTML form posts to https.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        upgradeInsecureRequests: process.env.CSP_UPGRADE_INSECURE === "false" ? null : [],
+      },
+    },
+  }),
+);
+app.use(cors(corsOptions()));
 app.use(express.json());
+app.use(metricsMiddleware);
 // Needed for the plain-HTML reset-password form served from auth.routes.ts.
 app.use(express.urlencoded({ extended: true }));
 
@@ -21,6 +49,8 @@ app.get("/health", (_req, res) => {
     service: "snapstock-backend",
   });
 });
+
+app.get("/metrics", metricsHandler);
 
 app.use("/auth", authRoutes);
 app.use("/detection", detectionRoutes);

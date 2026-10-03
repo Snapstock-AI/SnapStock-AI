@@ -13,6 +13,8 @@ jest.mock("../../../src/modules/detection/detection.repository", () => ({
     findOrCreateProduct: jest.fn(),
     createDetection: jest.fn(),
     applyInventoryChange: jest.fn(),
+    saveScanResult: jest.fn(),
+    markScanAnalyzed: jest.fn(),
   },
 }));
 
@@ -113,7 +115,7 @@ describe("DetectionService", () => {
 
 
   describe("Successful scan", () => {
-    it("should process AI detections and complete the scan", async () => {
+    it("should save AI detections and wait for confirmation before changing inventory", async () => {
       const file = {
         buffer: Buffer.from("fake-image"),
         originalname: "shelf.jpg",
@@ -132,12 +134,6 @@ describe("DetectionService", () => {
       });
 
       
-      mockedRepository.findOrCreateProduct
-        .mockResolvedValueOnce({
-          id: "product-apple",
-        })
-        .mockResolvedValueOnce(null);
-
       
       mockedRepository.createDetection
         .mockResolvedValueOnce({
@@ -177,11 +173,13 @@ describe("DetectionService", () => {
           counts: {
             apple: {
           fresh: 1,
+          medium: 0,
           rotten: 0,
           total: 1,
             },
             banana: {
           fresh: 1,
+          medium: 0,
           rotten: 0,
           total: 1,
         },
@@ -259,21 +257,8 @@ describe("DetectionService", () => {
       );
 
       
-      expect(
-        mockedRepository.findOrCreateProduct
-      ).toHaveBeenNthCalledWith(
-        1,
-        "business-123",
-        "Apple"
-      );
-
-      expect(
-        mockedRepository.findOrCreateProduct
-      ).toHaveBeenNthCalledWith(
-        2,
-        "business-123",
-        "Banana"
-      );
+      // Products are only created/linked when the user adds the scan to inventory.
+      expect(mockedRepository.findOrCreateProduct).not.toHaveBeenCalled();
 
      
 
@@ -283,7 +268,7 @@ describe("DetectionService", () => {
         1,
         "scan-123",
         "Apple",
-        "product-apple",
+        null,
         0.95,
         {
           x1: 10,
@@ -314,16 +299,18 @@ describe("DetectionService", () => {
       );
 
       
-      expect(mockedRepository.applyInventoryChange).toHaveBeenCalledWith(
+      expect(mockedRepository.applyInventoryChange).not.toHaveBeenCalled();
+      expect(mockedRepository.markScanAnalyzed).toHaveBeenCalledWith(
         "scan-123",
-        "business-123",
-        "STOCK_IN",
+        result,
       );
 
  
 
       expect(result).toEqual({
         scanId: "scan-123",
+        scanMode: "STOCK_IN",
+        inventoryApplied: false,
 
         image_width: 640,
         image_height: 480,
@@ -333,12 +320,14 @@ describe("DetectionService", () => {
         counts: {
           apple: {
             fresh: 1,
+            medium: 0,
             rotten: 0,
             total: 1,
           },
     
           banana: {
             fresh: 1,
+            medium: 0,
             rotten: 0,
             total: 1,
         

@@ -1,68 +1,64 @@
-import { BarChart3, Bell, Camera, Leaf, Shield, Store } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
+import { Layers, Timer } from 'lucide-react'
+import { BlurWords, Container, Reveal, SectionTag } from '@/components/landing/primitives'
 
-const features = [
+const highlights = [
   {
-    icon: Camera,
-    title: 'Scan with any phone',
-    description:
-      'Point your camera at a shelf. Our vision model counts stock and reads freshness — no scanners, no scales, no barcodes.',
+    icon: Layers,
+    value: '3 tiers',
+    text: 'Freshness grading that flags produce as it ripens, so you can discount or rotate stock before it spoils.',
   },
   {
-    icon: Leaf,
-    title: 'Freshness scoring',
-    description:
-      'A CNN trained on 138k+ produce images grades each item as Fresh, Medium or Spoiled with confidence intervals.',
-  },
-  {
-    icon: Bell,
-    title: 'Real-time alerts',
-    description:
-      'Get pinged the moment a batch is nearing spoilage or a bin drops below your reorder threshold.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Waste analytics',
-    description:
-      'See which SKUs spoil fastest, when demand spikes, and where your shelf life is quietly eating margin.',
-  },
-  {
-    icon: Store,
-    title: 'Multi-tenant catalog',
-    description:
-      'Manage multiple stalls, staff, and product catalogs from one dashboard with role-based access.',
-  },
-  {
-    icon: Shield,
-    title: 'Private by default',
-    description:
-      'Images are processed securely and never used to train third-party models. Your shelves stay yours.',
+    icon: Timer,
+    value: '< 2s',
+    text: 'Scan a whole shelf faster than counting it by hand, and keep stock levels accurate every day.',
   },
 ]
 
 export default function Features() {
   return (
-    <section id="features" className="border-t border-border bg-muted/35 py-16 md:py-24">
-      <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Features</p>
-        <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">
-          Enterprise-grade produce intelligence, sized for the corner shop.
-        </h2>
+    <section id="features" className="bg-cream px-5 pt-[30px] pb-[60px] md:px-[30px] md:py-20 xl:py-[120px]">
+      <Container className="flex flex-col gap-10 md:gap-[46px] xl:flex-row xl:items-start xl:gap-12">
+        <div className="flex w-full flex-col gap-10 md:gap-[46px] xl:max-w-[599px] xl:gap-[60px]">
+          <div className="flex flex-col gap-4 md:gap-5">
+            <Reveal>
+              <SectionTag>Features</SectionTag>
+            </Reveal>
+            <BlurWords
+              text="Reduce waste, protect your margins"
+              className="text-[36px] leading-[1.2] font-bold text-ink md:max-w-[550px] xl:text-[44px] 2xl:text-[52px]"
+            />
+            <Reveal as="p" className="text-lg leading-relaxed text-ink-body md:max-w-[550px]">
+              SnapStock-AI helps shop owners adopt smart, data-driven habits that keep produce fresher,
+              shelves fuller and money out of the bin.
+            </Reveal>
+          </div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map(({ icon: Icon, title, description }) => (
-            <Card key={title} className="hover:shadow-md">
-              <CardContent className="p-6">
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/12 text-primary">
-                  <Icon className="h-5 w-5" />
+          <Reveal className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {highlights.map(({ icon: Icon, value, text }) => (
+              <div key={value} className="flex flex-col items-start gap-5">
+                <span className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-lime text-ink">
+                  <Icon className="h-7 w-7" aria-hidden="true" />
+                </span>
+                <div className="flex flex-col gap-4">
+                  <p className="font-display text-[26px] leading-[1.2] font-bold tracking-[-0.06em] text-ink md:text-[32px]">
+                    {value}
+                  </p>
+                  <p className="text-base leading-relaxed text-ink-body">{text}</p>
                 </div>
-                <h3 className="font-semibold tracking-tight">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            ))}
+          </Reveal>
         </div>
-      </div>
+
+        <Reveal className="w-full xl:flex-1 xl:self-stretch">
+          <img
+            src="/images/landing/feature.webp"
+            alt="Fresh vegetables displayed in baskets at a grocery store"
+            loading="lazy"
+            className="aspect-[1.25] h-full w-full rounded-[20px] object-cover md:aspect-auto md:h-[520px] xl:h-full xl:min-h-[520px]"
+          />
+        </Reveal>
+      </Container>
     </section>
   )
 }

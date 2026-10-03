@@ -1,0 +1,79 @@
+name: Set Google Client ID on EKS
+
+# Patch GOOGLE_CLIENT_ID then restart backend.
+# OIDC is refs/heads/dev only:
+#   gh workflow run "Set Google Client ID on EKS" --ref dev
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  patch-secret:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Google client ID variable
+        env:
+          CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLIENT_ID}" ]; then
+            echo "Repository variable VITE_GOOGLE_CLIENT_ID is empty."
+            exit 1
+          fi
+          if [[ "${CLIENT_ID}" != *.apps.googleusercontent.com ]]; then
+            echo "VITE_GOOGLE_CLIENT_ID does not look like a Google OAuth client ID."
+            exit 1
+          fi
+          echo "Using client ID ending ...${CLIENT_ID: -28}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.EKS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Patch secret and restart backend
+        env:
+          CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+          CLUSTER: ${{ vars.EKS_CLUSTER_NAME }}
+          REGION: ${{ vars.AWS_REGION }}
+        run: |
+          set -euo pipefail
+          aws eks update-kubeconfig --name "${CLUSTER}" --region "${REGION}"
+
+          kubectl -n snapstock get secret snapstock-backend-secrets >/dev/null
+
+          kubectl -n snapstock patch secret snapstock-backend-secrets --type merge \
+            -p "{\"stringData\":{\"GOOGLE_CLIENT_ID\":\"${CLIENT_ID}\"}}"
+
+          kubectl -n snapstock rollout restart deployment/snapstock-backend
+          kubectl -n snapstock rollout status deployment/snapstock-backend --timeout=5m
+
+          LEN=$(kubectl -n snapstock get secret snapstock-backend-secrets \
+            -o jsonpath="{.data.GOOGLE_CLIENT_ID}" | base64 -d | wc -c)
+          echo "GOOGLE_CLIENT_ID length in secret: ${LEN}"
+          test "${LEN}" -gt 20
+
+          echo "======== SNAPSTOCK WORKLOADS ========"
+          kubectl -n snapstock get pods,deploy -o wide || true
+
+          POD=$(kubectl -n snapstock get pods -l app=snapstock-backend --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || true)
+          if [ -z "${POD}" ]; then
+            POD=$(kubectl -n snapstock get pods --field-selector=status.phase=Running -o name | grep -i backend | grep -v migrate | head -1 | cut -d/ -f2 || true)
+          fi
+          echo "POD=${POD}"
+          if [ -n "${POD}" ]; then
+            echo "======== BACKEND ENV (filtered) ========"
+            kubectl -n snapstock exec "${POD}" -- printenv \
+              | grep -E '^(GOOGLE_CLIENT_ID|CLIENT_URL|SERVER_PUBLIC_URL|NODE_ENV|CSP_)=' \
+              | sed -E 's/(GOOGLE_CLIENT_ID=).+/\1***redacted***/' || true
+            echo "======== BACKEND LOGS grep auth/google/error ========"
+            kubectl -n snapstock logs "${POD}" --tail=2000 2>/dev/null \
+              | grep -iE 'google|auth|/auth|error|fail|warn' | tail -100 || true
+            echo "======== BACKEND LOGS (tail 150) ========"
+            kubectl -n snapstock logs "${POD}" --tail=150 || true
+          fi

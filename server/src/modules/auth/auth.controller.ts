@@ -1,3 +1,4 @@
+import { errorMessage, errorStatus } from "../../shared/utils/errors";
 import { Request, Response } from "express";
 import { AuthService } from "./auth.service";
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
@@ -12,7 +13,7 @@ export class AuthController {
       );
       return res.status(200).json({ success: true, data: user });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(errorStatus(error)).json({ success: false, message: errorMessage(error) });
     }
   }
 
@@ -39,9 +40,9 @@ export class AuthController {
         data: result,
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message,
+        message: errorMessage(error),
       });
     }
   }
@@ -56,9 +57,9 @@ export class AuthController {
         data: result,
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message,
+        message: errorMessage(error),
       });
     }
   }
@@ -72,9 +73,9 @@ export class AuthController {
         data: result,
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message,
+        message: errorMessage(error),
       });
     }
   }
@@ -88,9 +89,9 @@ export class AuthController {
         data: result,
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message,
+        message: errorMessage(error),
       });
     }
   }
@@ -106,7 +107,7 @@ export class AuthController {
     } catch (error: any) {
       return res.status(401).json({
         success: false,
-        message: error.message,
+        message: errorMessage(error),
       });
     }
   }
@@ -122,9 +123,9 @@ export class AuthController {
         data: result,
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message,
+        message: errorMessage(error),
       });
     }
   }
@@ -203,9 +204,9 @@ export class AuthController {
         data: result,
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message,
+        message: errorMessage(error),
       });
     }
   }
@@ -219,9 +220,9 @@ export class AuthController {
         data: result,
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message,
+        message: errorMessage(error),
       });
     }
   }
@@ -235,9 +236,9 @@ export class AuthController {
         data: result,
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message,
+        message: errorMessage(error),
       });
     }
   }

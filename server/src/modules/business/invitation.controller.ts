@@ -1,3 +1,4 @@
+import { errorMessage, errorStatus } from "../../shared/utils/errors";
 import { Request, Response } from "express";
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
 import { InvitationService } from "./invitation.service";
@@ -22,9 +23,9 @@ export class InvitationController {
         message: "Invitation accepted successfully.",
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message || "Unable to accept invitation.",
+        message: errorMessage(error, "Unable to accept invitation."),
       });
     }
   }
@@ -61,6 +62,13 @@ export class InvitationController {
   static async confirmSubmit(req: Request, res: Response) {
     const token = String(req.body.token || "");
     try {
+      if (
+        typeof req.body.password === "string" &&
+        req.body.password !== req.body.confirm_password
+      ) {
+        throw new Error("Passwords do not match.");
+      }
+
       const result = await InvitationService.completeViaPage(token, {
         full_name: typeof req.body.full_name === "string" ? req.body.full_name : undefined,
         password: typeof req.body.password === "string" ? req.body.password : undefined,
@@ -105,9 +113,29 @@ export class InvitationController {
 
       return res.status(200).json({ success: true, data: invitations });
     } catch (error: any) {
+      return res.status(errorStatus(error)).json({
+        success: false,
+        message: errorMessage(error, "Unable to load invitations."),
+      });
+    }
+  }
+
+  static async cancel(req: AuthRequest, res: Response) {
+    try {
+      await InvitationService.cancel(
+        req.user!.userId,
+        String(req.params.businessId),
+        String(req.params.invitationId),
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Invitation canceled.",
+      });
+    } catch (error: any) {
       return res.status(400).json({
         success: false,
-        message: error.message || "Unable to load invitations.",
+        message: error.message || "Unable to cancel invitation.",
       });
     }
   }
@@ -158,9 +186,9 @@ export class InvitationController {
         message: "Invitation sent successfully.",
       });
     } catch (error: any) {
-      return res.status(400).json({
+      return res.status(errorStatus(error)).json({
         success: false,
-        message: error.message || "Unable to send invitation.",
+        message: errorMessage(error, "Unable to send invitation."),
       });
     }
   }

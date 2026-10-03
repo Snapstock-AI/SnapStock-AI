@@ -1,118 +1,84 @@
 import { Link } from 'react-router'
+import { useCallback, useEffect, useState } from 'react'
 import {
   AlertTriangle,
   ArrowRight,
+  Bell,
   Building2,
-  CalendarDays,
   Camera,
-  Check,
-  ChevronDown,
-  FileText,
-  Globe2,
+  Leaf,
   Package,
-  UserPlus,
+  ScanLine,
 } from 'lucide-react'
+import { Cell, Label, Pie, PieChart } from 'recharts'
 import { useAuth, type Business } from '@/context/AuthContext'
 import { apiRequest } from '@/lib/api'
-import {
-  getDashboard,
-  type DashboardData,
-  type FreshnessSegment,
-} from '@/lib/dashboard'
+import { getDashboard, type DashboardData, type FreshnessSegment } from '@/lib/dashboard'
 import { usePollingData } from '@/hooks/usePollingData'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { EmptyState } from '@/components/EmptyState'
-import { cn } from '@/lib/utils'
-import { useCallback, useEffect, useState } from 'react'
+import SectionCards, { type SectionStat } from '@/components/dashboard/SectionCards'
+import ChartAreaInteractive from '@/components/dashboard/ChartAreaInteractive'
 
-const RANGE_OPTIONS = [
-  { days: 7, label: 'Last 7 days' },
-  { days: 14, label: 'Last 14 days' },
-  { days: 30, label: 'Last 30 days' },
-] as const
-
-function DonutChart({ segments }: { segments: FreshnessSegment[] }) {
-  const radius = 54
-  const stroke = 18
-  const c = 2 * Math.PI * radius
-  let offset = 0
-  const data =
-    segments.length > 0
-      ? segments
-      : [{ label: 'Empty', value: 100, count: 0, color: '#edf2f9' }]
-
-  return (
-    <div className="relative mx-auto h-[200px] w-[200px]">
-      <svg viewBox="0 0 140 140" className="-rotate-90 h-full w-full">
-        <circle cx="70" cy="70" r={radius} fill="none" stroke="#edf2f9" strokeWidth={stroke} />
-        {data.map((seg) => {
-          const len = (seg.value / 100) * c
-          const el = (
-            <circle
-              key={seg.label}
-              cx="70"
-              cy="70"
-              r={radius}
-              fill="none"
-              stroke={seg.color}
-              strokeWidth={stroke}
-              strokeDasharray={`${len} ${c - len}`}
-              strokeDashoffset={-offset}
-            />
-          )
-          offset += len
-          return el
-        })}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <p className="text-xs text-fd-muted">Mix</p>
-        <p className="text-lg font-medium text-fd-ink">Freshness</p>
-      </div>
-    </div>
-  )
+/** Map API freshness segments onto theme tokens so the donut follows light/dark mode. */
+function segmentColor(seg: FreshnessSegment) {
+  const label = seg.label.toLowerCase()
+  if (label.includes('fresh')) return 'var(--chart-1)'
+  if (label.includes('spoil') || label.includes('rotten')) return 'var(--spoiled)'
+  if (label.includes('ripe') || label.includes('medium')) return 'var(--ripe)'
+  return seg.color
 }
 
-function BarChart({
-  points,
-  windowDays,
-}: {
-  points: Array<{ label: string; value: number }>
-  windowDays: number
-}) {
-  const max = Math.max(1, ...points.map((d) => d.value))
-  if (points.length === 0) {
+function FreshnessDonut({ segments }: { segments: FreshnessSegment[] }) {
+  const total = segments.reduce((sum, seg) => sum + seg.count, 0)
+  const data = segments.map((seg) => ({ name: seg.label, value: seg.count, fill: segmentColor(seg) }))
+  const config: ChartConfig = Object.fromEntries(
+    segments.map((seg) => [seg.label, { label: seg.label, color: segmentColor(seg) }]),
+  )
+
+  if (total === 0) {
     return (
-      <p className="flex h-[220px] items-center justify-center text-sm text-fd-muted">
-        No scans in the last {windowDays} days
+      <p className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">
+        No graded items yet
       </p>
     )
   }
+
   return (
-    <div className="flex h-[220px] items-end justify-between gap-3 px-2 pt-4">
-      {points.map((d) => (
-        <div key={d.label} className="flex flex-1 flex-col items-center gap-2">
-          <div className="flex h-[180px] w-full items-end justify-center border-b border-dashed border-border">
-            <div
-              className="w-8 rounded-t-sm bg-primary transition-all duration-300 hover:opacity-90"
-              style={{ height: `${Math.max(4, (d.value / max) * 100)}%` }}
-            />
-          </div>
-          <span className="text-xs text-fd-muted">{d.label}</span>
-        </div>
-      ))}
-    </div>
+    <ChartContainer config={config} className="mx-auto aspect-square h-[220px]">
+      <PieChart>
+        <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+        <Pie data={data} dataKey="value" nameKey="name" innerRadius={62} outerRadius={92} strokeWidth={4}>
+          {data.map((entry) => (
+            <Cell key={entry.name} fill={entry.fill} stroke="var(--card)" />
+          ))}
+          <Label
+            content={({ viewBox }) => {
+              if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
+                return (
+                  <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                    <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-2xl font-semibold">
+                      {total.toLocaleString()}
+                    </tspan>
+                    <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 22} className="fill-muted-foreground text-xs">
+                      items graded
+                    </tspan>
+                  </text>
+                )
+              }
+              return null
+            }}
+          />
+        </Pie>
+      </PieChart>
+    </ChartContainer>
   )
 }
 
-const shelfTones = ['bg-primary', 'bg-[#ff4f70]', 'bg-[#01caf1]', 'bg-[#f4c430]', 'bg-[#7dcf8a]']
+const shelfTone = (pct: number) => (pct >= 70 ? 'bg-chart-1' : pct >= 40 ? 'bg-ripe' : 'bg-spoiled')
 
 export default function DashboardHome() {
   const { token, user } = useAuth()
@@ -193,7 +159,7 @@ export default function DashboardHome() {
   }
 
   if (loading && !data) {
-    return <div className="text-sm text-fd-muted">Loading your dashboard...</div>
+    return <div className="text-sm text-muted-foreground">Loading your dashboard...</div>
   }
 
   if (error && !data) {
@@ -217,77 +183,72 @@ export default function DashboardHome() {
 
   const firstName = user.full_name.split(' ')[0]
   const hour = new Date().getHours()
-  const greeting =
-    hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening'
-  const rangeLabel =
-    RANGE_OPTIONS.find((option) => option.days === windowDays)?.label ?? `Last ${windowDays} days`
-  const kpis = data?.kpis
-  const stats = [
+  const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening'
+  const kpis = data.kpis
+  const activeAlerts = kpis?.activeAlerts ?? 0
+  const avgFreshness = kpis?.avgFreshness ?? null
+  const stats: SectionStat[] = [
     {
       label: 'Total SKUs',
       value: String(kpis?.totalSkus ?? 0),
       icon: Package,
+      badge: { text: `${windowDays}d`, tone: 'neutral' },
+      headline: 'Products tracked',
+      detail: `Seen on shelves in the last ${windowDays} days`,
     },
     {
       label: 'Avg Freshness',
-      value: kpis?.avgFreshness != null ? `${kpis.avgFreshness}%` : '—',
-      icon: UserPlus,
+      value: avgFreshness != null ? `${avgFreshness}%` : '—',
+      icon: Leaf,
+      badge:
+        avgFreshness == null
+          ? undefined
+          : avgFreshness >= 70
+            ? { text: 'Healthy', tone: 'good' }
+            : { text: 'At risk', tone: 'warn' },
+      headline:
+        avgFreshness == null
+          ? 'No graded items yet'
+          : avgFreshness >= 70
+            ? 'Shelves look fresh'
+            : 'Freshness dropping',
+      detail: 'Weighted across fresh, ripe and spoiled',
     },
     {
       label: 'Active Alerts',
-      value: String(kpis?.activeAlerts ?? 0),
-      icon: FileText,
+      value: String(activeAlerts),
+      icon: Bell,
+      badge: activeAlerts > 0 ? { text: 'Needs action', tone: 'warn' } : { text: 'All clear', tone: 'good' },
+      headline: activeAlerts > 0 ? 'Review open alerts' : 'Nothing needs attention',
+      detail: 'Low stock, spoilage and stale shelves',
     },
     {
       label: 'Scans Today',
       value: String(kpis?.scansToday ?? 0),
-      icon: Globe2,
+      icon: ScanLine,
+      badge: { text: 'Today', tone: 'neutral' },
+      headline: 'Shelf scans completed',
+      detail: 'Each scan updates stock and freshness',
     },
   ]
 
   return (
-    <div className="space-y-[30px]">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 md:gap-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-[21px] font-medium text-fd-ink md:text-[30px]">
-            {greeting} {firstName}!
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+            {greeting}, {firstName}!
           </h1>
-          <p className="mt-1 text-sm text-fd-cap">
-            Dashboard <span className="mx-1">/</span> {displayName}
+          <p className="mt-1 text-sm text-muted-foreground">
+            Here&apos;s what&apos;s happening at {displayName}.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="inline-flex h-[42px] items-center gap-2 rounded-[60px] border border-border bg-white px-4 text-sm text-fd-ink shadow-sm transition hover:border-primary/40 hover:shadow-md dark:bg-card"
-              >
-                <CalendarDays className="h-4 w-4 text-primary" />
-                {rangeLabel}
-                <ChevronDown className="h-4 w-4 text-fd-muted" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              {RANGE_OPTIONS.map((option) => (
-                <DropdownMenuItem
-                  key={option.days}
-                  className="flex items-center justify-between"
-                  onClick={() => setWindowDays(option.days)}
-                >
-                  {option.label}
-                  {windowDays === option.days ? <Check className="h-4 w-4 text-primary" /> : null}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button className="h-[42px] rounded-[60px]" asChild>
-            <Link to="/dashboard/scans">
-              <Camera className="h-4 w-4" />
-              New scan
-            </Link>
-          </Button>
-        </div>
+        <Button asChild className="self-start sm:self-auto">
+          <Link to="/dashboard/scans">
+            <Camera className="h-4 w-4" />
+            New scan
+          </Link>
+        </Button>
       </div>
 
       {error && (
@@ -296,46 +257,25 @@ export default function DashboardHome() {
         </Alert>
       )}
 
-      <Card className="overflow-hidden">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map(({ label, value, icon: Icon }, index) => (
-            <div
-              key={label}
-              className={cn(
-                'p-[25px]',
-                index < stats.length - 1 && 'lg:border-r lg:border-border',
-                index % 2 === 0 && 'sm:border-r sm:border-border lg:border-r',
-                index < 2 && 'border-b border-border lg:border-b-0',
-              )}
-            >
-              <div className="flex items-center">
-                <div className="min-w-0">
-                  <h2 className="mb-1 text-[30px] font-medium leading-none text-fd-ink">{value}</h2>
-                  <h6 className="truncate text-sm font-normal text-fd-muted">{label}</h6>
-                </div>
-                <div className="ms-auto opacity-70">
-                  <Icon className="h-6 w-6 text-fd-muted" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+      <SectionCards stats={stats} />
 
-      {data?.topAlert ? (
-        <Alert className="border-0 bg-white fd-shadow dark:bg-card">
-          <AlertTriangle className="h-5 w-5 text-[#fdc16a]" />
+      {data.topAlert ? (
+        <Alert className="border-ripe/40 bg-ripe/10">
+          <AlertTriangle className="h-5 w-5 text-ripe-foreground dark:text-ripe" />
           <AlertDescription>
-            <p className="font-medium text-fd-ink">{data.topAlert.title}</p>
-            <p className="mt-1 text-sm text-fd-body">{data.topAlert.message}</p>
+            <p className="font-medium text-foreground">{data.topAlert.title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{data.topAlert.message}</p>
             <Button variant="link" className="mt-1 h-auto p-0" asChild>
-              <Link to="/dashboard/alerts">View all alerts</Link>
+              <Link to="/dashboard/alerts">
+                View all alerts
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </Button>
           </AlertDescription>
         </Alert>
       ) : null}
 
-      {!data?.hasData ? (
+      {!data.hasData ? (
         <EmptyState
           title="No scan data yet"
           description="Run a shelf scan to populate freshness mix, inventory, and alerts."
@@ -346,82 +286,74 @@ export default function DashboardHome() {
           }
         />
       ) : (
-        <div className="grid gap-[30px] lg:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>Freshness mix</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <DonutChart segments={data.freshnessMix} />
-              <ul className="mt-4 space-y-3">
-                {data.freshnessMix.map((seg) => (
-                  <li key={seg.label} className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2 text-fd-muted">
-                      <span
-                        className="inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ background: seg.color }}
-                      />
-                      {seg.label}
-                    </span>
-                    <span className="font-medium text-fd-ink">
-                      {seg.count} ({seg.value}%)
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+        <>
+          <ChartAreaInteractive points={data.scanVolume} windowDays={windowDays} onWindowChange={setWindowDays} />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Scan volume</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-2">
-              <BarChart points={data.scanVolume} windowDays={windowDays} />
-              <p className="mt-3 text-center text-sm italic text-fd-muted">
-                Completed scans over the last {windowDays} days
-              </p>
-            </CardContent>
-          </Card>
+          <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Freshness mix</CardTitle>
+                <CardDescription>Graded items in the last {windowDays} days</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center gap-6 sm:flex-row sm:justify-around">
+                <FreshnessDonut segments={data.freshnessMix} />
+                <ul className="w-full max-w-[240px] space-y-3">
+                  {data.freshnessMix.map((seg) => (
+                    <li key={seg.label} className="flex items-center justify-between gap-4 text-sm">
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-sm"
+                          style={{ background: segmentColor(seg) }}
+                        />
+                        {seg.label}
+                      </span>
+                      <span className="font-medium tabular-nums text-foreground">
+                        {seg.count} ({seg.value}%)
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Shelf health</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-2">
-              <div className="mb-5 flex h-[140px] items-center justify-center rounded-xl border border-border bg-muted/40">
-                <div className="text-center">
-                  <p className="text-[30px] font-medium text-primary">
+            <Card>
+              <CardHeader className="flex-row items-start justify-between">
+                <div className="flex flex-col gap-1.5">
+                  <CardTitle className="text-lg">Shelf health</CardTitle>
+                  <CardDescription>Freshness score per shelf</CardDescription>
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-semibold tabular-nums text-primary">
                     {data.avgShelfScore != null ? data.avgShelfScore : '—'}
                   </p>
-                  <p className="text-xs text-fd-muted">avg shelf score</p>
+                  <p className="text-xs text-muted-foreground">avg shelf score</p>
                 </div>
-              </div>
-              <div className="space-y-4">
+              </CardHeader>
+              <CardContent>
                 {data.shelfHealth.length === 0 ? (
-                  <p className="text-sm text-fd-muted">No shelves scanned yet.</p>
+                  <p className="text-sm text-muted-foreground">No shelves scanned yet.</p>
                 ) : (
-                  data.shelfHealth.map((shelf, i) => (
-                    <div key={shelf.shelfId} className="flex items-center gap-3">
-                      <span className="w-24 shrink-0 truncate text-sm text-fd-muted">
-                        {shelf.name}
-                      </span>
-                      <div className="h-[5px] flex-1 overflow-hidden rounded-full bg-[#edf2f9] dark:bg-muted">
-                        <div
-                          className={cn('h-full rounded-full', shelfTones[i % shelfTones.length])}
-                          style={{ width: `${shelf.pct}%` }}
-                        />
-                      </div>
-                      <span className="w-10 text-right text-sm font-medium text-fd-ink">
-                        {shelf.pct}%
-                      </span>
-                    </div>
-                  ))
+                  <ul className="space-y-4">
+                    {data.shelfHealth.map((shelf) => (
+                      <li key={shelf.shelfId} className="flex items-center gap-3">
+                        <span className="w-28 shrink-0 truncate text-sm text-muted-foreground">{shelf.name}</span>
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className={`h-full rounded-full ${shelfTone(shelf.pct)}`}
+                            style={{ width: `${shelf.pct}%` }}
+                          />
+                        </div>
+                        <span className="w-11 text-right text-sm font-medium tabular-nums text-foreground">
+                          {shelf.pct}%
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
       )}
     </div>
   )
