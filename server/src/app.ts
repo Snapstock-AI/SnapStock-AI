@@ -7,6 +7,7 @@ import authRoutes from "./modules/auth/auth.routes";
 import detectionRoutes from "./modules/detection/detection.routes";
 import businessRoutes from "./modules/business/business.routes";
 import shelfRoutes from "./modules/shelf/shelf.routes";
+import adminRoutes from "./modules/admin/admin.routes";
 import { metricsHandler, metricsMiddleware } from "./shared/metrics";
 
 // NFR-SEC-001.3: outside production any origin is accepted for local development; in
