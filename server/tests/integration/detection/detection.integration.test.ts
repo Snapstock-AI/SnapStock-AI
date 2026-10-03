@@ -20,6 +20,7 @@ jest.mock("../../../src/shared/middleware/auth.middleware", () => ({
     req.user = { id: "user-123" };
     next();
   }),
+  requireRoles: jest.fn(() => (_req: any, _res: any, next: any) => next()),
 }));
 
 const mockedService = DetectionService as jest.Mocked<typeof DetectionService>;

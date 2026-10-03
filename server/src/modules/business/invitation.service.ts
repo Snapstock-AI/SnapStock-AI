@@ -1,5 +1,4 @@
 import bcrypt from "bcrypt";
-import { ForbiddenError } from "../../shared/utils/errors";
 import crypto from "crypto";
 import { AppDataSource } from "../../config/data-source";
 import { EmployeeInvitation } from "../../entities/EmployeeInvitation";
@@ -9,6 +8,7 @@ import { BusinessService } from "./business.service";
 import { BusinessRepository } from "./business.repository";
 import { AuthRepository } from "../auth/auth.repository";
 import { sendEmployeeInvitationEmail } from "../../shared/utils/email";
+import { ForbiddenError } from "../../shared/utils/errors";
 
 const INVITATION_VALIDITY_DAYS = 7;
 
