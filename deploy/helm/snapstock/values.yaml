@@ -1,0 +1,92 @@
+# Defaults for the EKS deployment. Terraform (infra/eks/terraform/app.tf) overrides the image tags;
+# CI overrides them with `helm upgrade --reuse-values --set <svc>.image.tag=<sha>`.
+
+secretName: snapstock-backend-secrets   # created by Terraform (kubernetes_secret_v1.backend)
+
+backend:
+  image:
+    repository: ghcr.io/snapstock-ai/snapstock-server
+    tag: ""            # set by Terraform / CI
+    pullPolicy: IfNotPresent
+  port: 5000
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits:   { cpu: "1",  memory: 512Mi }
+  scaling:
+    minReplicas: 2
+    maxReplicas: 6
+    cpuUtilization: 65
+
+frontend:
+  image:
+    repository: ghcr.io/snapstock-ai/snapstock-client
+    tag: ""            # must be built with the nginx proxy template
+    pullPolicy: IfNotPresent
+  port: 8080
+  redirectPort: 8081   # nginx: plain HTTP -> https redirect
+  resources:
+    requests: { cpu: 50m,  memory: 64Mi }
+    limits:   { cpu: 250m, memory: 128Mi }
+  scaling:
+    minReplicas: 2
+    maxReplicas: 4
+    cpuUtilization: 70
+
+ai:
+  image:
+    repository: ghcr.io/snapstock-ai/snapstock-ai-service
+    tag: ""
+    pullPolicy: IfNotPresent
+  port: 8000
+  # One AI pod per 2-vCPU AI node. Tune after benchmarking seconds per image.
+  resources:
+    requests: { cpu: 1500m, memory: 2Gi }
+    limits:   { cpu: "2",   memory: 3Gi }
+  scaling:
+    minReplicas: 2
+    maxReplicas: 8
+    cpuUtilization: 60
+    # Event-driven: target number of waiting jobs per AI replica (aws-sqs-queue scaler)
+    queueLength: 2
+    scaleDownStabilizationSeconds: 300
+  nodeSelector:
+    workload: ai
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: ai
+      effect: NoSchedule
+
+# Event-driven scan analysis (S3 upload + SQS jobs/results). Terraform fills these in.
+# Disabled -> the web client falls back to synchronous POST /detection/analyze.
+events:
+  enabled: false
+  region: ""
+  bucket: ""
+  jobQueueUrl: ""
+  resultQueueUrl: ""
+  maxUploadBytes: 10485760
+
+# IAM roles (IRSA) for the pods that talk to S3/SQS.
+serviceAccounts:
+  backend:
+    roleArn: ""
+  ai:
+    roleArn: ""
+
+# How the app is exposed:
+#   nlb-eip - NLB with a fixed Elastic IP (Terraform passes publicService.*)
+#   alb     - ALB Ingress (DNS name, supports ACM/HTTPS)
+exposure: nlb-eip
+
+publicService:
+  eipAllocation: ""
+  subnet: ""
+  # Terraform sets these when enable_https = true (ACM certificate + public hostname).
+  certificateArn: ""
+  host: ""
+
+ingress:
+  className: alb
+  certificateArn: ""   # empty = HTTP only
+  idleTimeoutSeconds: 120

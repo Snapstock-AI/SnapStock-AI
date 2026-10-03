@@ -17,8 +17,11 @@ RUN apt-get update && \
 
 COPY requirements.txt .
 
+# CPU-only PyTorch first. The default (CUDA) wheel segfaults in a GPU-less container when torch
+# lazily imports triton during inference, and it adds several GB of unused NVIDIA libraries.
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir --retries 10 torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir --retries 10 -r requirements.txt
 
 COPY app ./app
 

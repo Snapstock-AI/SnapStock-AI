@@ -148,6 +148,93 @@ describe("AuthService", () => {
     });
   });
 
+  describe("register", () => {
+    it("should create a new account when the email is unused", async () => {
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue(null);
+      mockedRepository.createUser.mockResolvedValue({
+        id: "user-1",
+        full_name: "New User",
+        email: "new@example.com",
+        system_role: "BUSINESS_USER",
+        email_verified: false,
+      } as any);
+
+      const result = await AuthService.register({
+        full_name: "New User",
+        email: "new@example.com",
+        password,
+      });
+
+      expect(mockedRepository.createUser).toHaveBeenCalled();
+      expect(mockedSendVerificationEmail).toHaveBeenCalledWith("new@example.com", expect.any(String));
+      expect(result.message).toContain("registered successfully");
+    });
+
+    it("should reject when the email belongs to an already-verified account", async () => {
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue({
+        id: "user-1",
+        email: "taken@example.com",
+        email_verified: true,
+        deleted_at: null,
+      } as any);
+
+      await expect(
+        AuthService.register({
+          full_name: "Someone",
+          email: "taken@example.com",
+          password,
+        }),
+      ).rejects.toThrow("User already exists");
+
+      expect(mockedRepository.createUser).not.toHaveBeenCalled();
+    });
+
+    it("should reject when the email belongs to a deleted account", async () => {
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue({
+        id: "user-1",
+        email: "gone@example.com",
+        email_verified: false,
+        deleted_at: new Date(),
+      } as any);
+
+      await expect(
+        AuthService.register({
+          full_name: "Someone",
+          email: "gone@example.com",
+          password,
+        }),
+      ).rejects.toThrow("This email is no longer available.");
+    });
+
+    it("should let an unverified account retry signup instead of blocking it", async () => {
+      mockedRepository.findByEmailIncludingDeleted.mockResolvedValue({
+        id: "user-1",
+        email: "pending@example.com",
+        full_name: "Old Name",
+        email_verified: false,
+        deleted_at: null,
+      } as any);
+
+      const result = await AuthService.register({
+        full_name: "Updated Name",
+        email: "pending@example.com",
+        password,
+      });
+
+      expect(mockedRepository.createUser).not.toHaveBeenCalled();
+      expect(mockedRepository.updateFullName).toHaveBeenCalledWith("user-1", "Updated Name");
+      expect(mockedRepository.updatePassword).toHaveBeenCalledWith("user-1", expect.any(String));
+      expect(mockedRepository.deleteEmailTokensForUser).toHaveBeenCalledWith("user-1");
+      expect(mockedRepository.saveEmailToken).toHaveBeenCalledWith(
+        "user-1",
+        expect.any(String),
+        expect.any(Date),
+      );
+      expect(mockedSendVerificationEmail).toHaveBeenCalledWith("pending@example.com", expect.any(String));
+      expect(result.message).toContain("resent the verification email");
+    });
+  });
+
   describe("login", () => {
     it("should create a session and return access + refresh tokens", async () => {
       mockedRepository.findByEmail.mockResolvedValue({

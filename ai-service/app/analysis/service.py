@@ -1,3 +1,4 @@
+import threading
 from collections import defaultdict
 from ultralytics import YOLO
 from keras import Model
@@ -11,12 +12,27 @@ from app.analysis.schemas import (
 )
 
 from app.config import (
-    POSITIVE_CLASS_LABEL,
+    FRESH_LABEL,
+    MEDIUM_LABEL,
     YOLO_CONFIDENCE_THRESHOLD,
 )
 
 
+# The SQS worker thread and HTTP requests share the same YOLO/Keras models; running them
+# concurrently is not thread-safe and only competes for the same CPU, so serialize inference.
+_INFERENCE_LOCK = threading.Lock()
+
+
 def analyze_image(
+    detection_model: YOLO,
+    freshness_model: Model,
+    image_bytes: bytes,
+) -> AnalysisResponse:
+    with _INFERENCE_LOCK:
+        return _analyze_image(detection_model, freshness_model, image_bytes)
+
+
+def _analyze_image(
     detection_model: YOLO,
     freshness_model: Model,
     image_bytes: bytes,
@@ -52,8 +68,10 @@ def analyze_image(
 
         summary = counts[fruit.class_name]
 
-        if prediction.freshness == POSITIVE_CLASS_LABEL:
+        if prediction.freshness == FRESH_LABEL:
             summary.fresh += 1
+        elif prediction.freshness == MEDIUM_LABEL:
+            summary.medium += 1
         else:
             summary.rotten += 1
 

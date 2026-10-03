@@ -5,7 +5,8 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 
-export type ScanStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+/** ANALYZED: AI result saved, waiting for the user to add it to inventory (then COMPLETED). */
+export type ScanStatus = "PENDING" | "PROCESSING" | "ANALYZED" | "COMPLETED" | "FAILED";
 export type ScanMode = "STOCK_IN" | "STOCK_OUT";
 
 @Entity("scans")
@@ -18,12 +19,19 @@ export class Scan {
   scan_mode!: ScanMode;
   @Column({
     type: "enum",
-    enum: ["PENDING", "PROCESSING", "COMPLETED", "FAILED"],
+    enum: ["PENDING", "PROCESSING", "ANALYZED", "COMPLETED", "FAILED"],
     enumName: "scan_status",
     default: "PENDING",
   })
   status!: ScanStatus;
   @Column({ type: "text", nullable: true }) error_message!: string | null;
+  // Event-driven analysis: uploaded S3 object and the final result summary.
+  @Column({ type: "text", nullable: true }) image_key!: string | null;
+  @Column({ type: "varchar", length: 100, nullable: true })
+  image_content_type!: string | null;
+  @Column({ type: "varchar", length: 255, nullable: true })
+  image_original_name!: string | null;
+  @Column({ type: "jsonb", nullable: true }) result_json!: unknown | null;
   @CreateDateColumn({ type: "timestamptz" }) created_at!: Date;
   @Column({ type: "timestamptz", nullable: true }) completed_at!: Date | null;
 }

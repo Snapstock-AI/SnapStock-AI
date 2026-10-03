@@ -21,7 +21,13 @@ RUN npm run build
 # ---------- Serve React ----------
 FROM nginx:1.27-alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# nginx renders /etc/nginx/templates/*.template into conf.d at start (envsubst).
+# The default keeps the image working where no backend proxy is needed (e.g. the K3s gateway
+# routes /snapstock-backend-http itself).
+ENV BACKEND_UPSTREAM=127.0.0.1:5000
+# Public hostname for the :8081 http->https redirect (empty = redirect to the requested host).
+ENV PUBLIC_HOST=""
+COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 COPY --from=build /app/dist /usr/share/nginx/html
 

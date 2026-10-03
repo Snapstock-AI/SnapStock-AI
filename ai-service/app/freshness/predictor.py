@@ -11,10 +11,13 @@ from .gradcam import GradCAM
 from .heatmap import save_heatmap
 
 from app.config import (
+    FRESH_LABEL,
+    FRESH_THRESHOLD,
+    MEDIUM_LABEL,
     MODEL_NAME,
-    NEGATIVE_CLASS_LABEL,
-    POSITIVE_CLASS_LABEL,
     PREDICTION_THRESHOLD,
+    ROTTEN_LABEL,
+    ROTTEN_THRESHOLD,
 )
 
 from app.common.image_utils import (
@@ -93,7 +96,7 @@ def _generate_gradcam(
 ):
 
     # binary classification
-    class_id = 1 if probability >= 0.5 else 0
+    class_id = 1 if probability >= PREDICTION_THRESHOLD else 0
 
     try:
 
@@ -129,15 +132,24 @@ def _build_prediction_result(
     heatmap_path=None
 ):
 
-    if probability >= PREDICTION_THRESHOLD:
+    # The model outputs the probability that the fruit is "good".
+    # Confident predictions at either end are fresh / rotten; the
+    # uncertain middle band is graded as medium.
+    if probability >= FRESH_THRESHOLD:
 
-        freshness = POSITIVE_CLASS_LABEL
+        freshness = FRESH_LABEL
         confidence = probability
+
+    elif probability < ROTTEN_THRESHOLD:
+
+        freshness = ROTTEN_LABEL
+        confidence = 1 - probability
 
     else:
 
-        freshness = NEGATIVE_CLASS_LABEL
-        confidence = 1 - probability
+        freshness = MEDIUM_LABEL
+        # 1.0 at the centre of the band (0.5), falling towards the edges.
+        confidence = 1 - abs(probability - 0.5) * 2
 
 
 

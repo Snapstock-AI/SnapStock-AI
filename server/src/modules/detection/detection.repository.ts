@@ -4,6 +4,19 @@ import { Scan, ScanMode, ScanStatus } from "../../entities/Scan";
 import { calculateInventoryQuantity } from "./inventory.utils";
 import db from "../../config/db";
 
+export type ScanRecord = {
+  id: string;
+  business_id: string;
+  shelf_id: string;
+  user_id: string;
+  scan_mode: ScanMode;
+  status: ScanStatus;
+  error_message: string | null;
+  image_key: string | null;
+  image_content_type: string | null;
+  result_json: unknown | null;
+};
+
 export class DetectionRepository {
   static async findScanHistory(
     businessId: string,
@@ -122,6 +135,22 @@ export class DetectionRepository {
     scanMode: ScanMode,
   ) {
     return AppDataSource.transaction(async (manager) => {
+      const scanRows = (await manager.query(
+        `SELECT business_id, status FROM scans WHERE id = $1 FOR UPDATE`,
+        [scanId],
+      )) as Array<{ business_id: string; status: ScanStatus }>;
+      if (!scanRows[0]) {
+        throw new Error("Scan not found");
+      }
+      if (scanRows[0].business_id !== businessId) {
+        throw new Error("Scan does not belong to this business");
+      }
+      // The row lock makes a double-click (or two tabs) wait here and then stop,
+      // so one scan can never change inventory twice.
+      if (scanRows[0].status === "COMPLETED") {
+        throw new Error("This scan has already been added to inventory.");
+      }
+
       const rows = (await manager.query(
         `SELECT
            p.id,
@@ -186,11 +215,19 @@ export class DetectionRepository {
 
         if (change.quantity < change.product.low_stock_threshold) {
           await manager.query(
-            `INSERT INTO alerts (business_id, product_id, type, message, active)
-             VALUES ($1, $2, 'LOW_STOCK', $3, TRUE)
+            `INSERT INTO alerts
+               (business_id, product_id, type, severity, title, message, dedupe_key, evidence_at, active)
+             VALUES ($1, $2, 'LOW_STOCK', 'warning', $3, $4, $5, CURRENT_TIMESTAMP, TRUE)
              ON CONFLICT (business_id, product_id, type) WHERE (active = TRUE)
-             DO UPDATE SET message = EXCLUDED.message, updated_at = CURRENT_TIMESTAMP`,
-            [businessId, change.product.id, alertMessage],
+             DO UPDATE SET message = EXCLUDED.message, title = EXCLUDED.title,
+                           evidence_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`,
+            [
+              businessId,
+              change.product.id,
+              `Low stock: ${change.product.name}`,
+              alertMessage,
+              `low_stock:${change.product.id}`,
+            ],
           );
         } else {
           await manager.query(
@@ -239,6 +276,101 @@ export class DetectionRepository {
       [status, errorMessage ?? null, scanId],
     );
     return result.rows[0];
+  }
+
+  // ---- Event-driven analysis ------------------------------------------------
+
+  static async updateScanImageMetadata(
+    scanId: string,
+    imageKey: string,
+    contentType: string,
+    originalName: string,
+  ) {
+    await db.query(
+      `UPDATE scans SET image_key = $1, image_content_type = $2, image_original_name = $3
+       WHERE id = $4`,
+      [imageKey, contentType, originalName, scanId],
+    );
+  }
+
+  static async getScanById(scanId: string): Promise<ScanRecord | undefined> {
+    const result = await db.query(
+      `SELECT id, business_id, shelf_id, user_id, scan_mode, status, error_message,
+              image_key, image_content_type, result_json
+       FROM scans WHERE id = $1`,
+      [scanId],
+    );
+    return result.rows[0];
+  }
+
+  /** Atomically moves a scan from PENDING to PROCESSING; false if someone else already did. */
+  static async claimScanForQueue(scanId: string): Promise<boolean> {
+    const result = await db.query(
+      `UPDATE scans SET status = 'PROCESSING', error_message = NULL
+       WHERE id = $1 AND status = 'PENDING' RETURNING id`,
+      [scanId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  /** Stores the AI result without touching inventory; the user confirms it later. */
+  static async markScanAnalyzed(scanId: string, result: unknown) {
+    await db.query(
+      `UPDATE scans SET status = 'ANALYZED', error_message = NULL, result_json = $1
+       WHERE id = $2`,
+      [JSON.stringify(result), scanId],
+    );
+  }
+
+  /**
+   * Links a scan's unmatched detections to products by label. Stock-in creates missing
+   * products; stock-out only matches existing ones. Returns how many detections are linked.
+   */
+  static async linkScanProducts(
+    scanId: string,
+    businessId: string,
+    scanMode: ScanMode,
+  ): Promise<{ linked: number; unmatchedLabels: string[] }> {
+    const unlinked = await db.query(
+      `SELECT DISTINCT product_label FROM detections
+       WHERE scan_id = $1 AND product_id IS NULL`,
+      [scanId],
+    );
+
+    const unmatchedLabels: string[] = [];
+
+    for (const { product_label: label } of unlinked.rows as Array<{ product_label: string }>) {
+      const product =
+        scanMode === "STOCK_IN"
+          ? await DetectionRepository.findOrCreateProduct(businessId, label)
+          : await DetectionRepository.findProductByName(businessId, label);
+
+      if (!product) {
+        unmatchedLabels.push(label);
+        continue;
+      }
+
+      await db.query(
+        `UPDATE detections SET product_id = $1
+         WHERE scan_id = $2 AND product_label = $3 AND product_id IS NULL`,
+        [product.id, scanId, label],
+      );
+    }
+
+    const linked = await db.query(
+      `SELECT COUNT(*)::int AS count FROM detections
+       WHERE scan_id = $1 AND product_id IS NOT NULL`,
+      [scanId],
+    );
+
+    return { linked: Number(linked.rows[0]?.count ?? 0), unmatchedLabels };
+  }
+
+  static async saveScanResult(scanId: string, result: unknown) {
+    await db.query(`UPDATE scans SET result_json = $1 WHERE id = $2`, [
+      JSON.stringify(result),
+      scanId,
+    ]);
   }
 
   static async createDetection(

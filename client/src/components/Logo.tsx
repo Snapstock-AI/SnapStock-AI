@@ -1,12 +1,13 @@
-import { Leaf } from 'lucide-react'
 import { Link } from 'react-router'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
+import LogoMark from '@/components/LogoMark'
 
 type LogoProps = {
   className?: string
   showText?: boolean
-  variant?: 'default' | 'light'
+  /** default = theme foreground, light = white (dark photos), ink = landing ink */
+  variant?: 'default' | 'light' | 'ink'
   /** Override destination. Defaults to dashboard when signed in, else landing. */
   to?: string
 }
@@ -22,22 +23,18 @@ export default function Logo({
 
   const content = (
     <>
-      <span
-        className={cn(
-          'flex h-8 w-8 items-center justify-center rounded-full',
-          variant === 'light' ? 'bg-white/20 text-white' : 'bg-primary text-primary-foreground',
-        )}
-      >
-        <Leaf className="h-4 w-4" />
-      </span>
+      <LogoMark />
       {showText && (
         <span
           className={cn(
-            'text-xl font-semibold tracking-tight',
-            variant === 'light' ? 'text-white' : 'text-fd-ink',
+            'flex items-center gap-1.5 font-display text-xl font-bold tracking-[-0.04em]',
+            variant === 'light' ? 'text-white' : variant === 'ink' ? 'text-ink' : 'text-fd-ink',
           )}
         >
-          SnapStock-AI
+          SnapStock
+          <span className="rounded-md bg-lime px-1.5 py-0.5 text-[10px] font-bold leading-none tracking-normal text-ink">
+            AI
+          </span>
         </span>
       )}
     </>
@@ -48,7 +45,12 @@ export default function Logo({
   }
 
   return (
-    <Link to={href} viewTransition className={cn('flex items-center gap-2.5', className)}>
+    <Link
+      to={href}
+      viewTransition
+      aria-label="SnapStock-AI home"
+      className={cn('flex items-center gap-2.5', className)}
+    >
       {content}
     </Link>
   )

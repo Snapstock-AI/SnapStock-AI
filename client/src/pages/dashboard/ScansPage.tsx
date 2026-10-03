@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { Camera, Upload } from "lucide-react";
 import { Link } from "react-router";
-import { analyzeImage, countHistoryItems, formatHistoryDate, getScanHistory } from "../../lib/detection";
+import {
+  analyzeImage,
+  confirmScanInventory,
+  countHistoryItems,
+  formatHistoryDate,
+  getScanHistory,
+  scanStatusLabel,
+} from "../../lib/detection";
+import type { AnalysisStage } from "../../lib/detection";
 import { updateDetectionFreshness } from "../../lib/detection";
 import type {
   DetectionResult,
@@ -43,10 +51,12 @@ export default function ScansPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   const [previewImage, setPreviewImage] = useState<File | null>(null);
+  const [previewSource, setPreviewSource] = useState<"camera" | "upload">("camera");
 
   const [result, setResult] = useState<DetectionResult | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const [analysisStage, setAnalysisStage] = useState<AnalysisStage | null>(null);
 
   const [error, setError] = useState("");
 
@@ -58,6 +68,9 @@ export default function ScansPage() {
   const [historyError, setHistoryError] = useState("");
   const [selectedHistoryScan, setSelectedHistoryScan] = useState<ScanHistoryItem | null>(null);
   const [scanMode, setScanMode] = useState<ScanMode>("STOCK_IN");
+  const [confirmingScanId, setConfirmingScanId] = useState<string | null>(null);
+  // Bumped after a scan is analysed or added to inventory so the history list reloads.
+  const [historyVersion, setHistoryVersion] = useState(0);
 
   const { token, user } = useAuth();
   const businessId = user?.businessId;
@@ -121,7 +134,7 @@ export default function ScansPage() {
         );
       })
       .finally(() => setHistoryLoading(false));
-  }, [token, businessId]);
+  }, [token, businessId, historyVersion]);
 
   const handleFreshnessChange = async (
     detectionId: string | undefined,
@@ -141,10 +154,12 @@ export default function ScansPage() {
       );
       const counts = detections.reduce<DetectionResult["counts"]>((summary, detection) => {
         const key = detection.class_name;
-        summary[key] ||= { fresh: 0, rotten: 0, total: 0 };
+        summary[key] ||= { fresh: 0, medium: 0, rotten: 0, total: 0 };
         summary[key].total += 1;
         if (detection.freshness === "Fresh") {
           summary[key].fresh += 1;
+        } else if (detection.freshness === "Medium") {
+          summary[key].medium += 1;
         } else {
           summary[key].rotten += 1;
         }
@@ -164,14 +179,57 @@ export default function ScansPage() {
   };
 
 
+  /**
+   * Analysis never changes stock; this applies a reviewed scan to inventory exactly once,
+   * so two photos of the same shelf are not counted twice by accident.
+   */
+  const addScanToInventory = async (scanId: string) => {
+    if (!token) return;
+
+    setConfirmingScanId(scanId);
+    setError("");
+
+    try {
+      const applied = await confirmScanInventory(scanId, token);
+
+      // Keep the on-screen detections (they include any freshness corrections).
+      setResult((current) =>
+        current && current.scanId === scanId
+          ? {
+              ...current,
+              inventoryApplied: true,
+              inventoryChanges: applied.inventoryChanges ?? [],
+            }
+          : current,
+      );
+      setSelectedHistoryScan((current) =>
+        current && current.id === scanId ? { ...current, status: "COMPLETED" } : current,
+      );
+      setHistoryVersion((version) => version + 1);
+    } catch (confirmError: unknown) {
+      showError(
+        confirmError instanceof Error
+          ? confirmError.message
+          : "Unable to add the scan to inventory.",
+      );
+    } finally {
+      setConfirmingScanId(null);
+    }
+  };
+
+  const discardResult = () => {
+    setResult(null);
+    setSelectedImage(null);
+  };
+
   const analyzeSelectedImage = async (
   file: File, 
   shelf: Shelf | null
-) => {
+): Promise<boolean> => {
 
   if (!shelf) {
     showError("Please select a shelf first.");
-    return;
+    return false;
   }
 
   try {
@@ -180,7 +238,7 @@ export default function ScansPage() {
 
     if (!token) {
       showError("You are not authenticated.");
-      return;
+      return false;
     }
 
     const data = await analyzeImage(
@@ -189,17 +247,22 @@ export default function ScansPage() {
       businessId!,
       token,
       scanMode,
+      { onProgress: setAnalysisStage },
     );
 
     setResult(data);
+    setHistoryVersion((version) => version + 1);
+    return true;
   } catch (error: unknown) {
 
     showError(
       error instanceof Error ? error.message : "Image analysis failed."
     );  
+    return false;
 
   } finally {
     setLoading(false);
+    setAnalysisStage(null);
   }
 };
 
@@ -210,6 +273,8 @@ export default function ScansPage() {
 
    
     const file = event.target.files?.[0];
+    // Reset so picking the same file again still fires onChange.
+    event.target.value = "";
 
     if (!file) return;
 
@@ -219,6 +284,7 @@ export default function ScansPage() {
     }
 
     setPreviewImage(file);
+    setPreviewSource("upload");
     setResult(null);
 
     setError("");
@@ -246,7 +312,7 @@ export default function ScansPage() {
             <Label htmlFor="shelf-select">Select a Shelf</Label>
             <select
               id="shelf-select"
-              className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-11 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               value={selectedShelf?.id || ""}
               disabled={shelvesLoading || shelves.length === 0}
               onChange={(e) => {
@@ -274,6 +340,7 @@ export default function ScansPage() {
           <div className="mb-6 flex justify-center gap-3" role="group" aria-label="Inventory scan mode">
             <Button
               type="button"
+              className="min-h-11"
               variant={scanMode === "STOCK_IN" ? "default" : "outline"}
               aria-pressed={scanMode === "STOCK_IN"}
               onClick={() => setScanMode("STOCK_IN")}
@@ -282,6 +349,7 @@ export default function ScansPage() {
             </Button>
             <Button
               type="button"
+              className="min-h-11"
               variant={scanMode === "STOCK_OUT" ? "destructive" : "outline"}
               aria-pressed={scanMode === "STOCK_OUT"}
               onClick={() => setScanMode("STOCK_OUT")}
@@ -306,6 +374,7 @@ export default function ScansPage() {
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Button
               type="button"
+              className="min-h-11"
               onClick={() => {
                 if (!selectedShelf) {
                   showError("Please select a shelf first.");
@@ -318,7 +387,7 @@ export default function ScansPage() {
               Open Camera
             </Button>
 
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild className="min-h-11">
               <label
                 className="cursor-pointer"
                 onClick={(e) => {
@@ -351,6 +420,7 @@ export default function ScansPage() {
             onClose={() => setShowCamera(false)}
             onCapture={(file) => {
               setPreviewImage(file);
+              setPreviewSource("camera");
               setShowCamera(false);
             }}
           />
@@ -370,16 +440,32 @@ export default function ScansPage() {
             />
 
             <div className="mt-6 flex justify-center gap-4">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setPreviewImage(null);
-                  setShowCamera(true);
-                }}
-              >
-                Retake
-              </Button>
+              {previewSource === "upload" ? (
+                <Button variant="secondary" asChild>
+                  <label className="cursor-pointer">
+                    <Upload className="h-4 w-4" />
+                    Choose another
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                    />
+                  </label>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setPreviewImage(null);
+                    setShowCamera(true);
+                  }}
+                >
+                  <Camera className="h-4 w-4" />
+                  Retake
+                </Button>
+              )}
 
               <Button
                 type="button"
@@ -393,9 +479,10 @@ export default function ScansPage() {
                   setResult(null);
                   setError("");
 
-                  await analyzeSelectedImage(previewImage, selectedShelf);
-
-                  setPreviewImage(null);
+                  // FR-SCAN-004: keep the preview after a failure so Analyze acts as "retry".
+                  if (await analyzeSelectedImage(previewImage, selectedShelf)) {
+                    setPreviewImage(null);
+                  }
                 }}
               >
                 Analyze
@@ -417,7 +504,13 @@ export default function ScansPage() {
             <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
               <div className="flex flex-col items-center gap-3">
                 <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent" />
-                <p className="font-medium text-white">Analyzing...</p>
+                <p className="font-medium text-white">
+                  {analysisStage === "uploading"
+                    ? "Uploading image..."
+                    : analysisStage === "queued"
+                      ? "Queued for analysis..."
+                      : "Analyzing..."}
+                </p>
               </div>
             </div>
           )}
@@ -444,10 +537,47 @@ export default function ScansPage() {
             )}
           </CardHeader>
           <CardContent className="space-y-6">
-            {(result.inventoryChanges ?? []).length > 0 && (
+            {result.inventoryApplied === false && (
+              <div className="rounded-xl border border-primary/40 bg-primary/5 p-5">
+                <p className="text-sm font-semibold">Not added to inventory yet</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Review the detected items below and correct any freshness grades, then{" "}
+                  {(result.scanMode ?? scanMode) === "STOCK_OUT"
+                    ? "remove them from"
+                    : "add them to"}{" "}
+                  inventory. If you already added a photo of this shelf, discard this one so
+                  the stock is not counted twice.
+                </p>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <Button
+                    type="button"
+                    className="min-h-11"
+                    variant={(result.scanMode ?? scanMode) === "STOCK_OUT" ? "destructive" : "default"}
+                    disabled={confirmingScanId === result.scanId || result.total_count === 0}
+                    onClick={() => addScanToInventory(result.scanId)}
+                  >
+                    {confirmingScanId === result.scanId
+                      ? "Saving..."
+                      : (result.scanMode ?? scanMode) === "STOCK_OUT"
+                        ? "Remove from inventory"
+                        : "Add to inventory"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11"
+                    disabled={confirmingScanId === result.scanId}
+                    onClick={discardResult}
+                  >
+                    Discard
+                  </Button>
+                </div>
+              </div>
+            )}
+            {result.inventoryApplied !== false && (result.inventoryChanges ?? []).length > 0 && (
               <div className="rounded-xl border border-border bg-muted p-5">
                 <p className="text-sm font-semibold">
-                  {scanMode === "STOCK_OUT" ? "Stock removed" : "Stock added"}
+                  {(result.scanMode ?? scanMode) === "STOCK_OUT" ? "Stock removed" : "Stock added"}
                 </p>
                 <div className="mt-3 space-y-2 text-sm">
                   {(result.inventoryChanges ?? []).map((change) => (
@@ -503,7 +633,10 @@ export default function ScansPage() {
                           )
                         }
                       >
-                        <SelectTrigger className="w-[140px]">
+                        <SelectTrigger
+                          className="w-[140px]"
+                          aria-label={`Correct freshness state for ${detection.class_name}`}
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -523,7 +656,7 @@ export default function ScansPage() {
                   >
                     <h4 className="text-lg font-semibold capitalize">{productName}</h4>
 
-                    <div className="mt-4 grid grid-cols-3 gap-3">
+                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Total</p>
                         <p className="mt-1 text-xl font-semibold">{product.total}</p>
@@ -531,6 +664,10 @@ export default function ScansPage() {
                       <div>
                         <p className="text-sm text-muted-foreground">Fresh</p>
                         <p className="mt-1 text-xl font-semibold">{product.fresh}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Medium</p>
+                        <p className="mt-1 text-xl font-semibold">{product.medium ?? 0}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Rotten</p>
@@ -584,7 +721,7 @@ export default function ScansPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{scan.status}</span>
+                    <span>{scanStatusLabel(scan.status)}</span>
                     <span>{formatHistoryDate(scan.created_at)}</span>
                   </div>
                 </button>
@@ -616,7 +753,7 @@ export default function ScansPage() {
               <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                 <div className="rounded-xl bg-muted p-3">
                   <p className="text-muted-foreground">Status</p>
-                  <p className="mt-1 font-semibold">{selectedHistoryScan.status}</p>
+                  <p className="mt-1 font-semibold">{scanStatusLabel(selectedHistoryScan.status)}</p>
                 </div>
                 <div className="rounded-xl bg-muted p-3">
                   <p className="text-muted-foreground">Items</p>
@@ -631,6 +768,31 @@ export default function ScansPage() {
                   <p className="mt-1 font-semibold">{selectedHistoryScan.spoiled_count}</p>
                 </div>
               </div>
+
+              {selectedHistoryScan.status === "ANALYZED" && (
+                <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm">
+                  <p className="text-muted-foreground">
+                    This scan has not changed inventory. Add it only if it is not a repeat
+                    photo of a shelf you already added.
+                  </p>
+                  <Button
+                    type="button"
+                    className="mt-3 min-h-11"
+                    variant={selectedHistoryScan.scan_mode === "STOCK_OUT" ? "destructive" : "default"}
+                    disabled={
+                      confirmingScanId === selectedHistoryScan.id ||
+                      selectedHistoryScan.item_count === 0
+                    }
+                    onClick={() => addScanToInventory(selectedHistoryScan.id)}
+                  >
+                    {confirmingScanId === selectedHistoryScan.id
+                      ? "Saving..."
+                      : selectedHistoryScan.scan_mode === "STOCK_OUT"
+                        ? "Remove from inventory"
+                        : "Add to inventory"}
+                  </Button>
+                </div>
+              )}
 
               <h3 className="text-lg font-semibold tracking-tight">Detected items</h3>
               <div className="flex flex-wrap gap-2">

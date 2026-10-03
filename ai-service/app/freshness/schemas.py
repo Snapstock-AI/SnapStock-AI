@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 class PredictionResponse(BaseModel):
     freshness: str = Field(
         ...,
-        description="Predicted freshness class. Example: good or bad."
+        description="Predicted freshness class. One of: fresh, medium, rotten."
     )
 
     confidence: float = Field(

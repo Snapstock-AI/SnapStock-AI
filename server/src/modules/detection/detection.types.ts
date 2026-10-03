@@ -25,6 +25,7 @@ export interface AIAnalysisResponse {
   total_count: number;
   counts: Record<string, {
   fresh: number;
+  medium: number;
   rotten: number;
   total: number;
 }>
@@ -38,11 +39,15 @@ export interface SavedDetection extends AIDetection {
 
 export interface DetectionResult {
   scanId: string;
+  scanMode: "STOCK_IN" | "STOCK_OUT";
+  /** False until the user confirms the scan with "Add to inventory". */
+  inventoryApplied: boolean;
   image_width: number;
   image_height: number;
   total_count: number;
   counts: Record<string, {
   fresh: number;
+  medium: number;
   rotten: number;
   total: number;
 }>;

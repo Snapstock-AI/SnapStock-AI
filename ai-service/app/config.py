@@ -34,10 +34,24 @@ LEGACY_MODEL_PATH = MODEL_DIR / "mobilenet_model.keras"
 IMAGE_SIZE = (224, 224)
 PREPROCESSING_MODE = "rescale_0_1"
 
+# The model itself is binary (sigmoid output = probability of "good").
+# These labels match the training dataset folders and are used by evaluation.
 POSITIVE_CLASS_LABEL = "good"
 NEGATIVE_CLASS_LABEL = "bad"
 
 PREDICTION_THRESHOLD = 0.5
+
+# The app grades produce into three classes, derived from the
+# "good" probability:
+#   probability >= FRESH_THRESHOLD                   -> fresh
+#   ROTTEN_THRESHOLD <= probability < FRESH_THRESHOLD -> medium
+#   probability < ROTTEN_THRESHOLD                   -> rotten
+FRESH_LABEL = "fresh"
+MEDIUM_LABEL = "medium"
+ROTTEN_LABEL = "rotten"
+
+FRESH_THRESHOLD = 0.7
+ROTTEN_THRESHOLD = 0.3
 
 MODEL_NAME = "mobilenet"
 

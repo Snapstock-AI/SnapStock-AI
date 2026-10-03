@@ -1,0 +1,44 @@
+{{- if eq .Values.exposure "nlb-eip" }}
+# Internet-facing NLB with a fixed Elastic IP, created by the AWS Load Balancer Controller.
+# nginx in the frontend serves the SPA and proxies /snapstock-backend-http/ to the backend.
+#
+# With publicService.certificateArn set (Terraform enable_https), the NLB terminates TLS on 443
+# with the ACM certificate and forwards to nginx :8080; port 80 goes to nginx :8081, which only
+# redirects to https. Without it, port 80 serves the app directly (HTTP only).
+apiVersion: v1
+kind: Service
+metadata:
+  name: snapstock-public
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: external
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+    service.beta.kubernetes.io/aws-load-balancer-subnets: {{ required "publicService.subnet is required" .Values.publicService.subnet | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-eip-allocations: {{ required "publicService.eipAllocation is required" .Values.publicService.eipAllocation | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: HTTP
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: /health
+    {{- if .Values.publicService.certificateArn }}
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: {{ .Values.publicService.certificateArn | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-negotiation-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    {{- end }}
+spec:
+  type: LoadBalancer
+  loadBalancerClass: service.k8s.aws/nlb
+  selector:
+    app: snapstock-frontend
+  ports:
+    {{- if .Values.publicService.certificateArn }}
+    - name: http
+      port: 80
+      targetPort: {{ .Values.frontend.redirectPort }}
+    - name: https
+      port: 443
+      targetPort: {{ .Values.frontend.port }}
+    {{- else }}
+    - name: http
+      port: 80
+      targetPort: {{ .Values.frontend.port }}
+    {{- end }}
+{{- end }}

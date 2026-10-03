@@ -3,7 +3,6 @@ import { Detection } from "../../entities/Detection";
 import { Product } from "../../entities/Product";
 import { Scan } from "../../entities/Scan";
 import { Shelf } from "../../entities/Shelf";
-import { Alert } from "../../entities/Alert";
 
 const FRESHNESS_EXPR =
   "COALESCE(detection.corrected_freshness, detection.freshness)";
@@ -194,23 +193,6 @@ export class DashboardRepository {
       spoiled_count: Number(r.spoiled_count),
       last_seen: r.last_seen as Date,
     }));
-  }
-
-  static async activeLowStockAlerts(businessId: string) {
-    return AppDataSource.getRepository(Alert)
-      .createQueryBuilder("alert")
-      .leftJoin("products", "product", "product.id = alert.product_id")
-      .select([
-        "alert.id AS id",
-        "alert.message AS message",
-        "alert.created_at AS created_at",
-        "product.name AS product_name",
-      ])
-      .where("alert.business_id = :businessId", { businessId })
-      .andWhere("alert.type = :type", { type: "LOW_STOCK" })
-      .andWhere("alert.active = TRUE")
-      .orderBy("alert.created_at", "DESC")
-      .getRawMany();
   }
 
   static async listShelves(businessId: string) {

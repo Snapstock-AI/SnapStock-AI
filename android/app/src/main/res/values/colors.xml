@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SnapStock brand -->
+    <color name="snap_lime">#E7F352</color>
+    <color name="snap_teal">#04303B</color>
+    <color name="snap_teal_dark">#021F27</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="ic_launcher_background">#E7F352</color>
+</resources>

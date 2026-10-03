@@ -215,11 +215,11 @@ export const sendEmployeeInvitationEmail = async (
     from: `"SnapStock AI" <${process.env.SMTP_USER}>`,
     to: email,
     subject: `You have been invited to join ${businessName} on SnapStock AI`,
-    text: `${greeting}\n\nYou have been invited to join ${businessName} on SnapStock AI as a team member.\n\nIf you already have an account, sign in and open this link:\n${link}\n\nIf you are new, create an account with this email address, then open the same link to join the workspace.\n\nThis invitation expires in 7 days.`,
+    text: `${greeting}\n\nYou have been invited to join ${businessName} on SnapStock AI as a team member.\n\nOpen this link to accept. If you are new to SnapStock AI, you will set your name and password there (no sign-in needed):\n${link}\n\nThis invitation expires in 7 days.`,
     html: emailTemplate(
       "Team invitation",
       `Join ${businessName} on SnapStock AI`,
-      `${greeting}<br /><br />You have been invited to join <strong>${businessName}</strong> on SnapStock AI as a team member.<br /><br />Sign in with this email if you already have an account, or create one first — then use the button below to join the workspace. No temporary password is required.`,
+      `${greeting}<br /><br />You have been invited to join <strong>${businessName}</strong> on SnapStock AI as a team member.<br /><br />Click the button below to accept. If you are new, you will create your password on that page — no sign-in needed.`,
       "Accept invitation",
       link,
       "This invitation expires in 7 days. If you did not expect this email, you can ignore it.",

@@ -9,3 +9,4 @@ pytest
 pytest-cov
 pytest-mock
 httpx2
+boto3

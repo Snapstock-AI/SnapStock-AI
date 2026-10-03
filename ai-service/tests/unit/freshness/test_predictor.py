@@ -9,11 +9,13 @@ from app.common.exceptions import (
     PredictionError,
 )
 from app.config import (
+    FRESH_LABEL,
+    FRESH_THRESHOLD,
     IMAGE_SIZE,
+    MEDIUM_LABEL,
     MODEL_NAME,
-    NEGATIVE_CLASS_LABEL,
-    POSITIVE_CLASS_LABEL,
-    PREDICTION_THRESHOLD,
+    ROTTEN_LABEL,
+    ROTTEN_THRESHOLD,
 )
 from app.freshness import predictor as predictor_module
 from app.freshness.predictor import (
@@ -57,46 +59,70 @@ def create_test_image() -> Image.Image:
     return Image.fromarray(image_array)
 
 
-def test_build_prediction_result_positive_class():
+def test_build_prediction_result_fresh_class():
     result = _build_prediction_result(0.80)
 
-    assert result.freshness == POSITIVE_CLASS_LABEL
+    assert result.freshness == FRESH_LABEL
     assert result.confidence == pytest.approx(0.80)
     assert result.confidence_percent == 80.0
     assert result.model == MODEL_NAME
 
 
-def test_build_prediction_result_negative_class():
+def test_build_prediction_result_rotten_class():
     result = _build_prediction_result(0.20)
 
-    assert result.freshness == NEGATIVE_CLASS_LABEL
+    assert result.freshness == ROTTEN_LABEL
     assert result.confidence == pytest.approx(0.80)
     assert result.confidence_percent == 80.0
     assert result.model == MODEL_NAME
 
 
-def test_build_prediction_result_exact_threshold():
+def test_build_prediction_result_medium_class():
+    result = _build_prediction_result(0.50)
+
+    assert result.freshness == MEDIUM_LABEL
+    assert result.confidence == pytest.approx(1.0)
+    assert result.confidence_percent == 100.0
+    assert result.model == MODEL_NAME
+
+
+def test_build_prediction_result_medium_confidence_drops_towards_edges():
+    result = _build_prediction_result(0.60)
+
+    assert result.freshness == MEDIUM_LABEL
+    assert result.confidence == pytest.approx(0.80)
+
+
+def test_build_prediction_result_exact_fresh_threshold():
     result = _build_prediction_result(
-        PREDICTION_THRESHOLD
+        FRESH_THRESHOLD
     )
 
-    assert result.freshness == POSITIVE_CLASS_LABEL
+    assert result.freshness == FRESH_LABEL
 
 
-def test_build_prediction_result_just_below_threshold():
-    probability = PREDICTION_THRESHOLD - 0.0001
-
-    result = _build_prediction_result(probability)
-
-    assert result.freshness == NEGATIVE_CLASS_LABEL
-
-
-def test_build_prediction_result_just_above_threshold():
-    probability = PREDICTION_THRESHOLD + 0.0001
+def test_build_prediction_result_just_below_fresh_threshold():
+    probability = FRESH_THRESHOLD - 0.0001
 
     result = _build_prediction_result(probability)
 
-    assert result.freshness == POSITIVE_CLASS_LABEL
+    assert result.freshness == MEDIUM_LABEL
+
+
+def test_build_prediction_result_exact_rotten_threshold():
+    result = _build_prediction_result(
+        ROTTEN_THRESHOLD
+    )
+
+    assert result.freshness == MEDIUM_LABEL
+
+
+def test_build_prediction_result_just_below_rotten_threshold():
+    probability = ROTTEN_THRESHOLD - 0.0001
+
+    result = _build_prediction_result(probability)
+
+    assert result.freshness == ROTTEN_LABEL
 
 
 def test_predict_probability_returns_model_probability():
@@ -213,7 +239,7 @@ def test_predict_success():
         image_bytes,
     )
 
-    assert result.freshness == POSITIVE_CLASS_LABEL
+    assert result.freshness == FRESH_LABEL
 
     assert result.confidence == pytest.approx(
         0.80,
@@ -246,7 +272,7 @@ def test_predict_crop_success():
         crop,
     )
 
-    assert result.freshness == POSITIVE_CLASS_LABEL
+    assert result.freshness == FRESH_LABEL
 
     assert result.confidence == pytest.approx(
         0.75,
@@ -438,7 +464,7 @@ def test_predict_crop_returns_heatmap_path_as_explanation(monkeypatch):
     model = Mock()
 
     model.predict.return_value = np.array(
-        [[0.30]],
+        [[0.20]],
         dtype=np.float32,
     )
 
@@ -455,7 +481,7 @@ def test_predict_crop_returns_heatmap_path_as_explanation(monkeypatch):
         crop,
     )
 
-    assert result.freshness == NEGATIVE_CLASS_LABEL
+    assert result.freshness == ROTTEN_LABEL
 
     assert result.explanation == "temp/gradcam/fake.jpg"
 
@@ -479,6 +505,6 @@ def test_predict_still_succeeds_when_gradcam_fails(monkeypatch):
         image_to_bytes(create_test_image(), "JPEG"),
     )
 
-    assert result.freshness == POSITIVE_CLASS_LABEL
+    assert result.freshness == FRESH_LABEL
 
     assert result.explanation is None

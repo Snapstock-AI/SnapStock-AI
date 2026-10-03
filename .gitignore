@@ -2,6 +2,11 @@
 .env
 .env.local
 .env.*.local
+*.pem
+snapstock-k3s-key.pem
+monitoring/.env
+monitoring/prometheus/metrics_token
+monitoring/grafana/provisioning/datasources/cloudwatch.yml
 
 # Dependencies
 node_modules/
@@ -51,3 +56,8 @@ Thumbs.db
 
 # Docker local overrides
 docker-compose.override.yml
+
+# Test reports
+reports/
+junit.xml
+coverage/

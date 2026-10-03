@@ -12,9 +12,22 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
     globals: true,
+    // React's production build has no act(); force the dev build even if the shell exports NODE_ENV=production.
+    env: { NODE_ENV: 'test' },
     environment: 'jsdom',
+    // Avoid undici/jsdom worker fork crashes on some CI Node images.
+    pool: 'threads',
     setupFiles: './tests/setup.ts',
     include: ['tests/**/*.test.{ts,tsx}'],
+    reporters: ['default', 'junit'],
+    outputFile: { junit: './reports/junit.xml' },
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/components/ui/**'],
+      reportsDirectory: './reports/coverage',
+      reporter: ['text-summary', 'json-summary', 'lcov'],
+    },
   },
   resolve: {
     alias: {
