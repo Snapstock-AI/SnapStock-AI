@@ -1,7 +1,13 @@
 name: E2E and accessibility
 
-# Slower than unit tests, so it runs nightly and on demand rather than on every pull request.
+# Slower than unit tests, so it runs nightly/on demand and only on dev pushes that change E2E files.
 on:
+  push:
+    branches:
+      - dev
+    paths:
+      - "e2e/**"
+      - ".github/workflows/e2e.yml"
   workflow_dispatch:
   schedule:
     - cron: "0 2 * * *"
@@ -26,6 +32,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            e2e/package-lock.json
+            server/package-lock.json
+            client/package-lock.json
+      - name: Install E2E dependencies
+        run: npm ci
+        working-directory: e2e
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: server
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: client
       - run: npx playwright install --with-deps chromium
         working-directory: e2e
       - name: Run browser, degraded-mode and accessibility tests
