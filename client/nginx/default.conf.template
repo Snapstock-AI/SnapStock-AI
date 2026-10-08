@@ -8,7 +8,23 @@ server {
     # Image uploads for shelf scans / detection.
     client_max_body_size 20m;
 
+    # Always revalidate the SPA shell so an existing browser picks up the latest
+    # hashed JS/CSS filenames after a deployment.
+    location = /index.html {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+        try_files /index.html =404;
+    }
+
+    # Vite fingerprints production assets, so these can be cached permanently.
+    location ^~ /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
     location / {
+        add_header Cache-Control "no-cache" always;
         try_files $uri $uri/ /index.html;
     }
 
