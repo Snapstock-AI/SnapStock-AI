@@ -72,24 +72,32 @@ Without them the EKS jobs are skipped (build and tests still run). Deploy jobs n
 running: if it is paused (`pause.ps1`), run `resume.ps1` first or the rollout times out.
 The legacy K3s/SSM deploy jobs only run when `K3S_DEPLOY_ENABLED` is `true`.
 
-## Domain and HTTPS (`https.tf`)
-The app is served as **https://snapstock.rashmika.dev** (DNS at name.com). The NLB keeps its
-Elastic IP and terminates TLS with a free, auto-renewed ACM certificate; port 80 is redirected
-to https by nginx (:8081). To set it up on a new stack:
-1. `terraform apply` with `enable_https = false` requests the certificate.
-2. At the DNS provider add the CNAME from `terraform output acm_validation_record` and an
-   A record `snapstock` -> `terraform output app_public_ip`.
-3. Deploy a frontend image built from this repo (nginx with the :8081 redirect listener).
-4. Set `enable_https = true` and `terraform apply` (waits until the certificate is issued).
+The production demo now runs on the retained K3s EC2 server; the former EKS cluster was removed
+to stop its control-plane, NAT Gateway, load-balancer, and extra IPv4 charges. Run the demo
+start/stop scripts from the repository root with an explicit relative path:
+```powershell
+.\infra\eks\resume.ps1
+.\infra\eks\pause.ps1
+```
+`resume.ps1` starts the K3s instance and waits for the public frontend and backend health check.
+`pause.ps1` stops it while preserving its EBS data and the Elastic IP used by
+`snapstock.rashmika.dev`. RDS is retained only as a stopped recovery copy and is not needed by
+the K3s application, which uses its local PostgreSQL volume.
+
+## Domain and HTTPS
+The app is served as **https://snapstock.rashmika.dev**. Its A record still points to the retained
+production Elastic IP (`13.201.24.199`), which is attached directly to the K3s instance. The K3s
+Gateway API routes frontend and backend traffic, and its existing certificate handles TLS.
 
 ## Verify
 ```powershell
-aws eks update-kubeconfig --region ap-south-1 --name snapstock-prod
-kubectl get nodes -L workload
-kubectl -n snapstock get pods,scaledobject -o wide
-curl http://<alb>/health ; curl http://<alb>/snapstock-backend-http/health
+.\infra\eks\resume.ps1
+curl.exe https://snapstock.rashmika.dev/
+curl.exe https://snapstock.rashmika.dev/snapstock-backend-http/health
+.\infra\eks\pause.ps1
 ```
 
 ## Teardown
-`terraform destroy` in `infra/eks/terraform` will refuse to delete RDS (`deletion_protection`, `prevent_destroy`) on purpose.
-Remove those guards deliberately if you really want to delete the database. The state bucket lives in `bootstrap/` and is kept.
+The EKS runtime resources have already been removed. The Terraform files are retained as history
+and must not be applied unless an EKS rebuild is intentional. RDS and the recovery snapshots are
+kept separately to protect the database.

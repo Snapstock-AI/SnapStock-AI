@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snapstock-ai
+  namespace: dp-default-snapstock-development-9f3d29f9
+  labels:
+    app: snapstock-ai
+    app.kubernetes.io/part-of: snapstock
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: snapstock-ai
+  template:
+    metadata:
+      labels:
+        app: snapstock-ai
+        app.kubernetes.io/part-of: snapstock
+    spec:
+      containers:
+        - name: ai
+          image: ghcr.io/snapstock-ai/snapstock-ai-service:dev-55ebdb5feab4d0d0e16b0e46d45ab3a93c3ac407
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: CUDA_VISIBLE_DEVICES
+              value: "-1"
+            - name: TF_CPP_MIN_LOG_LEVEL
+              value: "2"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 90
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 30
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 100m
+              memory: 2Gi
+            limits:
+              cpu: 1500m
+              memory: 3Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: snapstock-ai
+  namespace: dp-default-snapstock-development-9f3d29f9
+  labels:
+    app: snapstock-ai
+    app.kubernetes.io/part-of: snapstock
+spec:
+  selector:
+    app: snapstock-ai
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

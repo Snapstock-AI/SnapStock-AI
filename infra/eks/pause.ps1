@@ -1,65 +1,56 @@
-# Pause the SnapStock EKS stack to save credits (overnight / between work sessions).
-#
-#   .\infra\eks\pause.ps1                    # EKS nodes -> 0, stop RDS
-#   .\infra\eks\pause.ps1 -IncludeOldServer  # also stop the old K3s server (snapstock.rashmika.dev goes offline)
-#
-# Do NOT stop the EKS "system"/"ai" instances from the EC2 console: they belong to Auto Scaling
-# groups and would be replaced. Scaling the node groups to 0 is the supported way.
-#
-# Still billed while paused (~$4-5/day): EKS control plane, NAT gateway, NLB, Elastic IPs,
-# RDS storage, S3/ECR storage. Nothing is deleted; data, images and the Elastic IP are kept.
-# Note: AWS automatically restarts a stopped RDS instance after 7 days.
+# Stop the SnapStock K3s demo server between evaluation sessions.
+# The local PostgreSQL volume, container images, and production Elastic IP are preserved.
+# The website is offline while the instance is stopped.
 
-param([switch]$IncludeOldServer)
+param([string]$Profile = "snapstock-login")
 
 $ErrorActionPreference = "Stop"
-$region  = "ap-south-1"
-$cluster = "snapstock-prod"
-$db      = "snapstock-prod-pg"
-$oldServer = "i-059a3eb481e38c2fd"
+$region = "ap-south-1"
+$account = "471547181436"
+$server = "i-059a3eb481e38c2fd"
+$db = "snapstock-prod-pg"
 
-# Fail fast on network problems: PowerShell does not stop on native command errors, so a TLS or
-# connection failure (e.g. "SSL validation failed ... handshake failure" from a flaky Wi-Fi/VPN)
-# would otherwise let the script continue with empty values.
-function Assert-Aws([string]$what) {
-    if ($LASTEXITCODE -ne 0) { throw "AWS call failed while $what. Check your internet/VPN connection and run the script again." }
-}
-$ok = $false
-foreach ($attempt in 1..3) {
-    aws sts get-caller-identity --query Account --output text | Out-Null
-    if ($LASTEXITCODE -eq 0) { $ok = $true; break }
-    Write-Host "AWS not reachable (attempt $attempt/3), retrying in 10 s..."
-    Start-Sleep -Seconds 10
-}
-if (-not $ok) { throw "Cannot reach AWS (TLS/network error). Check your internet/VPN connection and try again." }
-
-foreach ($ng in (aws eks list-nodegroups --cluster-name $cluster --region $region --query "nodegroups" --output text).Split()) {
-    if (-not $ng) { continue }
-    $max = aws eks describe-nodegroup --cluster-name $cluster --nodegroup-name $ng --region $region --query "nodegroup.scalingConfig.maxSize" --output text
-    aws eks update-nodegroup-config --cluster-name $cluster --nodegroup-name $ng --region $region `
-        --scaling-config "minSize=0,maxSize=$max,desiredSize=0" --query "update.status" --output text | Out-Null
-    Write-Host "node group $ng -> 0 nodes"
+function Assert-Aws([string]$What) {
+    if ($LASTEXITCODE -ne 0) {
+        throw "AWS call failed while $What. Run 'aws login --profile $Profile' and try again."
+    }
 }
 
-# The PodDisruptionBudgets keep one replica of each app alive, which blocks the scale-in drain.
-# Deleting the pods directly (--disable-eviction) lets the nodes shut down in a few minutes.
-aws eks update-kubeconfig --region $region --name $cluster | Out-Null
-foreach ($node in (kubectl get nodes -o name)) {
-    kubectl drain $node --ignore-daemonsets --delete-emptydir-data --disable-eviction --force --timeout=120s | Out-Null
-    Write-Host "drained $node"
+$actualAccount = aws sts get-caller-identity --profile $Profile --query Account --output text
+Assert-Aws "checking the signed-in account"
+if ($actualAccount -ne $account) {
+    throw "Refusing to continue: profile '$Profile' is account $actualAccount, expected $account."
 }
 
-$status = aws rds describe-db-instances --db-instance-identifier $db --region $region --query "DBInstances[0].DBInstanceStatus" --output text
-if ($status -eq "available") {
-    aws rds stop-db-instance --db-instance-identifier $db --region $region --query "DBInstance.DBInstanceStatus" --output text | Out-Null
-    Write-Host "RDS $db -> stopping"
+$state = aws ec2 describe-instances --instance-ids $server --profile $Profile --region $region `
+    --query "Reservations[0].Instances[0].State.Name" --output text
+Assert-Aws "checking the K3s server"
+
+if ($state -eq "running") {
+    aws ec2 stop-instances --instance-ids $server --profile $Profile --region $region `
+        --query "StoppingInstances[0].CurrentState.Name" --output text | Out-Null
+    Assert-Aws "stopping the K3s server"
+    aws ec2 wait instance-stopped --instance-ids $server --profile $Profile --region $region
+    Assert-Aws "waiting for the K3s server to stop"
+    Write-Host "K3s demo server -> stopped"
+} elseif ($state -eq "stopped") {
+    Write-Host "K3s demo server is already stopped"
 } else {
-    Write-Host "RDS $db is '$status' (not stopped by this script)"
+    throw "K3s demo server is '$state'; wait for that transition to finish and run this script again."
 }
 
-if ($IncludeOldServer) {
-    aws ec2 stop-instances --instance-ids $oldServer --region $region --query "StoppingInstances[0].CurrentState.Name" --output text | Out-Null
-    Write-Host "old K3s server $oldServer -> stopping (its Elastic IP 15.252.170.236 is kept)"
+# RDS is retained only as a recoverable backup. Keep it stopped if AWS auto-starts it after 7 days.
+$dbState = aws rds describe-db-instances --db-instance-identifier $db --profile $Profile --region $region `
+    --query "DBInstances[0].DBInstanceStatus" --output text
+Assert-Aws "checking RDS"
+if ($dbState -eq "available") {
+    aws rds stop-db-instance --db-instance-identifier $db --profile $Profile --region $region `
+        --query "DBInstance.DBInstanceStatus" --output text | Out-Null
+    Assert-Aws "stopping RDS"
+    Write-Host "RDS backup instance -> stopping"
+} else {
+    Write-Host "RDS backup instance is '$dbState'"
 }
 
-Write-Host "`nPaused. Resume with: .\infra\eks\resume.ps1"
+Write-Host "Website offline; database and production IP preserved."
+Write-Host "Start the demo with: .\infra\eks\resume.ps1"
