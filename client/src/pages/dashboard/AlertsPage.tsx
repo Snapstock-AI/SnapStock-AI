@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 type AlertFilter = 'all' | 'active' | 'resolved'
 
@@ -162,76 +162,71 @@ export default function AlertsPage() {
               <TabsTrigger value="active">Active ({activeCount})</TabsTrigger>
               <TabsTrigger value="resolved">Resolved ({resolvedCount})</TabsTrigger>
             </TabsList>
-          </Tabs>
+            <TabsContent value={filter} className="space-y-3">
+              {!alerts.length && (
+                <p className="text-sm text-muted-foreground">
+                  {filter === 'active'
+                    ? 'No active alerts.'
+                    : 'No alerts resolved in the last 30 days.'}
+                </p>
+              )}
 
-          {!alerts.length && (
-            <p className="text-sm text-muted-foreground">
-              {filter === 'active'
-                ? 'No active alerts.'
-                : 'No alerts resolved in the last 30 days.'}
-            </p>
-          )}
-
-          {alerts.map((alert) => {
-            const Icon = alertIcon(alert.severity)
-            const resolving = resolvingId === alert.id
-            const resolved = isResolved(alert)
-            return (
-              <Card
-                key={alert.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => setSelectedId(alert.id)}
-                onKeyDown={(event) => {
-                  if (event.target !== event.currentTarget) return
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    setSelectedId(alert.id)
-                  }
-                }}
-                className={cn(
-                  'cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  resolved ? 'bg-muted/40' : typeStyles[alert.severity],
-                )}
-              >
-                <CardContent className="flex gap-4 p-4">
-                  <Icon className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-                  <div className={resolved ? 'flex-1 opacity-70' : 'flex-1'}>
-                    <p className="font-medium">{alert.title}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{alert.message}</p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {resolved && alert.resolvedAt
-                        ? `${alert.resolvedBy === 'auto' ? 'Cleared' : 'Resolved'} ${formatRelative(alert.resolvedAt)}`
-                        : formatRelative(alert.createdAt)}
-                    </span>
-                    {resolved ? (
-                      <span className="inline-flex h-9 items-center rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-medium text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-400">
-                        <CheckCheck className="mr-1 h-4 w-4" />
-                        Resolved
-                      </span>
-                    ) : (
-                      isOwner && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={resolving}
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleResolve(alert.id)
-                          }}
-                        >
-                          <Check className="mr-1 h-4 w-4" />
-                          {resolving ? 'Resolving...' : 'Resolve'}
-                        </Button>
-                      )
+              {alerts.map((alert) => {
+                const Icon = alertIcon(alert.severity)
+                const resolving = resolvingId === alert.id
+                const resolved = isResolved(alert)
+                return (
+                  <Card
+                    key={alert.id}
+                    className={cn(
+                      'transition-shadow hover:shadow-md',
+                      resolved ? 'bg-muted/40' : typeStyles[alert.severity],
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+                  >
+                    <CardContent className="flex gap-4 p-4">
+                      <button
+                        type="button"
+                        aria-label={`View details for ${alert.title}`}
+                        onClick={() => setSelectedId(alert.id)}
+                        className="flex min-w-0 flex-1 gap-4 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <Icon className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+                        <span className={resolved ? 'flex-1 opacity-70' : 'flex-1'}>
+                          <span className="block font-medium">{alert.title}</span>
+                          <span className="mt-1 block text-sm text-muted-foreground">{alert.message}</span>
+                        </span>
+                      </button>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {resolved && alert.resolvedAt
+                            ? `${alert.resolvedBy === 'auto' ? 'Cleared' : 'Resolved'} ${formatRelative(alert.resolvedAt)}`
+                            : formatRelative(alert.createdAt)}
+                        </span>
+                        {resolved ? (
+                          <span className="inline-flex h-9 items-center rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-medium text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-400">
+                            <CheckCheck className="mr-1 h-4 w-4" />
+                            Resolved
+                          </span>
+                        ) : (
+                          isOwner && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={resolving}
+                              onClick={() => handleResolve(alert.id)}
+                            >
+                              <Check className="mr-1 h-4 w-4" />
+                              {resolving ? 'Resolving...' : 'Resolve'}
+                            </Button>
+                          )
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </TabsContent>
+          </Tabs>
         </div>
       )}
 

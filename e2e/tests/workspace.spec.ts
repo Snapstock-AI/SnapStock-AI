@@ -13,6 +13,11 @@ async function scanViaApi(request: APIRequestContext, vendor: Account, mode: "ST
     },
   });
   expect(response.ok(), await response.text()).toBe(true);
+  const result = (await response.json()).data as { scanId: string };
+  const confirmed = await request.post(`${urls.api}/detection/scans/${result.scanId}/confirm`, {
+    headers: { Authorization: `Bearer ${vendor.token}` },
+  });
+  expect(confirmed.ok(), await confirmed.text()).toBe(true);
 }
 
 test.beforeEach(async ({ request }) => {

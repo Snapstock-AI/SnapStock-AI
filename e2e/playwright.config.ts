@@ -12,6 +12,7 @@ const backendEnv = {
   SMTP_USER: "noreply@snapstock.test",
   SMTP_PASS: "e2e",
   CLIENT_URL: urls.web,
+  SERVER_PUBLIC_URL: urls.api,
   NODE_ENV: "development",
 };
 
