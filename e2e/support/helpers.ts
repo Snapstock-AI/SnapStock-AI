@@ -48,7 +48,7 @@ export async function registerAndVerify(request: APIRequestContext, email = uniq
     data: { full_name: "E2E Vendor", email, password: PASSWORD },
   });
   expect(registered.status()).toBe(201);
-  const link = await latestMailLink(request, email, "verify-email");
+  const link = await latestMailLink(request, email, "verify-email/confirm");
   const token = new URL(link).searchParams.get("token")!;
   const verified = await request.get(`${urls.api}/auth/verify-email`, { params: { token } });
   expect(verified.ok()).toBe(true);

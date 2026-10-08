@@ -21,7 +21,7 @@ test.describe("authentication journeys", () => {
     await page.getByRole("button", { name: "Sign In" }).click();
     await expect(page.getByRole("alert")).toContainText(/verify your email/i);
 
-    const link = await latestMailLink(request, email, "verify-email");
+    const link = await latestMailLink(request, email, "verify-email/confirm");
     await page.goto(link);
     await expect(page.getByText(/verified/i).first()).toBeVisible();
 
